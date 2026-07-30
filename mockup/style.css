@@ -168,6 +168,8 @@ table { border-collapse: collapse; width: 100%; }
 .banner .b-ico { font-size: 17px; flex: none; }
 .banner .b-txt { flex: 1; }
 .banner b { display: block; }
+.banner .b-txt.flow b { display: inline; }
+.banner .b-txt.flow { line-height: 2; }
 .banner.warn { background: #fdf6e9; border-color: #e8cf9a; color: #6b4a12; }
 .banner.info { background: var(--primary-08); border-color: var(--primary-15); color: var(--primary-2); }
 .banner.bad  { background: var(--danger-08); border-color: #d9a49f; color: #6f1e17; }
@@ -445,6 +447,8 @@ body { padding-bottom: 44px; }
   width: 100%; max-width: 470px; overflow: hidden;
   animation: pop .16s cubic-bezier(.2,.9,.3,1.2);
 }
+.modal.wide { max-width: 720px; }
+.modal .body { max-height: 72vh; overflow-y: auto; }
 .modal header { padding: 14px 18px; border-bottom: 1px solid var(--line-2); font-weight: 700; font-size: 14px; }
 .modal .body { padding: 18px; display: grid; gap: 12px; font-size: 13px; }
 .modal footer { padding: 12px 18px; border-top: 1px solid var(--line-2); display: flex; gap: 8px; justify-content: flex-start; background: #fbfaf7; }

@@ -368,14 +368,15 @@ function admMonitor() {
     <div class="card">
       <header><h2>تایم‌لاین کل سامانه</h2><span class="hint">چه کسی، چه کاری، چه ساعتی، با چه IP</span></header>
       <div class="body tight"><div class="tblwrap"><table class="tbl">
-        <thead><tr><th>زمان</th><th>نمایندگی</th><th>اقدام</th><th>هدف</th><th>IP</th></tr></thead>
-        <tbody>${ACTIVITY.map(e=>`
-          <tr>
+        <thead><tr><th>زمان</th><th>نمایندگی</th><th>اقدام</th><th>هدف</th><th>IP</th><th></th></tr></thead>
+        <tbody>${ACTIVITY.map((e,i)=>`
+          <tr onclick="actDetail(${i})" style="cursor:pointer" title="برای دیدن جزئیات کامل کلیک کنید">
             <td style="color:var(--ink-3)" class="mono">${esc(e.t)}</td>
             <td><b>${esc(agent(e.who).agency)}</b><div style="color:var(--ink-3);font-size:11px">${esc(agent(e.who).code)}</div></td>
             <td>${e.hot?`<span class="tag o">${esc(e.act)}</span>`:esc(e.act)}</td>
             <td class="mono">${esc(e.target)}</td>
             <td class="mono" style="color:var(--ink-3)">${esc(e.ip)}</td>
+            <td class="c" style="color:var(--ink-3)">‹</td>
           </tr>`).join('')}</tbody>
       </table></div></div>
     </div>
@@ -385,13 +386,15 @@ function admMonitor() {
       <div class="body tight"><table class="tbl">
         <thead><tr><th>نمایندگی</th><th class="c">امروز</th><th class="c">این ماه</th></tr></thead>
         <tbody>
-          <tr><td><b>اتو کاظمی</b></td><td class="c mono">۲۲</td><td class="c mono" style="color:var(--danger);font-weight:700">۹۱</td></tr>
-          <tr><td><b>نمایندگی گودرزی</b></td><td class="c mono">۴</td><td class="c mono">۳۷</td></tr>
-          <tr><td><b>شریفی موتور</b></td><td class="c mono">۹</td><td class="c mono">۲۸</td></tr>
-          <tr><td><b>اکبری خودرو</b></td><td class="c mono">۱۳</td><td class="c mono">۴۵</td></tr>
+          ${[['a2','۲۲','۹۱',1],['a1','۴','۳۷',0],['a4','۹','۲۸',0],['a5','۱۳','۴۵',0]].map(([id,d,m,hot])=>`
+            <tr onclick="revealsOf('${id}')" style="cursor:pointer" title="کدام آگهی‌ها را باز کرده؟">
+              <td><b>${esc(agent(id).agency)}</b></td>
+              <td class="c mono">${d}</td>
+              <td class="c mono" ${hot?'style="color:var(--danger);font-weight:700"':''}>${m}</td>
+            </tr>`).join('')}
         </tbody></table>
         <div style="padding:11px 13px;font-size:11.5px;color:var(--ink-3);border-top:1px solid var(--line-2)">
-          با کلیک روی هر ردیف، دقیقاً معلوم می‌شود کدام آگهی‌ها را باز کرده است.
+↑ روی هر ردیف کلیک کنید تا دقیقاً ببینید کدام آگهی‌ها را باز کرده است.
         </div>
       </div>
     </div>

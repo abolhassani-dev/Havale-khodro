@@ -32,6 +32,43 @@ function renewModal(id) {
 }
 function closeModal() { S.modal = null; render(); }
 
+function actDetail(i) { S.modal = { type: 'act', i }; render(); }
+function revealsOf(id) { S.modal = { type: 'reveals', id }; render(); }
+
+/* یک ردیف «برچسب — مقدار» */
+function row(k, v) {
+  return `<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted var(--line);padding:5px 0">
+    <span style="color:var(--ink-3);white-space:nowrap">${k}</span><b style="text-align:left">${v}</b></div>`;
+}
+
+/* جمله‌ی فارسی هر اقدام — «دقیقاً چه کار کرد» */
+function actSentence(e) {
+  const who = agent(e.who), h = e.hv ? HAVALES.find(x => x.id === e.hv) : null;
+  const owner = h ? agent(h.owner) : null;
+  switch (e.act) {
+    case 'باز کردن مشخصات':
+      return `<b>${esc(who.agency)}</b> مشخصات تماس فروشنده‌ی حواله‌ی
+        <b>HV-${fa(e.hv)}</b> (${esc(h.car)}) را باز کرد و شماره‌ی
+        <b class="num">${esc(owner.phone)}</b> متعلق به <b>${esc(owner.agency)}</b> را دید.
+        یک واحد از سقف روزانه‌اش مصرف شد.`;
+    case 'ثبت حواله فروش':
+      return `<b>${esc(who.agency)}</b> حواله‌ی <b>HV-${fa(e.hv)}</b>
+        (${esc(h.car)} — ${esc(h.color)}) را به مبلغ <b class="num">${money(h.price)}</b> تومان ثبت کرد.`;
+    case 'گزارش تخلف':
+      const r = REPORTS.find(x => x.hv === e.hv);
+      return `<b>${esc(who.agency)}</b> علیه حواله‌ی <b>HV-${fa(e.hv)}</b>
+        گزارش تخلف با دلیل «${esc(r ? r.reason : '—')}» ثبت کرد.`;
+    case 'ورود به سامانه':
+      return `<b>${esc(who.agency)}</b> وارد سامانه شد. نشست قبلی این حساب بسته شد (تک‌نشستی).`;
+    case 'ساخت زیرنماینده':
+      return `<b>${esc(who.agency)}</b> حساب زیرنماینده‌ی <b>${esc(e.target)}</b> را ساخت
+        و یک ظرفیت از ظرفیت پیش‌خریدشده‌اش مصرف شد.`;
+    default:
+      return `<b>${esc(who.agency)}</b> ${esc(e.act)} — سه بار رمز اشتباه وارد شد.
+        پس از ۵ تلاش، حساب ۱۵ دقیقه قفل می‌شود.`;
+  }
+}
+
 function modalHTML() {
   const m = S.modal; if (!m) return '';
   const box = (title, body, foot) => `
@@ -150,6 +187,98 @@ function modalHTML() {
      <div class="field"><label>متن <span class="req">*</span></label><textarea rows="4"></textarea></div>`,
     `<button class="btn primary" onclick="closeModal();toast('تیکت ثبت شد')">ثبت تیکت</button>
      <button class="btn" onclick="closeModal()">انصراف</button>`);
+
+
+  if (m.type === 'act') {
+    const e = ACTIVITY[m.i], who = agent(e.who);
+    const h = e.hv ? HAVALES.find(x => x.id === e.hv) : null;
+    const owner = h ? agent(h.owner) : null;
+    return `
+      <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="modal wide">
+          <header>${esc(e.act)} — ${esc(e.t)}</header>
+          <div class="body">
+            <div class="banner info" style="margin:0"><span class="b-ico">◎</span>
+              <div class="b-txt flow">${actSentence(e)}</div></div>
+
+            <div class="cols c2" style="gap:12px">
+              <div>
+                <div style="font-size:11px;color:var(--ink-3);font-weight:600;margin-bottom:3px">چه کسی</div>
+                ${row('نمایندگی', esc(who.agency))}
+                ${row('کد / شهر', esc(who.code) + ' — ' + esc(who.city))}
+                ${row('مسئول', esc(who.name))}
+                ${row('موبایل', '<span class="num">' + esc(who.phone) + '</span>')}
+                ${row('اشتراک', who.sub === 'active' ? '<span class="tag g">فعال</span>' : '<span class="tag r">منقضی</span>')}
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-3);font-weight:600;margin-bottom:3px">مشخصات فنی</div>
+                ${row('زمان', esc(e.t))}
+                ${row('IP', '<span class="num">' + esc(e.ip) + '</span>')}
+                ${row('دستگاه', esc(e.ua))}
+                ${row('شماره نشست', '<span class="num">' + esc(e.sid) + '</span>')}
+                ${row('هدف', '<span class="num">' + esc(e.target) + '</span>')}
+              </div>
+            </div>
+
+            ${h ? `
+              <div>
+                <div style="font-size:11px;color:var(--ink-3);font-weight:600;margin:4px 0 3px">حواله‌ی مربوطه</div>
+                ${row('خودرو', esc(h.car) + ' — ' + esc(h.color || 'هر رنگ') + ' — مدل ' + esc(h.year || '—'))}
+                ${row('نوع واگذاری', h.solh === 'solh' ? '<span class="tag g">صلح</span>' : '<span class="tag o">وکالتی</span>')}
+                ${row('مبلغ حواله', '<span class="num">' + money(h.price) + '</span> تومان')}
+                ${row('زمان تحویل / مدت واریز', '<span class="num">' + fa(h.delivery) + '</span> روز / <span class="num">' + fa(h.deposit) + '</span> روز')}
+                ${row('صاحب آگهی', esc(owner.agency) + ' — ' + esc(owner.code))}
+                ${row('تماس صاحب آگهی', '<span class="num">' + esc(owner.phone) + '</span>')}
+                ${row('کل بازدید این آگهی', '<span class="num">' + fa(h.views) + '</span> بار')}
+              </div>` : ''}
+          </div>
+          <footer>
+            <button class="btn primary" onclick="closeModal();go('adm-agent')">پرونده‌ی این نماینده</button>
+            ${h ? `<button class="btn" onclick="closeModal();go('adm-havales')">دیدن حواله</button>` : ''}
+            <button class="btn" onclick="revealsOf('${e.who}')">همه‌ی بازدیدهای این نماینده</button>
+            <div style="flex:1"></div>
+            <button class="btn" onclick="closeModal()">بستن</button>
+          </footer>
+        </div>
+      </div>`;
+  }
+
+  if (m.type === 'reveals') {
+    const who = agent(m.id);
+    const list = REVEALS.filter(r => r.who === m.id);
+    return `
+      <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="modal wide">
+          <header>آگهی‌هایی که ${esc(who.agency)} مشخصاتشان را باز کرده</header>
+          <div class="body">
+            <div class="banner ${list.length > 4 ? 'warn' : 'info'}" style="margin:0">
+              <span class="b-ico">☏</span>
+              <div class="b-txt"><b>${fa(list.length)} مورد در این فهرست</b>
+                ${esc(who.agency)} — ${esc(who.code)}. هر ردیف یعنی شماره‌ی آن فروشنده برای این نماینده باز شده است.</div>
+            </div>
+            <div class="tblwrap"><table class="tbl">
+              <thead><tr><th>حواله</th><th>خودرو</th><th>صاحب آگهی</th><th>شماره‌ی دیده‌شده</th><th>زمان</th><th>IP</th></tr></thead>
+              <tbody>${list.map(r => {
+                const h = HAVALES.find(x => x.id === r.hv) || {}, o = agent(h.owner);
+                return `<tr>
+                  <td class="mono">HV-${fa(r.hv)}</td>
+                  <td class="strong">${esc(h.car)}</td>
+                  <td>${esc(o.agency)}<div style="color:var(--ink-3);font-size:11px">${esc(o.code)}</div></td>
+                  <td class="mono">${esc(o.phone)}</td>
+                  <td style="color:var(--ink-3)">${esc(r.at)}</td>
+                  <td class="mono" style="color:var(--ink-3)">${esc(r.ip)}</td>
+                </tr>`; }).join('')}</tbody>
+            </table></div>
+          </div>
+          <footer>
+            <button class="btn primary" onclick="closeModal();go('adm-agent')">پرونده‌ی این نماینده</button>
+            <button class="btn" onclick="closeModal();toast('سقف این حساب کاهش یافت')">کاهش سقف</button>
+            <div style="flex:1"></div>
+            <button class="btn" onclick="closeModal()">بستن</button>
+          </footer>
+        </div>
+      </div>`;
+  }
 
   return '';
 }
