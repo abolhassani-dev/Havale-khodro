@@ -207,7 +207,6 @@ model Havale {
   model           String?
   amountToman     BigInt? // مبلغ حواله
   paidAmountToman BigInt? // مبلغ واریزی تا امروز به شرکت خودروساز
-  totalPriceToman BigInt? // مبلغ کل خودرو — اختیاری، برای محاسبه‌ی «مانده تا تکمیل»
   deliveryDays    Int? // زمان تحویل، به روز
   depositDays     Int? // مدت زمان واریز: مهلت خریدار، به روز
   supplierCompany String?
@@ -225,7 +224,8 @@ model Havale {
   revealCount Int @default(0)
   reportCount Int @default(0)
 
-  // عمر آگهی: برابر «مدت زمان واریز» از لحظه‌ی ثبت. قابل تمدید یک‌کلیکی.
+  // عمر آگهی: در حواله فروش برابر «مدت زمان واریز»، در درخواست خرید ۷ روز.
+  // قابل تمدید یک‌کلیکی.
   closesAt   DateTime?
   renewedAt  DateTime?
   renewCount Int       @default(0)
