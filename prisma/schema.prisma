@@ -1,0 +1,397 @@
+// سامانه حواله خودرو — فاز ۱
+// دو پنل: نمایندگی‌ها و مدیریت (ادمین)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+/// منبع ایجاد اشتراک: توسط ادمین یا توسط نماینده مادر (حالت ماژول)
+enum SubscriptionOrigin {
+  ADMIN
+  PARENT_SEAT
+}
+
+/// نوع حواله: عرضه (فروش) یا درخواست خرید
+enum HavaleKind {
+  OFFER
+  REQUEST
+}
+
+enum HavaleStatus {
+  ACTIVE
+  FULFILLED
+  SUSPENDED
+  ARCHIVED
+}
+
+/// امکان صلح
+enum SolhStatus {
+  POSSIBLE
+  NOT_POSSIBLE
+  CONDITIONAL
+}
+
+enum ReportReason {
+  FAKE_LISTING
+  WRONG_PRICE
+  UNREACHABLE
+  ALREADY_SOLD
+  FRAUD
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  ABUSIVE
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum SeatOrderStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+enum SessionEndReason {
+  LOGOUT
+  KICKED
+  EXPIRED
+  ADMIN_REVOKED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  passwordHash String
+  phone        String     @unique
+  fullName     String
+  role         Role       @default(AGENT)
+  status       UserStatus @default(ACTIVE)
+
+  // ---- پروفایل نمایندگی ----
+  agencyCode       String? @unique
+  agencyName       String?
+  city             String?
+  coordinatorName  String?
+  coordinatorPhone String?
+
+  // ---- حالت ماژول / زیرنمایندگی ----
+  isReseller  Boolean @default(false)
+  seatCredits Int     @default(0)
+  parentId    String?
+  parent      User?   @relation("AgentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    User[]  @relation("AgentHierarchy")
+
+  // ---- سلامت رفتاری ----
+  fakeStrikes        Int     @default(0)
+  falseReportStrikes Int     @default(0)
+  adminNote          String?
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subscriptions       Subscription[]    @relation("SubscriptionOwner")
+  grantedSubscription Subscription[]    @relation("SubscriptionCreator")
+  havales             Havale[]
+  sessions            AuthSession[]
+  otpChallenges       OtpChallenge[]
+  reveals             ContactReveal[]
+  reportsFiled        ViolationReport[] @relation("ReportReporter")
+  reportsReviewed     ViolationReport[] @relation("ReportReviewer")
+  tickets             Ticket[]
+  ticketMessages      TicketMessage[]
+  seatOrders          SeatOrder[]       @relation("SeatOrderBuyer")
+  seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
+  activityLogs        ActivityLog[]
+
+  @@index([role, status])
+  @@index([parentId])
+}
+
+model Plan {
+  id               String  @id @default(cuid())
+  name             String  @unique
+  durationDays     Int
+  priceRial        BigInt
+  dailyRevealLimit Int     @default(30)
+  maxActiveHavale  Int     @default(100)
+  isActive         Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("SubscriptionOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  startsAt  DateTime           @default(now())
+  expiresAt DateTime
+  status    SubscriptionStatus @default(ACTIVE)
+  priceRial BigInt             @default(0)
+  origin    SubscriptionOrigin @default(ADMIN)
+
+  createdById String?
+  createdBy   User?   @relation("SubscriptionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status, expiresAt])
+}
+
+model Havale {
+  id     String     @id @default(cuid())
+  serial Int        @unique @default(autoincrement())
+  kind   HavaleKind
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // سه فیلد الزامی در هر دو نوع
+  carType  String
+  carColor String
+  solh     SolhStatus
+
+  // در «حواله فروش» الزامی، در «درخواست خرید» اختیاری
+  model           String?
+  amountRial      BigInt?
+  paidAmountRial  BigInt?
+  deliveryDate    DateTime?
+  depositDays     Int?
+  supplierCompany String?
+
+  // اطلاعات تماس مسئول هماهنگی (پیش‌فرض از پروفایل نمایندگی)
+  coordinatorName  String?
+  coordinatorPhone String?
+
+  description String?
+  status      HavaleStatus @default(ACTIVE)
+
+  suspendReason String?
+  revealCount   Int    @default(0)
+  reportCount   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reveals ContactReveal[]
+  reports ViolationReport[]
+
+  @@index([kind, status, createdAt])
+  @@index([ownerId, kind, status])
+  @@index([carType, carColor])
+  @@index([supplierCompany])
+}
+
+/// هر بار که یک نماینده «مشخصات فروشنده» یک حواله را باز می‌کند اینجا ثبت می‌شود
+model ContactReveal {
+  id String @id @default(cuid())
+
+  havaleId String
+  havale   Havale @relation(fields: [havaleId], references: [id], onDelete: Cascade)
+
+  viewerId String
+  viewer   User   @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@unique([havaleId, viewerId])
+  @@index([viewerId, createdAt])
+  @@index([havaleId, createdAt])
+}
+
+model ViolationReport {
+  id     String @id @default(cuid())
+  serial Int    @unique @default(autoincrement())
+
+  havaleId String
+  havale   Havale @relation(fields: [havaleId], references: [id], onDelete: Cascade)
+
+  reporterId String
+  reporter   User   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reason      ReportReason
+  description String
+  status      ReportStatus @default(PENDING)
+
+  adminNote    String?
+  reviewedById String?
+  reviewedBy   User?     @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([havaleId, reporterId])
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+}
+
+model Ticket {
+  id     String @id @default(cuid())
+  serial Int    @unique @default(autoincrement())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subject  String
+  priority TicketPriority @default(NORMAL)
+  status   TicketStatus   @default(OPEN)
+
+  lastReplyAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([status, lastReplyAt])
+  @@index([userId, createdAt])
+}
+
+model TicketMessage {
+  id String @id @default(cuid())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  body      String
+  isStaff   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+/// نشست فعال — هر حساب فقط یک نشست زنده دارد
+model AuthSession {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ip        String?
+  userAgent String?
+
+  createdAt  DateTime          @default(now())
+  lastSeenAt DateTime          @default(now())
+  expiresAt  DateTime
+  endedAt    DateTime?
+  endReason  SessionEndReason?
+
+  @@index([userId, endedAt])
+}
+
+/// کد دو عاملی پیامکی
+model OtpChallenge {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  codeHash    String
+  attempts    Int       @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// درخواست خرید ظرفیت زیرنمایندگی (حالت ماژول)
+model SeatOrder {
+  id     String @id @default(cuid())
+  serial Int    @unique @default(autoincrement())
+
+  buyerId String
+  buyer   User   @relation("SeatOrderBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  seats         Int
+  unitPriceRial BigInt
+  totalRial     BigInt
+  status        SeatOrderStatus @default(PENDING)
+
+  buyerNote    String?
+  adminNote    String?
+  reviewedById String?
+  reviewedBy   User?     @relation("SeatOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([buyerId, createdAt])
+}
+
+/// گزارش فعالیت برای مانیتورینگ در پنل مدیریت
+model ActivityLog {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action     String
+  targetType String?
+  targetId   String?
+  summary    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+/// تنظیمات قابل ویرایش سامانه (قیمت ظرفیت، سقف گزارش‌ها و ...)
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
