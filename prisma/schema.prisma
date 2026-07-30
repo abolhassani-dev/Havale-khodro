@@ -48,11 +48,10 @@ enum HavaleStatus {
   ARCHIVED
 }
 
-/// امکان صلح
+/// نوع واگذاری حواله — دو حالت بیشتر ندارد
 enum SolhStatus {
-  POSSIBLE
-  NOT_POSSIBLE
-  CONDITIONAL
+  SOLH // صلح
+  VEKALATI // وکالتی
 }
 
 enum ReportReason {

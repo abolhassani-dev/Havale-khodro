@@ -9,7 +9,7 @@ const COLORS = ['سفید', 'مشکی', 'خاکستری', 'نقره‌ای', 'آ
 const YEARS = ['۱۴۰۴', '۱۴۰۳', '۱۴۰۲'];
 const COMPANIES = ['مدیران خودرو'];
 const CITIES = ['تهران', 'اصفهان', 'مشهد', 'شیراز', 'تبریز', 'کرج', 'اهواز', 'قم'];
-const SOLH = { yes: 'دارد', no: 'ندارد', cond: 'مشروط' };
+const SOLH = { solh: 'صلح', vek: 'وکالتی' };
 
 /* ------------------------------ کاربران ------------------------------ */
 
@@ -29,26 +29,26 @@ const ME = AGENTS[0];
 /* revealed: آیا «من» مشخصات این حواله را باز کرده‌ام */
 
 const HAVALES = [
-  { id: 2041, kind: 'offer', car: 'MVM X55 Pro',            color: 'سفید',    year: '۱۴۰۴', solh: 'yes',  price: 1_285_000_000, paid: 640_000_000, delivery: 90, deposit: 3, co: 'مدیران خودرو', owner: 'a2', age: '۲ ساعت پیش', left: 3, views: 7,  revealed: false, status: 'active' },
-  { id: 2040, kind: 'offer', car: 'تیگو ۸ پرو مکس',          color: 'مشکی',    year: '۱۴۰۴', solh: 'cond', price: 2_940_000_000, paid: 1_500_000_000, delivery: 60, deposit: 5, co: 'مدیران خودرو', owner: 'a4', age: '۴ ساعت پیش', left: 5, views: 12, revealed: true,  status: 'active' },
-  { id: 2039, kind: 'offer', car: 'آریزو ۶ پرو',             color: 'خاکستری', year: '۱۴۰۳', solh: 'yes',  price: 1_760_000_000, paid: 900_000_000, delivery: 45, deposit: 2, co: 'مدیران خودرو', owner: 'a5', age: '۶ ساعت پیش', left: 2, views: 4,  revealed: false, status: 'active' },
-  { id: 2038, kind: 'offer', car: 'فیدلیتی پرایم ۵ نفره',    color: 'نقره‌ای', year: '۱۴۰۴', solh: 'no',   price: 2_150_000_000, paid: 1_100_000_000, delivery: 120, deposit: 7, co: 'مدیران خودرو', owner: 'a2', age: 'دیروز',     left: 6, views: 19, revealed: true,  status: 'active' },
-  { id: 2037, kind: 'offer', car: 'MVM X22 Pro',             color: 'آبی',     year: '۱۴۰۳', solh: 'yes',  price: 895_000_000,   paid: 450_000_000, delivery: 30, deposit: 4, co: 'مدیران خودرو', owner: 'a4', age: 'دیروز',     left: 4, views: 9,  revealed: false, status: 'active' },
-  { id: 2036, kind: 'offer', car: 'MVM X33 S',               color: 'سفید',    year: '۱۴۰۴', solh: 'cond', price: 1_120_000_000, paid: 560_000_000, delivery: 75, deposit: 3, co: 'مدیران خودرو', owner: 'a5', age: '۲ روز پیش',  left: 1, views: 15, revealed: false, status: 'active' },
-  { id: 2035, kind: 'offer', car: 'تیگو ۷ پرو',              color: 'مشکی',    year: '۱۴۰۴', solh: 'yes',  price: 2_310_000_000, paid: 1_200_000_000, delivery: 50, deposit: 4, co: 'مدیران خودرو', owner: 'a2', age: '۲ روز پیش',  left: 2, views: 22, revealed: false, status: 'active' },
-  { id: 2034, kind: 'offer', car: 'فیدلیتی پرستیژ ۷ نفره',  color: 'قرمز',    year: '۱۴۰۳', solh: 'no',   price: 2_480_000_000, paid: 1_250_000_000, delivery: 100, deposit: 6, co: 'مدیران خودرو', owner: 'a4', age: '۳ روز پیش',  left: 3, views: 6,  revealed: false, status: 'active' },
+  { id: 2041, kind: 'offer', car: 'MVM X55 Pro',            color: 'سفید',    year: '۱۴۰۴', solh: 'solh',  price: 1_285_000_000, paid: 640_000_000, delivery: 90, deposit: 3, co: 'مدیران خودرو', owner: 'a2', age: '۲ ساعت پیش', left: 3, views: 7,  revealed: false, status: 'active' },
+  { id: 2040, kind: 'offer', car: 'تیگو ۸ پرو مکس',          color: 'مشکی',    year: '۱۴۰۴', solh: 'vek', price: 2_940_000_000, paid: 1_500_000_000, delivery: 60, deposit: 5, co: 'مدیران خودرو', owner: 'a4', age: '۴ ساعت پیش', left: 5, views: 12, revealed: true,  status: 'active' },
+  { id: 2039, kind: 'offer', car: 'آریزو ۶ پرو',             color: 'خاکستری', year: '۱۴۰۳', solh: 'solh',  price: 1_760_000_000, paid: 900_000_000, delivery: 45, deposit: 2, co: 'مدیران خودرو', owner: 'a5', age: '۶ ساعت پیش', left: 2, views: 4,  revealed: false, status: 'active' },
+  { id: 2038, kind: 'offer', car: 'فیدلیتی پرایم ۵ نفره',    color: 'نقره‌ای', year: '۱۴۰۴', solh: 'vek',   price: 2_150_000_000, paid: 1_100_000_000, delivery: 120, deposit: 7, co: 'مدیران خودرو', owner: 'a2', age: 'دیروز',     left: 6, views: 19, revealed: true,  status: 'active' },
+  { id: 2037, kind: 'offer', car: 'MVM X22 Pro',             color: 'آبی',     year: '۱۴۰۳', solh: 'solh',  price: 895_000_000,   paid: 450_000_000, delivery: 30, deposit: 4, co: 'مدیران خودرو', owner: 'a4', age: 'دیروز',     left: 4, views: 9,  revealed: false, status: 'active' },
+  { id: 2036, kind: 'offer', car: 'MVM X33 S',               color: 'سفید',    year: '۱۴۰۴', solh: 'vek', price: 1_120_000_000, paid: 560_000_000, delivery: 75, deposit: 3, co: 'مدیران خودرو', owner: 'a5', age: '۲ روز پیش',  left: 1, views: 15, revealed: false, status: 'active' },
+  { id: 2035, kind: 'offer', car: 'تیگو ۷ پرو',              color: 'مشکی',    year: '۱۴۰۴', solh: 'solh',  price: 2_310_000_000, paid: 1_200_000_000, delivery: 50, deposit: 4, co: 'مدیران خودرو', owner: 'a2', age: '۲ روز پیش',  left: 2, views: 22, revealed: false, status: 'active' },
+  { id: 2034, kind: 'offer', car: 'فیدلیتی پرستیژ ۷ نفره',  color: 'قرمز',    year: '۱۴۰۳', solh: 'vek',   price: 2_480_000_000, paid: 1_250_000_000, delivery: 100, deposit: 6, co: 'مدیران خودرو', owner: 'a4', age: '۳ روز پیش',  left: 3, views: 6,  revealed: false, status: 'active' },
 
   /* حواله‌های خودِ من */
-  { id: 2033, kind: 'offer', car: 'MVM X55 Pro',   color: 'خاکستری', year: '۱۴۰۴', solh: 'yes', price: 1_310_000_000, paid: 655_000_000, delivery: 85, deposit: 4, co: 'مدیران خودرو', owner: 'a1', age: 'دیروز',    left: 4, views: 11, revealed: false, status: 'active' },
-  { id: 2028, kind: 'offer', car: 'آریزو ۵',       color: 'سفید',    year: '۱۴۰۳', solh: 'yes', price: 1_040_000_000, paid: 520_000_000, delivery: 40, deposit: 2, co: 'مدیران خودرو', owner: 'a1', age: '۴ روز پیش', left: 1, views: 8,  revealed: false, status: 'active' },
-  { id: 2019, kind: 'offer', car: 'MVM 110S',      color: 'آبی',     year: '۱۴۰۲', solh: 'no',  price: 615_000_000,   paid: 300_000_000, delivery: 25, deposit: 3, co: 'مدیران خودرو', owner: 'a1', age: '۹ روز پیش', left: 0, views: 14, revealed: false, status: 'expired' },
-  { id: 2012, kind: 'offer', car: 'تیگو ۷ پرو',    color: 'مشکی',    year: '۱۴۰۳', solh: 'yes', price: 2_280_000_000, paid: 1_150_000_000, delivery: 55, deposit: 5, co: 'مدیران خودرو', owner: 'a1', age: '۱۴ روز پیش', left: 0, views: 31, revealed: false, status: 'sold' },
+  { id: 2033, kind: 'offer', car: 'MVM X55 Pro',   color: 'خاکستری', year: '۱۴۰۴', solh: 'solh', price: 1_310_000_000, paid: 655_000_000, delivery: 85, deposit: 4, co: 'مدیران خودرو', owner: 'a1', age: 'دیروز',    left: 4, views: 11, revealed: false, status: 'active' },
+  { id: 2028, kind: 'offer', car: 'آریزو ۵',       color: 'سفید',    year: '۱۴۰۳', solh: 'solh', price: 1_040_000_000, paid: 520_000_000, delivery: 40, deposit: 2, co: 'مدیران خودرو', owner: 'a1', age: '۴ روز پیش', left: 1, views: 8,  revealed: false, status: 'active' },
+  { id: 2019, kind: 'offer', car: 'MVM 110S',      color: 'آبی',     year: '۱۴۰۲', solh: 'vek',  price: 615_000_000,   paid: 300_000_000, delivery: 25, deposit: 3, co: 'مدیران خودرو', owner: 'a1', age: '۹ روز پیش', left: 0, views: 14, revealed: false, status: 'expired' },
+  { id: 2012, kind: 'offer', car: 'تیگو ۷ پرو',    color: 'مشکی',    year: '۱۴۰۳', solh: 'solh', price: 2_280_000_000, paid: 1_150_000_000, delivery: 55, deposit: 5, co: 'مدیران خودرو', owner: 'a1', age: '۱۴ روز پیش', left: 0, views: 31, revealed: false, status: 'sold' },
 
   /* درخواست‌های خرید */
-  { id: 2042, kind: 'request', car: 'تیگو ۸ پرو مکس', color: null,   year: '۱۴۰۴', solh: 'yes',  price: 2_900_000_000, paid: null, delivery: 60, deposit: null, co: 'مدیران خودرو', owner: 'a5', age: '۱ ساعت پیش', left: 7, views: 3, revealed: false, status: 'active' },
-  { id: 2032, kind: 'request', car: 'MVM X22 Pro',    color: 'سفید', year: null,   solh: 'cond', price: null,          paid: null, delivery: null, deposit: null, co: null, owner: 'a4', age: 'دیروز', left: 6, views: 5, revealed: true, status: 'active' },
-  { id: 2030, kind: 'request', car: 'آریزو ۶ پرو',    color: null,   year: '۱۴۰۴', solh: 'yes',  price: 1_800_000_000, paid: null, delivery: 45, deposit: null, co: 'مدیران خودرو', owner: 'a2', age: '۲ روز پیش', left: 5, views: 2, revealed: false, status: 'active' },
-  { id: 2025, kind: 'request', car: 'فیدلیتی پرایم ۵ نفره', color: null, year: null, solh: 'no', price: null,          paid: null, delivery: null, deposit: null, co: null, owner: 'a1', age: '۵ روز پیش', left: 2, views: 1, revealed: false, status: 'active' },
+  { id: 2042, kind: 'request', car: 'تیگو ۸ پرو مکس', color: null,   year: '۱۴۰۴', solh: 'solh',  price: 2_900_000_000, paid: null, delivery: 60, deposit: null, co: 'مدیران خودرو', owner: 'a5', age: '۱ ساعت پیش', left: 7, views: 3, revealed: false, status: 'active' },
+  { id: 2032, kind: 'request', car: 'MVM X22 Pro',    color: 'سفید', year: null,   solh: 'vek', price: null,          paid: null, delivery: null, deposit: null, co: null, owner: 'a4', age: 'دیروز', left: 6, views: 5, revealed: true, status: 'active' },
+  { id: 2030, kind: 'request', car: 'آریزو ۶ پرو',    color: null,   year: '۱۴۰۴', solh: 'solh',  price: 1_800_000_000, paid: null, delivery: 45, deposit: null, co: 'مدیران خودرو', owner: 'a2', age: '۲ روز پیش', left: 5, views: 2, revealed: false, status: 'active' },
+  { id: 2025, kind: 'request', car: 'فیدلیتی پرایم ۵ نفره', color: null, year: null, solh: 'vek', price: null,          paid: null, delivery: null, deposit: null, co: null, owner: 'a1', age: '۵ روز پیش', left: 2, views: 1, revealed: false, status: 'active' },
 ];
 
 /* ------------------------------ تیکت ------------------------------ */

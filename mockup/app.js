@@ -354,9 +354,9 @@ function reportTag(st) {
     : '<span class="tag r">بی‌مورد</span>';
 }
 function solhTag(s) {
-  return s === 'yes' ? '<span class="tag g">صلح دارد</span>'
-    : s === 'no' ? '<span class="tag r">صلح ندارد</span>'
-    : '<span class="tag o">صلح مشروط</span>';
+  return s === 'solh'
+    ? '<span class="tag g">صلح</span>'
+    : '<span class="tag o">وکالتی</span>';
 }
 
 /* ================================================================
@@ -404,7 +404,7 @@ function pageSearch() {
       <div class="filters">
         ${sel('fCar', 'نوع خودرو', CARS)}
         ${sel('fColor', 'رنگ', COLORS)}
-        ${selPairs('fSolh', 'امکان صلح', [['yes','دارد'],['no','ندارد'],['cond','مشروط']])}
+        ${selPairs('fSolh', 'امکان صلح', [['solh','صلح'],['vek','وکالتی']])}
         ${sel('fCity', 'شهر', CITIES)}
       </div>
     </div>
@@ -516,7 +516,7 @@ function formHavale(kind) {
         <div class="field"><label>نوع خودرو ${R}</label>
           <select>${CARS.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
         <div class="field"><label>امکان صلح ${R}</label>
-          <select><option>دارد</option><option>ندارد</option><option>مشروط</option></select></div>
+          <select><option>صلح</option><option>وکالتی</option></select></div>
         <div class="field"><label>رنگ خودرو ${req ? '' : R}</label>
           <select><option>${req ? 'فرقی ندارد — هر رنگ' : 'انتخاب کنید'}</option>${COLORS.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
           ${req ? '<div class="help">اگر خالی بماند، درخواست شما در جستجوی همه‌ی رنگ‌ها دیده می‌شود</div>' : ''}</div>
