@@ -40,7 +40,8 @@ enum HavaleKind {
 
 enum HavaleStatus {
   ACTIVE
-  FULFILLED
+  FULFILLED // «فروخته شد» — از لیست عمومی خارج، در پنل مدیریت می‌ماند
+  EXPIRED // عمر آگهی تمام شد (برابر «مدت زمان واریز»)
   SUSPENDED
   ARCHIVED
 }
@@ -109,6 +110,13 @@ model User {
   coordinatorName  String?
   coordinatorPhone String?
 
+  // ---- امنیت ----
+  mustChangePassword Boolean @default(true) // اولین ورود: تغییر اجباری پسورد
+
+  // ---- سقف نمایش مشخصات ----
+  // اگر پر باشد، سقف روزانه‌ی پلن را برای همین حساب بازنویسی می‌کند
+  dailyRevealLimitOverride Int?
+
   // ---- حالت ماژول / زیرنمایندگی ----
   isReseller  Boolean @default(false)
   seatCredits Int     @default(0)
@@ -147,7 +155,7 @@ model Plan {
   id               String  @id @default(cuid())
   name             String  @unique
   durationDays     Int
-  priceRial        BigInt
+  priceToman       BigInt
   dailyRevealLimit Int     @default(30)
   maxActiveHavale  Int     @default(100)
   isActive         Boolean @default(true)
@@ -166,11 +174,11 @@ model Subscription {
   planId String
   plan   Plan   @relation(fields: [planId], references: [id])
 
-  startsAt  DateTime           @default(now())
-  expiresAt DateTime
-  status    SubscriptionStatus @default(ACTIVE)
-  priceRial BigInt             @default(0)
-  origin    SubscriptionOrigin @default(ADMIN)
+  startsAt   DateTime           @default(now())
+  expiresAt  DateTime
+  status     SubscriptionStatus @default(ACTIVE)
+  priceToman BigInt             @default(0)
+  origin     SubscriptionOrigin @default(ADMIN)
 
   createdById String?
   createdBy   User?   @relation("SubscriptionCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -190,17 +198,18 @@ model Havale {
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  // سه فیلد الزامی در هر دو نوع
-  carType  String
-  carColor String
-  solh     SolhStatus
+  // الزامی در هر دو نوع
+  carType String
+  solh    SolhStatus
 
   // در «حواله فروش» الزامی، در «درخواست خرید» اختیاری
+  carColor        String?
   model           String?
-  amountRial      BigInt?
-  paidAmountRial  BigInt?
-  deliveryDate    DateTime?
-  depositDays     Int?
+  amountToman     BigInt? // مبلغ حواله
+  paidAmountToman BigInt? // مبلغ واریزی تا امروز به شرکت خودروساز
+  totalPriceToman BigInt? // مبلغ کل خودرو — اختیاری، برای محاسبه‌ی «مانده تا تکمیل»
+  deliveryDays    Int? // زمان تحویل، به روز
+  depositDays     Int? // مدت زمان واریز: مهلت خریدار، به روز
   supplierCompany String?
 
   // اطلاعات تماس مسئول هماهنگی (پیش‌فرض از پروفایل نمایندگی)
@@ -211,8 +220,15 @@ model Havale {
   status      HavaleStatus @default(ACTIVE)
 
   suspendReason String?
-  revealCount   Int    @default(0)
-  reportCount   Int    @default(0)
+
+  // شمارنده‌ی بازدید — صاحب آگهی فقط همین عدد را می‌بیند، نه هویت بازدیدکننده‌ها
+  revealCount Int @default(0)
+  reportCount Int @default(0)
+
+  // عمر آگهی: برابر «مدت زمان واریز» از لحظه‌ی ثبت. قابل تمدید یک‌کلیکی.
+  closesAt   DateTime?
+  renewedAt  DateTime?
+  renewCount Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -220,6 +236,7 @@ model Havale {
   reveals ContactReveal[]
   reports ViolationReport[]
 
+  @@index([status, closesAt])
   @@index([kind, status, createdAt])
   @@index([ownerId, kind, status])
   @@index([carType, carColor])
@@ -334,13 +351,13 @@ model OtpChallenge {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  codeHash    String
-  attempts    Int       @default(0)
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  ip          String?
-  userAgent   String?
-  createdAt   DateTime  @default(now())
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
 
   @@index([userId, createdAt])
 }
@@ -353,10 +370,10 @@ model SeatOrder {
   buyerId String
   buyer   User   @relation("SeatOrderBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
 
-  seats         Int
-  unitPriceRial BigInt
-  totalRial     BigInt
-  status        SeatOrderStatus @default(PENDING)
+  seats          Int
+  unitPriceToman BigInt
+  totalToman     BigInt
+  status         SeatOrderStatus @default(PENDING)
 
   buyerNote    String?
   adminNote    String?

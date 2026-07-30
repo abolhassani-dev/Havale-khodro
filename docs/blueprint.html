@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>بلوپرینت سامانه حواله خودرو — فاز ۱</title>
+<title>بلوپرینت سامانه حواله خودرو — فاز ۱ (نسخه ۲)</title>
 <style>
   @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
 
@@ -16,140 +16,131 @@
     margin: 0;
   }
   h1, h2, h3 { line-height: 1.5; margin: 0; }
+  code { font-family: 'Vazirmatn', monospace; background: #f3f4f6; border-radius: 3px; padding: 0 4px; font-size: 9.5pt; }
 
   /* ---------- cover ---------- */
-  .cover { border: 2px solid #1d4ed8; border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; background: #f8fbff; }
-  .cover .kicker { color: #1d4ed8; font-size: 10pt; font-weight: 600; letter-spacing: .3px; }
-  .cover h1 { font-size: 22pt; font-weight: 800; margin: 6px 0 10px; color: #12225c; }
+  .cover { border: 2px solid #047857; border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; background: #f0fdf9; }
+  .cover .kicker { color: #047857; font-size: 10pt; font-weight: 600; }
+  .cover h1 { font-size: 21pt; font-weight: 800; margin: 6px 0 10px; color: #064e3b; }
   .cover .lead { font-size: 10.5pt; color: #374151; }
-  .cover .meta { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #b9cdf5; display: flex; gap: 26px; font-size: 9.5pt; color: #4b5563; flex-wrap: wrap; }
-  .cover .meta b { color: #12225c; }
+  .cover .meta { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #6ee7b7; display: flex; gap: 24px; font-size: 9.5pt; color: #4b5563; flex-wrap: wrap; }
+  .cover .meta b { color: #064e3b; }
 
-  /* ---------- how to read ---------- */
-  .howto { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; }
-  .howto h3 { font-size: 12pt; color: #92400e; margin-bottom: 6px; }
-  .howto ol { margin: 6px 0 0; padding-inline-start: 20px; }
-  .howto li { margin-bottom: 4px; }
-
-  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 20px; }
-  .legend div { flex: 1 1 200px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; font-size: 9.5pt; background: #fff; }
-  .legend b { display: block; margin-bottom: 2px; }
+  .howto { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 13px 18px; margin-bottom: 18px; }
+  .howto h3 { font-size: 12pt; color: #92400e; margin-bottom: 4px; }
+  .howto ol { margin: 4px 0 0; padding-inline-start: 20px; }
+  .howto li { margin-bottom: 3px; }
 
   /* ---------- sections ---------- */
-  section { margin-bottom: 22px; break-inside: auto; }
+  section { margin-bottom: 20px; }
   h2.sec {
-    font-size: 14pt; font-weight: 800; color: #12225c;
-    border-bottom: 2px solid #1d4ed8; padding-bottom: 6px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px;
-    break-after: avoid;
+    font-size: 14pt; font-weight: 800; color: #064e3b;
+    border-bottom: 2px solid #047857; padding-bottom: 6px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; break-after: avoid;
   }
   h2.sec .num {
-    background: #1d4ed8; color: #fff; border-radius: 6px;
+    background: #047857; color: #fff; border-radius: 6px;
     min-width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
     font-size: 11pt; font-weight: 700;
   }
-  h3.sub { font-size: 11.5pt; font-weight: 700; color: #1e3a8a; margin: 14px 0 6px; break-after: avoid; }
+  h3.sub { font-size: 11.5pt; font-weight: 700; color: #065f46; margin: 14px 0 6px; break-after: avoid; }
 
   ul.clean, ol.clean { margin: 6px 0; padding-inline-start: 22px; }
   ul.clean li, ol.clean li { margin-bottom: 5px; }
-  .bnum { font-weight: 700; color: #1d4ed8; }
+  .bnum { font-weight: 700; color: #047857; }
 
   /* ---------- tables ---------- */
   table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 9.5pt; break-inside: avoid; }
   th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: right; vertical-align: middle; }
-  thead th { background: #12225c; color: #fff; font-weight: 600; }
-  tbody tr:nth-child(even) td { background: #f6f8fc; }
+  thead th { background: #064e3b; color: #fff; font-weight: 600; }
+  tbody tr:nth-child(even) td { background: #f6faf8; }
   td.c, th.c { text-align: center; }
   .yes { color: #047857; font-weight: 700; }
   .no  { color: #b91c1c; font-weight: 700; }
-  .lock { color: #b45309; font-weight: 700; }
+  .hid { color: #b45309; font-weight: 700; }
 
   /* ---------- callouts ---------- */
-  .q, .d {
+  .d, .w, .n {
     border-radius: 8px; padding: 9px 13px; margin: 10px 0; font-size: 10pt; break-inside: avoid;
   }
-  .q { background: #fff7ed; border: 1px solid #fdba74; border-right: 4px solid #ea580c; }
-  .d { background: #eff6ff; border: 1px solid #bfdbfe; border-right: 4px solid #2563eb; }
-  .q b { color: #9a3412; }
-  .d b { color: #1e40af; }
-  .qref { display: inline-block; background: #ea580c; color: #fff; border-radius: 5px; padding: 0 7px; font-size: 8.5pt; font-weight: 700; margin-inline-start: 4px; }
+  .d { background: #ecfdf5; border: 1px solid #a7f3d0; border-right: 4px solid #059669; }
+  .w { background: #fff7ed; border: 1px solid #fdba74; border-right: 4px solid #ea580c; }
+  .n { background: #eff6ff; border: 1px solid #bfdbfe; border-right: 4px solid #2563eb; }
+  .d b { color: #065f46; } .w b { color: #9a3412; } .n b { color: #1e40af; }
 
-  /* ---------- answer form ---------- */
-  .formintro { background: #ecfdf5; border: 1px solid #6ee7b7; border-right: 4px solid #059669; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
-  .formintro b { color: #065f46; }
-
-  .qgroup { margin-bottom: 16px; }
-  .qgroup > h3 {
-    font-size: 11.5pt; font-weight: 700; color: #fff; background: #334155;
-    border-radius: 6px; padding: 5px 12px; margin: 18px 0 10px;
-    break-after: avoid;
+  .tag {
+    display: inline-block; background: #047857; color: #fff; border-radius: 5px;
+    padding: 0 7px; font-size: 8pt; font-weight: 700; margin-inline-start: 5px;
   }
-  .qitem { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 13px; margin-bottom: 9px; break-inside: avoid; background: #fff; }
-  .qitem .qhead { font-weight: 700; color: #111827; margin-bottom: 7px; }
-  .qitem .qhead .id {
-    display: inline-block; background: #1d4ed8; color: #fff; border-radius: 5px;
-    padding: 0 8px; font-size: 9pt; margin-inline-end: 7px; font-weight: 700;
-  }
-  .opts { margin: 6px 0 8px; }
-  .opt {
-    font-size: 9.5pt; display: flex; align-items: flex-start; gap: 8px;
-    padding: 4px 8px; border-radius: 5px; background: #f9fafb; margin-bottom: 4px;
-  }
-  .box { display: inline-block; width: 13px; height: 13px; border: 1.6px solid #4b5563; border-radius: 3px; flex: none; margin-top: 3px; background: #fff; }
-  .chip { background: #dbeafe; color: #1e40af; border-radius: 4px; padding: 0 6px; font-size: 8pt; font-weight: 700; }
-  .fill { border-bottom: 1px dotted #9ca3af; display: block; margin-top: 6px; padding-top: 12px; font-size: 9pt; color: #6b7280; }
-  .fill span { background: #fff; padding-inline-end: 6px; }
-
+  .tag.chg { background: #ea580c; }
   .note { font-size: 9pt; color: #6b7280; margin-top: 4px; }
   .pagebreak { break-before: page; }
-  footer.end { margin-top: 24px; border-top: 2px solid #1d4ed8; padding-top: 10px; font-size: 9.5pt; color: #4b5563; }
+  footer.end { margin-top: 22px; border-top: 2px solid #047857; padding-top: 10px; font-size: 9.5pt; color: #4b5563; }
 </style>
 </head>
 <body>
 
 <div class="cover">
-  <div class="kicker">سند طراحی — نسخه‌ی بازبینی</div>
+  <div class="kicker">سند طراحی — نسخه ۲، تصمیم‌ها اعمال شد</div>
   <h1>سامانه حواله خودرو — بلوپرینت فاز ۱</h1>
   <div class="lead">
-    نقشه‌ی کامل دو پنل «نمایندگی‌ها» و «مدیریت»، بر پایه‌ی ایده‌ی خام شما.
-    این سند <b>کد نیست</b>؛ نقشه‌ی کار است تا قبل از ساخت، همه چیز را ببینید و اصلاح کنید.
+    همه‌ی ۲۵ سؤال نسخه‌ی قبل پاسخ گرفت و در متن اعمال شد.
+    این نسخه <b>مبنای ساخت موک‌آپ</b> است. بندهایی که با نشان نارنجی <span class="tag chg">تغییر</span> علامت دارند نسبت به نسخه ۱ عوض شده‌اند.
   </div>
   <div class="meta">
-    <span><b>نسخه:</b> ۱٫۱</span>
-    <span><b>وضعیت:</b> در انتظار بازبینی شما</span>
+    <span><b>نسخه:</b> ۲٫۰</span>
+    <span><b>وضعیت:</b> آماده‌ی ساخت موک‌آپ</span>
+    <span><b>سؤال باز:</b> ۳ مورد کوچک (بخش ۱۷)</span>
     <span><b>گام بعدی:</b> موک‌آپ کلیک‌شدنی ۲۱ صفحه</span>
-    <span><b>سؤالات باز:</b> ۲۵ مورد (بخش ۱۶)</span>
   </div>
 </div>
 
 <div class="howto">
-  <h3>این سند را چطور بخوانید و ادیت کنید</h3>
+  <h3>چطور این نسخه را بازبینی کنید</h3>
   <ol>
-    <li>هر بند <b>شماره‌ی یکتا</b> دارد. برای اصلاح فقط شماره را بگویید — مثلاً «بند ۵.۵ را تومان کن».</li>
-    <li>هر جا سؤالی دارم، با نشان <span class="qref">س۷</span> علامت زده‌ام؛ متن کامل همان سؤال در <b>بخش ۱۶ (پاسخ‌نامه)</b> است.</li>
-    <li>اگر وقت خواندن کل سند را ندارید، <b>فقط بخش ۱۶ را پر کنید</b> — همان کافی است تا کار شروع شود.</li>
-    <li>بندهایی که علامت ⚙️ دارند پیش‌فرض من هستند؛ اگر چیزی نگویید همان اجرا می‌شود.</li>
+    <li><b>بخش ۰</b> فهرست تغییرات نسبت به نسخه ۱ است — سریع‌ترین راه برای اینکه ببینید جواب‌هایتان درست فهمیده شده.</li>
+    <li><b>بخش ۱۶</b> جدول کامل ۲۵ تصمیم نهایی است؛ سند مرجع در طول ساخت پروژه همین است.</li>
+    <li><b>بخش ۱۷</b> سه سؤال کوچک باقی‌مانده است که از دل جواب‌های خودتان بیرون آمد.</li>
+    <li>هر بند شماره دارد؛ برای اصلاح فقط شماره را بگویید — مثلاً «بند ۵.۶ را عوض کن».</li>
   </ol>
 </div>
 
-<div class="legend">
-  <div><b>⚙️ پیش‌فرض من</b>تصمیمی که خودم گرفته‌ام و بدون نظر شما اجرا می‌شود.</div>
-  <div><b>❓ سؤال</b>جایی که بدون نظر شما نمی‌توانم درست تصمیم بگیرم.</div>
-  <div><b>🔒 قابل مخفی‌سازی</b>فیلدی که در حالت اشتراک منقضی ماسک می‌شود.</div>
-</div>
+<!-- ۰ -->
+<section>
+  <h2 class="sec"><span class="num">۰</span> تغییرات نسخه ۲ نسبت به نسخه ۱</h2>
+  <table>
+    <thead><tr><th style="width:16%">بند</th><th style="width:42%">جواب شما</th><th>در سند چه شد</th></tr></thead>
+    <tbody>
+      <tr><td><b>۳.۷</b> پیامک</td><td>سرویس پیامکی فعلاً ندارم</td><td>ورود دو مرحله‌ای ساخته می‌شود ولی با درایور شبیه‌ساز، و یک کلید در تنظیمات که تا خرید پنل پیامک، مرحله‌ی دوم غیرفعال بماند</td></tr>
+      <tr><td><b>۵.۲</b> رنگ</td><td>در درخواست خرید اختیاری، در فروش الزامی</td><td>الزامی‌های درخواست خرید شد: <b>نوع خودرو + امکان صلح</b></td></tr>
+      <tr><td><b>۵.۲</b> تماس</td><td>در درخواست خرید خودکار باشد</td><td>در درخواست خرید اصلاً فیلد ورودی نیست؛ از پروفایل خوانده می‌شود</td></tr>
+      <tr><td><b>۵.۶</b> زمان تحویل</td><td>تعداد روز</td><td>عدد روز شد، نه تاریخ. فیلتر «تحویل زیر ۶۰ روز» کار می‌کند</td></tr>
+      <tr><td><b>۵.۹</b> مدت واریز</td><td>مهلت خریدار برای واریز، به روز</td><td>عدد روز</td></tr>
+      <tr><td><b>۵.۱۰</b> تعداد</td><td>هر حواله یک خودرو</td><td>فیلد «تعداد» حذف شد</td></tr>
+      <tr><td><b>۵.۱۲</b> انقضا</td><td>عمر آگهی = مدت زمان واریز</td><td>آگهی بعد از همان تعداد روز خودکار بسته می‌شود، با تمدید یک‌کلیکی</td></tr>
+      <tr><td><b>۶.۱</b> مشخصات</td><td>ماسک نه، کاملاً مخفی</td><td>هیچ بخشی از شماره نشان داده نمی‌شود؛ همه جای سند «ماسک» به «مخفی» تغییر کرد</td></tr>
+      <tr><td><b>۶.۴</b> سقف</td><td>پیش‌فرض ۳۰، برای هر اکانت قابل تغییر</td><td>سقف روی پلن + یک فیلد اختصاصی روی هر حساب که پلن را بازنویسی می‌کند</td></tr>
+      <tr><td><b>۶.۶</b> صاحب آگهی</td><td>فقط تعداد را ببیند، نه هویت</td><td>نماینده فقط عدد می‌بیند؛ در پنل ما نام و زمان و IP کامل ثبت است</td></tr>
+      <tr><td><b>۵.۵</b> واحد پول</td><td>تومان</td><td>همه جا تومان</td></tr>
+      <tr><td><b>۱۴</b> تکنولوژی</td><td>تیم نداریم، انتخاب فنی با تو</td><td>Next.js + TypeScript + PostgreSQL انتخاب شد — دلیلش در بند ۱۴.۲</td></tr>
+      <tr><td><b>۴.۱</b> پلن</td><td>فعلاً یک پلن</td><td>یک پلن ساخته می‌شود، ساختار چندپلنی سر جایش می‌ماند</td></tr>
+      <tr><td><b>۵.۱۱</b> لیست خودرو</td><td>فعلاً مدیران خودرو</td><td>لیست پایه با محصولات مدیران خودرو پر می‌شود، ساختار چندشرکتی می‌ماند</td></tr>
+    </tbody>
+  </table>
+</section>
 
 <!-- ۱ -->
 <section>
   <h2 class="sec"><span class="num">۱</span> دامنه‌ی فاز ۱</h2>
   <table>
-    <thead><tr><th style="width:50%">در فاز ۱ ساخته می‌شود</th><th>در فاز ۱ ساخته نمی‌شود (فاز ۲)</th></tr></thead>
+    <thead><tr><th style="width:50%">در فاز ۱ ساخته می‌شود</th><th>در فاز ۱ ساخته نمی‌شود</th></tr></thead>
     <tbody>
-      <tr><td>پنل نمایندگی‌ها (کامل)</td><td>بخش دوم پنل نماینده — هر چه بعداً تعریف کنید</td></tr>
-      <tr><td>پنل مدیریت / ادمین (کامل)</td><td>درگاه پرداخت آنلاین</td></tr>
-      <tr><td>حواله: ثبت، استعلام، درخواست خرید</td><td>اپلیکیشن موبایل</td></tr>
-      <tr><td>اشتراک + حالت ماژول (زیرنمایندگی)</td><td>چت زنده</td></tr>
-      <tr><td>گزارش تخلف (دو طرفه)</td><td>API برای طرف سوم</td></tr>
-      <tr><td>تیکت پشتیبانی</td><td>اپ حسابداری / فاکتور رسمی</td></tr>
+      <tr><td>پنل نمایندگی‌ها (کامل)</td><td>بخش دوم پنل نماینده — فاز ۲</td></tr>
+      <tr><td>پنل مدیریت / ادمین (کامل)</td><td>درگاه پرداخت آنلاین — پرداخت دستی است</td></tr>
+      <tr><td>حواله: ثبت، استعلام، درخواست خرید</td><td>ارسال واقعی پیامک — تا خرید پنل پیامک</td></tr>
+      <tr><td>اشتراک + حالت ماژول (زیرنمایندگی)</td><td>اپلیکیشن موبایل — سایت کامل ریسپانسیو است</td></tr>
+      <tr><td>گزارش تخلف دو طرفه</td><td>چت زنده</td></tr>
+      <tr><td>تیکت پشتیبانی</td><td>API برای طرف سوم</td></tr>
       <tr><td>مانیتورینگ فعالیت نماینده‌ها</td><td>—</td></tr>
     </tbody>
   </table>
@@ -160,10 +151,12 @@
   <h2 class="sec"><span class="num">۲</span> نقش‌ها و ساختار حساب</h2>
   <ul class="clean">
     <li><span class="bnum">۲.۱</span> <b>ادمین (ما):</b> در کل سامانه <b>ثبت‌نام عمومی وجود ندارد</b>. هیچ‌کس نمی‌تواند خودش حساب بسازد.</li>
-    <li><span class="bnum">۲.۲</span> <b>نماینده:</b> حسابش را ما در ازای دریافت حق اشتراک می‌سازیم. اطلاعات حساب: نام و نام خانوادگی، نام نمایندگی، <b>کد نمایندگی</b> (یکتا)، شهر، موبایل، نام و شماره‌ی مسئول هماهنگی، یوزرنیم، پسورد.</li>
-    <li><span class="bnum">۲.۳</span> <b>زیرنماینده:</b> از نظر سیستم همان «نماینده» است، فقط یک <b>نماینده‌ی مادر</b> دارد و اشتراکش از ظرفیت خریداری‌شده‌ی مادر مصرف شده است.</li>
-    <li><span class="bnum">۲.۴</span> ⚙️ سلسله‌مراتب <b>یک سطح</b> است: زیرنماینده نمی‌تواند خودش زیرنماینده بسازد. <span class="qref">س۱۹</span></li>
-    <li><span class="bnum">۲.۵</span> نماینده فقط وقتی می‌تواند زیرنماینده بسازد که ادمین «حالت ماژول» را برایش روشن کرده باشد.</li>
+    <li><span class="bnum">۲.۲</span> <b>نماینده:</b> حسابش را ما در ازای حق اشتراک می‌سازیم: نام و نام خانوادگی، نام نمایندگی، <b>کد نمایندگی</b> (یکتا)، شهر، موبایل، نام و شماره‌ی مسئول هماهنگی، یوزرنیم، پسورد.</li>
+    <li><span class="bnum">۲.۳</span> <b>زیرنماینده:</b> از نظر سیستم همان نماینده است، فقط یک نماینده‌ی مادر دارد و اشتراکش از ظرفیت خریداری‌شده‌ی مادر مصرف شده است.</li>
+    <li><span class="bnum">۲.۴</span> سلسله‌مراتب <b>یک سطح</b> است: زیرنماینده نمی‌تواند خودش زیرنماینده بسازد.</li>
+    <li><span class="bnum">۲.۵</span> <b>اختیارات زیرنماینده کاملاً مثل نماینده‌ی عادی است</b> — هم ثبت حواله، هم درخواست خرید، هم باز کردن مشخصات. تنها تفاوت: حق ساخت زیرنماینده ندارد.</li>
+    <li><span class="bnum">۲.۶</span> نماینده فقط وقتی می‌تواند زیرنماینده بسازد که ادمین «حالت ماژول» را برایش روشن کرده باشد.</li>
+    <li><span class="bnum">۲.۷</span> <b>پسورد اولیه:</b> ادمین تعیین می‌کند و در پنل یک‌بار نشان داده می‌شود تا به نماینده اعلام شود؛ نماینده در <b>اولین ورود مجبور است</b> آن را عوض کند. <span class="tag chg">تغییر</span></li>
   </ul>
 </section>
 
@@ -173,44 +166,65 @@
   <ul class="clean">
     <li><span class="bnum">۳.۱</span> <b>ورود دو مرحله‌ای:</b> مرحله ۱ یوزرنیم + پسورد → مرحله ۲ کد ۶ رقمی پیامکی.</li>
     <li><span class="bnum">۳.۲</span> کد پیامکی: اعتبار ۲ دقیقه، حداکثر ۵ تلاش اشتباه، ارسال مجدد بعد از ۹۰ ثانیه.</li>
-    <li><span class="bnum">۳.۳</span> <b>تک‌نشستی (خواسته‌ی صریح شما):</b> هر حساب همزمان فقط <b>یک</b> نشست فعال دارد. با ورود موفق نفر جدید، نشست قبلی همان لحظه باطل می‌شود و کاربر قبلی در اولین کلیک بیرون انداخته می‌شود با پیام «از دستگاه دیگری وارد حساب شده‌اید».</li>
+    <li><span class="bnum">۳.۳</span> <b>تک‌نشستی:</b> هر حساب همزمان فقط <b>یک</b> نشست فعال دارد. با ورود موفق نفر جدید، نشست قبلی همان لحظه باطل می‌شود و کاربر قبلی در اولین کلیک بیرون انداخته می‌شود با پیام «از دستگاه دیگری وارد حساب شده‌اید».</li>
     <li><span class="bnum">۳.۴</span> ادمین می‌تواند نشست هر نماینده را دستی قطع کند (خروج اجباری).</li>
     <li><span class="bnum">۳.۵</span> ۵ تلاش ناموفق ورود در ۱۵ دقیقه → قفل موقت حساب برای ۱۵ دقیقه.</li>
-    <li><span class="bnum">۳.۶</span> ⚙️ پسورد با bcrypt ذخیره می‌شود؛ توکن نشست تصادفی است و فقط هش آن در دیتابیس می‌ماند؛ کوکی <code>httpOnly</code> و <code>secure</code>.</li>
-    <li><span class="bnum">۳.۷</span> <b>سرویس پیامک:</b> لایه‌ی انتزاعی با دو درایور — شبیه‌ساز برای توسعه و یک پنل واقعی برای تولید. <span class="qref">س۳</span></li>
+    <li><span class="bnum">۳.۶</span> پسورد با bcrypt ذخیره می‌شود؛ توکن نشست تصادفی است و فقط هش آن در دیتابیس می‌ماند؛ کوکی <code>httpOnly</code> و <code>secure</code>.</li>
   </ul>
+
+  <h3 class="sub">۳.۷ پیامک — وضعیت فعلی <span class="tag chg">تغییر</span></h3>
+  <div class="w">
+    شما فعلاً پنل پیامکی ندارید، پس:
+    <ul class="clean" style="margin-top:6px">
+      <li>کل مکانیزم ورود دو مرحله‌ای <b>ساخته می‌شود</b> و آماده می‌ماند.</li>
+      <li>تا خرید پنل پیامک، درایور شبیه‌ساز فعال است: کد در پنل ادمین قابل دیدن است (برای تست).</li>
+      <li>یک کلید در تنظیمات هست به نام <b>«الزام کد دو عاملی»</b>. تا وقتی پیامک ندارید آن را خاموش می‌گذارید و ورود فقط با یوزرنیم و پسورد است؛ روزی که پنل پیامک خریدید، فقط کلید API را وارد می‌کنید و کلید را روشن می‌کنید — <b>بدون نیاز به تغییر کد</b>.</li>
+      <li>پنل پیامکی و «خط خدماتی» را باید خودتان تهیه کنید (کاوه‌نگار، ملی پیامک یا مشابه).</li>
+    </ul>
+  </div>
 </section>
 
 <!-- ۴ -->
-<section>
+<section class="pagebreak">
   <h2 class="sec"><span class="num">۴</span> اشتراک و حالت ماژول (زیرنمایندگی)</h2>
   <ul class="clean">
-    <li><span class="bnum">۴.۱</span> <b>پلن اشتراک:</b> نام، مدت (روز)، مبلغ، سقف نمایش روزانه‌ی مشخصات، سقف حواله‌ی فعال. پلن‌ها را ادمین می‌سازد. <span class="qref">س۶</span></li>
+    <li><span class="bnum">۴.۱</span> <b>فعلاً یک پلن اشتراک</b> داریم، ولی ساختار چندپلنی ساخته می‌شود تا هر وقت خواستید از پنل پلن جدید اضافه کنید. هر پلن: نام، مدت (روز)، مبلغ (تومان)، سقف نمایش روزانه‌ی مشخصات، سقف حواله‌ی فعال. <span class="tag chg">تغییر</span></li>
     <li><span class="bnum">۴.۲</span> وضعیت اشتراک: <b>فعال</b> یا <b>منقضی</b>. تاریخ انقضا مبنای همه‌ی محدودیت‌هاست.</li>
+    <li><span class="bnum">۴.۳</span> <b>پرداخت دستی است:</b> کارت به کارت یا واریز، بعد ما در پنل تأیید می‌کنیم. جای درگاه آنلاین در معماری باز می‌ماند برای فاز ۲.</li>
   </ul>
 
-  <h3 class="sub">۴.۳ گردش کار حالت ماژول (مثال آقای گودرزی با ۵۰ زیرنماینده)</h3>
+  <h3 class="sub">۴.۴ گردش کار حالت ماژول (مثال آقای گودرزی با ۵۰ زیرنماینده)</h3>
   <table>
     <thead><tr><th class="c" style="width:8%">گام</th><th style="width:22%">چه کسی</th><th>چه کاری</th></tr></thead>
     <tbody>
       <tr><td class="c">۱</td><td>ادمین (ما)</td><td>«حالت ماژول» را برای حساب آقای گودرزی روشن می‌کند</td></tr>
-      <tr><td class="c">۲</td><td>نماینده‌ی مادر</td><td>از پنل خودش درخواست خرید ظرفیت می‌دهد: ۵۰ ظرفیت × ۱٫۰۰۰٫۰۰۰</td></tr>
+      <tr><td class="c">۲</td><td>نماینده‌ی مادر</td><td>از پنل خودش درخواست خرید ظرفیت می‌دهد: ۵۰ ظرفیت × <b>۱ میلیون تومان</b></td></tr>
       <tr><td class="c">۳</td><td>ادمین</td><td>پس از دریافت پول، درخواست را تأیید می‌کند → ۵۰ «اعتبار ظرفیت» به حسابش اضافه می‌شود</td></tr>
-      <tr><td class="c">۴</td><td>نماینده‌ی مادر</td><td>خودش و بدون دخالت ما، با مصرف هر ظرفیت یک حساب زیرنماینده می‌سازد (یوزرنیم، پسورد، موبایل، شهر)</td></tr>
-      <tr><td class="c">۵</td><td>سیستم</td><td>اشتراک هر زیرنماینده صادر و به اشتراک مادر <b>گره</b> زده می‌شود — بند ۴.۴</td></tr>
+      <tr><td class="c">۴</td><td>نماینده‌ی مادر</td><td>خودش و بدون دخالت ما، با مصرف هر ظرفیت یک حساب زیرنماینده می‌سازد</td></tr>
+      <tr><td class="c">۵</td><td>سیستم</td><td>اشتراک زیرنماینده صادر و به اشتراک مادر گره زده می‌شود — بند ۴.۵</td></tr>
     </tbody>
   </table>
 
-  <h3 class="sub">۴.۴ قاعده‌ی طلایی وابستگی</h3>
+  <h3 class="sub">۴.۵ قاعده‌ی طلایی وابستگی</h3>
   <div class="d">
-    <b>اشتراک زیرنماینده هرگز از اشتراک مادر جلوتر نمی‌رود.</b><br>
-    تاریخ انقضای مؤثر زیرنماینده = <b>حداقلِ</b> (تاریخ انقضای خودش، تاریخ انقضای مادر).<br>
-    یعنی لحظه‌ای که اشتراک مادر تمام شود، <b>هر ۵۰ زیرنماینده همان لحظه محدود می‌شوند</b> — و چون این عدد «محاسبه‌ای» است و جایی ذخیره نمی‌شود، نه تأخیر دارد و نه امکان خطا. تعلیق حساب مادر توسط ادمین هم دقیقاً همین اثر را دارد.
+    <b>اشتراک زیرنماینده دقیقاً تا پایان اشتراک مادر است.</b><br>
+    مثلاً اشتراک مادر ۴ ماه دیگر تمام می‌شود → اشتراک زیرنماینده‌ی تازه‌ساخته هم ۴ ماهه است.<br>
+    یعنی لحظه‌ای که اشتراک مادر تمام شود، <b>هر ۵۰ زیرنماینده همان لحظه محدود می‌شوند</b>. چون این تاریخ «محاسبه‌ای» است و جایی ذخیره نمی‌شود، نه تأخیر دارد و نه امکان خطا. تعلیق حساب مادر توسط ادمین هم دقیقاً همین اثر را دارد.
   </div>
+
+  <h3 class="sub">۴.۶ دسترسی نماینده‌ی مادر روی زیرنماینده‌ها</h3>
+  <table>
+    <thead><tr><th style="width:50%">می‌تواند</th><th>نمی‌تواند</th></tr></thead>
+    <tbody>
+      <tr><td>ساخت حساب زیرنماینده (با مصرف ظرفیت)</td><td>دیدن یا ویرایش حواله‌های شخصی آن‌ها</td></tr>
+      <tr><td>تعلیق و فعال‌سازی حساب زیرنماینده</td><td>دیدن مشخصات فروشنده‌هایی که آن‌ها باز کرده‌اند</td></tr>
+      <tr><td>ریست پسورد زیرنماینده</td><td>ساخت زیرنماینده برای زیرنماینده</td></tr>
+      <tr><td>دیدن آمار کلی هر زیرنماینده (تعداد حواله، آخرین ورود)</td><td>—</td></tr>
+    </tbody>
+  </table>
   <ul class="clean">
-    <li><span class="bnum">۴.۵</span> ⚙️ پرداخت در فاز ۱ <b>دستی</b> است (کارت به کارت / واریز) و ادمین تأیید می‌کند؛ جای درگاه در معماری باز گذاشته می‌شود. <span class="qref">س۴</span></li>
-    <li><span class="bnum">۴.۶</span> ⚙️ قیمت هر ظرفیت از <b>تنظیمات سامانه</b> خوانده می‌شود، نه از کد — تا هر وقت خواستید بدون برنامه‌نویس عوضش کنید. <span class="qref">س۷</span></li>
-    <li><span class="bnum">۴.۷</span> اعتبار ظرفیت مصرف‌شده با حذف زیرنماینده <b>برنمی‌گردد</b> (جلوگیری از دور زدن سیستم).</li>
+    <li><span class="bnum">۴.۷</span> قیمت هر ظرفیت (۱ میلیون تومان) از <b>تنظیمات سامانه</b> خوانده می‌شود، نه از کد — هر وقت خواستید بدون برنامه‌نویس عوضش کنید.</li>
+    <li><span class="bnum">۴.۸</span> اعتبار ظرفیت مصرف‌شده با حذف زیرنماینده <b>برنمی‌گردد</b> (جلوگیری از دور زدن سیستم).</li>
   </ul>
 </section>
 
@@ -222,49 +236,63 @@
   <table>
     <thead><tr><th style="width:26%">نوع</th><th style="width:38%">معنی</th><th>کجا دیده می‌شود</th></tr></thead>
     <tbody>
-      <tr><td><b>حواله فروش (عرضه)</b><br>«ثبت حواله جدید»</td><td>این حواله را دارم و می‌فروشم</td><td>در استعلام، برای همه‌ی نماینده‌ها</td></tr>
+      <tr><td><b>حواله فروش</b><br>«ثبت حواله جدید»</td><td>این حواله را دارم و می‌فروشم</td><td>در استعلام، برای همه‌ی نماینده‌ها</td></tr>
       <tr><td><b>درخواست خرید</b><br>«ثبت درخواست خرید حواله»</td><td>این حواله را می‌خواهم بخرم</td><td>در استعلام، تب جداگانه</td></tr>
     </tbody>
   </table>
 
-  <h3 class="sub">۵.۲ فیلدها — دقیقاً همان لیست شما</h3>
+  <h3 class="sub">۵.۲ فیلدها و الزامی بودنشان <span class="tag chg">تغییر</span></h3>
   <table>
     <thead><tr>
-      <th class="c" style="width:6%">#</th><th style="width:30%">فیلد</th><th style="width:22%">نوع ورودی</th>
-      <th class="c" style="width:14%">در حواله فروش</th><th class="c" style="width:14%">در درخواست خرید</th>
+      <th class="c" style="width:6%">#</th><th style="width:28%">فیلد</th><th style="width:24%">نوع ورودی</th>
+      <th class="c" style="width:14%">حواله فروش</th><th class="c" style="width:16%">درخواست خرید</th>
     </tr></thead>
     <tbody>
       <tr><td class="c">۱</td><td>نوع خودرو</td><td>انتخابی + جستجو</td><td class="c yes">الزامی</td><td class="c yes">الزامی</td></tr>
-      <tr><td class="c">۲</td><td>رنگ خودرو</td><td>انتخابی</td><td class="c yes">الزامی</td><td class="c yes">الزامی</td></tr>
-      <tr><td class="c">۳</td><td>امکان صلح</td><td>دارد / ندارد / مشروط</td><td class="c yes">الزامی</td><td class="c yes">الزامی</td></tr>
+      <tr><td class="c">۲</td><td>امکان صلح</td><td>دارد / ندارد / مشروط</td><td class="c yes">الزامی</td><td class="c yes">الزامی</td></tr>
+      <tr><td class="c">۳</td><td>رنگ خودرو</td><td>انتخابی</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
       <tr><td class="c">۴</td><td>مدل (سال)</td><td>انتخابی</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۵</td><td>🔒 کد نمایندگی / شهر</td><td>خودکار از پروفایل</td><td class="c">خودکار</td><td class="c">خودکار</td></tr>
-      <tr><td class="c">۶</td><td>🔒 اطلاعات تماس مسئول هماهنگی</td><td>پیش‌فرض از پروفایل، قابل تغییر</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۷</td><td>مبلغ حواله</td><td>عدد</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۸</td><td>زمان تحویل</td><td>تاریخ / بازه</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۹</td><td>مدت زمان واریز</td><td>عدد (روز)</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۱۰</td><td>شرکت عرضه کننده</td><td>انتخابی</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
-      <tr><td class="c">۱۱</td><td>مبلغ پرداخت شده</td><td>عدد</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۵</td><td>مبلغ حواله (تومان)</td><td>عدد</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۶</td><td>مبلغ پرداخت شده (تومان)</td><td>عدد</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۷</td><td>زمان تحویل (روز)</td><td>عدد روز</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۸</td><td>مدت زمان واریز (روز)</td><td>عدد روز</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۹</td><td>شرکت عرضه کننده</td><td>انتخابی</td><td class="c yes">الزامی</td><td class="c">اختیاری</td></tr>
+      <tr><td class="c">۱۰</td><td>🔒 کد نمایندگی / شهر</td><td>خودکار از پروفایل</td><td class="c">خودکار</td><td class="c">خودکار</td></tr>
+      <tr><td class="c">۱۱</td><td>🔒 اطلاعات تماس مسئول هماهنگی</td><td>در فروش: پیش‌فرض از پروفایل و قابل تغییر<br>در درخواست: کاملاً خودکار</td><td class="c">پیش‌فرض پروفایل</td><td class="c">خودکار</td></tr>
       <tr><td class="c">۱۲</td><td>توضیحات</td><td>متن آزاد</td><td class="c">اختیاری</td><td class="c">اختیاری</td></tr>
     </tbody>
   </table>
-  <div class="note">در «درخواست خرید» فقط سه فیلد اول الزامی است — همان‌طور که خواستید. باقی فیلدها هست ولی پر کردنشان اجباری نیست.</div>
+  <div class="d">
+    <b>خلاصه‌ی الزامی‌ها:</b> در «حواله فروش» همه‌ی فیلدها الزامی است (جز توضیحات).
+    در «درخواست خرید» فقط <b>نوع خودرو</b> و <b>امکان صلح</b> الزامی است؛ باقی فیلدها هست ولی پر کردنشان اجباری نیست.
+  </div>
 
   <ul class="clean">
-    <li><span class="bnum">۵.۳</span> دو ردیف قفل‌دار (۵ و ۶) همان دو موردی هستند که خودتان با «--» علامت زده بودید و در حالت اشتراک منقضی مخفی می‌شوند — بخش ۷.</li>
-    <li><span class="bnum">۵.۴</span> ⚙️ «کد نمایندگی / شهر» <b>فیلد ورودی نیست</b> و از پروفایل خود نماینده خوانده می‌شود؛ اینطور نه جعل‌شدنی است و نه هر کس یک شکل می‌نویسد.</li>
-    <li><span class="bnum">۵.۵</span> واحد پول و نحوه‌ی نمایش مبالغ. <span class="qref">س۵</span></li>
-    <li><span class="bnum">۵.۶</span> شکل ذخیره‌ی «زمان تحویل». <span class="qref">س۸</span></li>
-    <li><span class="bnum">۵.۷</span> هر حواله یک <b>شماره‌ی یکتای نمایشی</b> دارد (مثل <code>HV-1042</code>) تا در تیکت و گزارش تخلف به آن ارجاع داده شود.</li>
-    <li><span class="bnum">۵.۸</span> وضعیت حواله: فعال / معامله‌شده / تعلیق‌شده توسط ادمین / بایگانی. <span class="qref">س۱۳</span> <span class="qref">س۱۴</span></li>
-    <li><span class="bnum">۵.۹</span> لیست‌های پایه (نوع خودرو، رنگ، شرکت عرضه کننده، شهر) از جدول قابل مدیریت در پنل ادمین می‌آیند، نه هاردکد. <span class="qref">س۱۱</span></li>
-    <li><span class="bnum">۵.۱۰</span> تعداد دستگاه در یک حواله. <span class="qref">س۱۲</span></li>
+    <li><span class="bnum">۵.۳</span> دو ردیف قفل‌دار (۱۰ و ۱۱) همان‌هایی هستند که خودتان با «--» علامت زده بودید و مخفی می‌شوند — بخش ۶ و ۷.</li>
+    <li><span class="bnum">۵.۴</span> «کد نمایندگی / شهر» <b>فیلد ورودی نیست</b> و از پروفایل خود نماینده خوانده می‌شود؛ اینطور نه جعل‌شدنی است و نه هر کس یک شکل می‌نویسد.</li>
+    <li><span class="bnum">۵.۵</span> <b>واحد پول: تومان</b> در کل سامانه، با جداکننده‌ی هزارگان و نوشتن حروفی زیر فیلد (مثلاً «۴۵۰,۰۰۰,۰۰۰ — چهارصد و پنجاه میلیون تومان») تا اشتباه صفر پیش نیاید. <span class="tag chg">تغییر</span></li>
+    <li><span class="bnum">۵.۶</span> <b>زمان تحویل = تعداد روز</b> (مثلاً ۹۰ روزه) از تاریخ ثبت حواله. فیلترهایی مثل «تحویل زیر ۶۰ روز» درست کار می‌کند. <span class="tag chg">تغییر</span></li>
+    <li><span class="bnum">۵.۷</span> <b>مبلغ پرداخت شده</b> = مبلغی که تا امروز به شرکت خودروساز واریز شده است.</li>
+    <li><span class="bnum">۵.۸</span> <b>مدت زمان واریز</b> = تعداد روز مهلت خریدار برای واریز پول، بعد از توافق.</li>
+    <li><span class="bnum">۵.۹</span> هر حواله یک <b>شماره‌ی یکتای نمایشی</b> دارد (مثل <code>HV-1042</code>) تا در تیکت و گزارش تخلف به آن ارجاع داده شود.</li>
+    <li><span class="bnum">۵.۱۰</span> هر حواله <b>یک خودرو</b> است؛ فیلد تعداد نداریم. <span class="tag chg">تغییر</span></li>
+    <li><span class="bnum">۵.۱۱</span> لیست‌های پایه از جدول قابل مدیریت در پنل ادمین می‌آیند. <b>فعلاً با محصولات مدیران خودرو پر می‌شود</b> و ساختار طوری است که هر وقت خواستید شرکت و خودروی جدید اضافه کنید. <span class="tag chg">تغییر</span></li>
   </ul>
 
-  <h3 class="sub">۵.۱۱ استعلام: سرچ و فیلتر</h3>
+  <h3 class="sub">۵.۱۲ عمر آگهی و بسته شدن <span class="tag chg">تغییر</span></h3>
+  <div class="d">
+    <b>عمر آگهی = همان عدد «مدت زمان واریز».</b> مثلاً اگر مدت واریز ۳ روز باشد، آگهی ۳ روز بعد از ثبت خودکار بسته می‌شود و از لیست عمومی می‌رود.
+    <ul class="clean" style="margin-top:6px">
+      <li>یک روز قبل از بسته شدن، در داشبورد نماینده هشدار می‌آید.</li>
+      <li>تمدید با <b>یک کلیک</b> است و شمارش از نو شروع می‌شود.</li>
+      <li>نماینده هر وقت بخواهد می‌تواند حواله را <b>«فروخته شد»</b> علامت بزند؛ از لیست عمومی خارج می‌شود ولی حذف نمی‌شود و در پنل ما می‌ماند — اینطور می‌فهمیم چه چیزی واقعاً در بازار معامله می‌شود.</li>
+    </ul>
+  </div>
+
+  <h3 class="sub">۵.۱۳ استعلام: سرچ و فیلتر</h3>
   <ul class="clean">
     <li><b>سرچ متنی آزاد</b> روی نوع خودرو، شرکت عرضه کننده، توضیحات و شماره‌ی حواله.</li>
-    <li><b>فیلترها:</b> نوع خودرو، رنگ، مدل، امکان صلح، شرکت عرضه کننده، شهر، بازه‌ی مبلغ، بازه‌ی زمان تحویل، مدت واریز، «فقط امروز / این هفته».</li>
+    <li><b>فیلترها:</b> نوع خودرو، رنگ، مدل، امکان صلح، شرکت عرضه کننده، شهر، بازه‌ی مبلغ، بازه‌ی زمان تحویل (روز)، مدت واریز، «فقط امروز / این هفته».</li>
     <li><b>مرتب‌سازی:</b> جدیدترین، ارزان‌ترین، گران‌ترین، نزدیک‌ترین زمان تحویل.</li>
     <li><b>تب‌ها:</b> حواله‌های فروش / درخواست‌های خرید / حواله‌های من.</li>
     <li>نمایش کارتی و جدولی، صفحه‌بندی، و ذخیره‌ی فیلترهای پرکاربرد.</li>
@@ -272,17 +300,18 @@
 </section>
 
 <!-- ۶ -->
-<section>
-  <h2 class="sec"><span class="num">۶</span> «باز کردن مشخصات فروشنده» — کلید مانیتورینگ</h2>
-  <div class="d">
-    این بخش را از دو خواسته‌ی شما استنتاج کردم: «حواله‌هایی که درخواست کردم مشخصات فروشنده‌اش برام باز بشه» در داشبورد، و «چند تا حواله را مشخصات فروشنده‌اش را دیده» در مانیتورینگ. هر دو از یک مکانیزم بیرون می‌آید.
+<section class="pagebreak">
+  <h2 class="sec"><span class="num">۶</span> مخفی‌سازی مشخصات و باز کردن آن</h2>
+  <div class="n">
+    این بخش هم‌زمان به سه خواسته‌ی شما جواب می‌دهد: مخفی بودن مشخصات، داشبورد «حواله‌هایی که مشخصاتش برام باز شده»، و مانیتورینگ «کی کدام آگهی را دیده».
   </div>
   <ul class="clean">
-    <li><span class="bnum">۶.۱</span> در لیست استعلام، اطلاعات تماس و کد نمایندگی/شهر <b>پیش‌فرض ماسک</b> است (مثل <code>۰۹۱۲***۴۵۶۷</code>).</li>
-    <li><span class="bnum">۶.۲</span> نماینده‌ی دارای اشتراک فعال دکمه‌ی «نمایش مشخصات فروشنده» را می‌زند → اطلاعات باز می‌شود و <b>این اقدام ثبت می‌شود</b>: چه کسی، چه حواله‌ای، چه ساعتی، با چه IP.</li>
-    <li><span class="bnum">۶.۳</span> هر حواله برای هر نماینده فقط <b>یک‌بار</b> از سقف مصرف می‌شود؛ بارهای بعد آزاد است.</li>
-    <li><span class="bnum">۶.۴</span> سقف روزانه از پلن اشتراک می‌آید — سدی برای رقیبی که بخواهد کل دیتابیس شما را جمع کند. <span class="qref">س۱۶</span></li>
-    <li><span class="bnum">۶.۵</span> مدل ماسک‌کردن. <span class="qref">س۱۵</span> <span class="qref">س۱۷</span> <span class="qref">س۱۸</span></li>
+    <li><span class="bnum">۶.۱</span> <b>مشخصات کاملاً مخفی است، نه ماسک‌شده.</b> یعنی هیچ بخشی از شماره یا کد نمایندگی نشان داده نمی‌شود — نه <code>۰۹۱۲***۴۵۶۷</code>، بلکه فقط عبارت «برای دیدن مشخصات کلیک کنید». <span class="tag chg">تغییر</span></li>
+    <li><span class="bnum">۶.۲</span> نماینده‌ی دارای اشتراک فعال دکمه‌ی «نمایش مشخصات فروشنده» را می‌زند → اطلاعات باز می‌شود و <b>همان لحظه در پنل ما ثبت می‌شود</b>: چه کسی، چه حواله‌ای، چه ساعتی، با چه IP.</li>
+    <li><span class="bnum">۶.۳</span> هر حواله برای هر نماینده فقط <b>یک‌بار</b> از سقف مصرف می‌شود؛ بارهای بعد آزاد است تا کسی برای پیدا کردن شماره‌ای که قبلاً گرفته، سقفش نسوزد.</li>
+    <li><span class="bnum">۶.۴</span> <b>سقف روزانه:</b> پیش‌فرض <b>۳۰</b> مورد در روز، و روی <b>هر حساب جداگانه قابل کم و زیاد کردن</b> است. یعنی مقدار پلن پیش‌فرض است و ادمین می‌تواند برای یک نماینده‌ی خاص عدد دیگری بگذارد. <span class="tag chg">تغییر</span></li>
+    <li><span class="bnum">۶.۵</span> در «درخواست خرید» هم مشخصات خریدار با همین قاعده مخفی است.</li>
+    <li><span class="bnum">۶.۶</span> <b>صاحب آگهی فقط تعداد را می‌بیند</b>، نه هویت. مثلاً «۷ نماینده مشخصات این حواله را دیده‌اند». اینطور نمی‌تواند بیرون از سامانه با آن‌ها هماهنگ شود و ما را دور بزند — ولی <b>در پنل ما نام و نمایندگی و ساعت هر بازدید کامل معلوم است</b>. <span class="tag chg">تغییر</span></li>
   </ul>
 </section>
 
@@ -301,12 +330,12 @@
       <tr><td>ورود به پنل</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
       <tr><td>دیدن لیست حواله‌ها (استعلام)</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
       <tr><td>دیدن مبلغ، مدل، زمان تحویل، شرکت</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
-      <tr><td>دیدن کد نمایندگی / شهر</td><td class="c yes">✔</td><td class="c lock">ماسک</td><td class="c lock">ماسک</td><td class="c no">✖</td></tr>
-      <tr><td>دیدن اطلاعات تماس مسئول هماهنگی</td><td class="c yes">✔ (با ثبت)</td><td class="c lock">ماسک</td><td class="c lock">ماسک</td><td class="c no">✖</td></tr>
+      <tr><td>دیدن کد نمایندگی / شهر</td><td class="c yes">✔</td><td class="c hid">مخفی</td><td class="c hid">مخفی</td><td class="c no">✖</td></tr>
+      <tr><td>دیدن اطلاعات تماس مسئول هماهنگی</td><td class="c yes">✔ (با ثبت)</td><td class="c hid">مخفی</td><td class="c hid">مخفی</td><td class="c no">✖</td></tr>
       <tr><td><b>ثبت حواله فروش</b></td><td class="c yes">✔</td><td class="c no">✖</td><td class="c no">✖</td><td class="c no">✖</td></tr>
       <tr><td><b>ثبت درخواست خرید حواله</b></td><td class="c yes">✔</td><td class="c no">✖</td><td class="c no">✖</td><td class="c no">✖</td></tr>
       <tr><td>ویرایش حواله‌های قبلی خودش</td><td class="c yes">✔</td><td class="c no">✖</td><td class="c no">✖</td><td class="c no">✖</td></tr>
-      <tr><td>بستن / حذف حواله‌های قبلی خودش</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
+      <tr><td>بستن / «فروخته شد» / حذف حواله‌های خودش</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
       <tr><td>گزارش تخلف</td><td class="c yes">✔</td><td class="c no">✖</td><td class="c no">✖</td><td class="c no">✖</td></tr>
       <tr><td>تیکت پشتیبانی (برای تمدید)</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c yes">✔</td><td class="c no">✖</td></tr>
       <tr><td>ساخت زیرنماینده</td><td class="c yes">✔ با ظرفیت</td><td class="c no">✖</td><td class="c">—</td><td class="c no">✖</td></tr>
@@ -318,9 +347,9 @@
 </section>
 
 <!-- ۸ -->
-<section>
+<section class="pagebreak">
   <h2 class="sec"><span class="num">۸</span> گزارش تخلف — دو طرفه و ضد سوءاستفاده</h2>
-  <div class="d">
+  <div class="n">
     خواسته‌ی شما دو تا بود و هر دو تأمین شده: هم جلوی <b>آگهی فیک</b> گرفته شود، هم جلوی <b>ریپورت الکی</b>. راهش این است که اخطار روی <b>هر دو طرف</b> ثبت شود.
   </div>
   <ul class="clean">
@@ -330,8 +359,8 @@
   <ul class="clean">
     <li>هر نماینده روی هر حواله فقط <b>یک</b> گزارش می‌تواند ثبت کند.</li>
     <li>سقف <b>۵ گزارش در ۲۴ ساعت</b> برای هر نماینده.</li>
-    <li>⚙️ برای دلیل «عدم پاسخگویی» ابتدا باید مشخصات آن حواله را باز کرده باشد — یعنی واقعاً تماس گرفته باشد.</li>
-    <li>هر گزارشی که ادمین «بی‌مورد» تشخیص دهد، در <b>پرونده‌ی گزارش‌دهنده</b> ثبت می‌شود.</li>
+    <li>برای دلیل «عدم پاسخگویی» ابتدا باید مشخصات آن حواله را باز کرده باشد — یعنی واقعاً تماس گرفته باشد.</li>
+    <li>هر گزارشی که ادمین «بی‌مورد» تشخیص دهد، در پرونده‌ی گزارش‌دهنده ثبت می‌شود.</li>
   </ul>
   <h3 class="sub">۸.۳ چهار حکم ادمین و اثرشان</h3>
   <table>
@@ -343,10 +372,18 @@
       <tr><td><b>نیاز به بررسی بیشتر</b></td><td>حواله موقتاً از دید عموم پنهان</td><td>—</td></tr>
     </tbody>
   </table>
+  <h3 class="sub">۸.۴ تنبیه خودکار</h3>
+  <table>
+    <thead><tr><th style="width:34%">شرط</th><th style="width:33%">نتیجه</th><th>تکلیف حق اشتراک</th></tr></thead>
+    <tbody>
+      <tr><td><b>۳ اخطار «آگهی جعلی»</b></td><td>حساب نماینده خودکار تعلیق می‌شود</td><td><b>اشتراک باطل نمی‌شود و وجه ضبط نمی‌شود</b>؛ بعد از رفع تعلیق، اشتراکش ادامه دارد</td></tr>
+      <tr><td><b>۳ اخطار «گزارش بی‌مورد»</b></td><td>دکمه‌ی گزارش تخلف برایش قطع می‌شود</td><td>—</td></tr>
+    </tbody>
+  </table>
   <ul class="clean">
-    <li><span class="bnum">۸.۴</span> آستانه‌ی اخطارها و تنبیه خودکار. <span class="qref">س۲۳</span> <span class="qref">س۲۴</span></li>
-    <li><span class="bnum">۸.۵</span> گزارش‌دهنده وضعیت گزارش خودش را در پنل می‌بیند: در بررسی / تأیید شد / رد شد.</li>
-    <li><span class="bnum">۸.۶</span> در صفحه‌ی بررسی، ادمین <b>سابقه‌ی هر دو طرف</b> را کنار هم می‌بیند تا بفهمد کدام‌یک بدسابقه است.</li>
+    <li><span class="bnum">۸.۵</span> هر دو عدد «۳» در تنظیمات سامانه قابل تغییر است.</li>
+    <li><span class="bnum">۸.۶</span> گزارش‌دهنده وضعیت گزارش خودش را در پنل می‌بیند: در بررسی / تأیید شد / رد شد.</li>
+    <li><span class="bnum">۸.۷</span> در صفحه‌ی بررسی، ادمین <b>سابقه‌ی هر دو طرف</b> را کنار هم می‌بیند تا بفهمد کدام‌یک بدسابقه است.</li>
   </ul>
 </section>
 
@@ -356,7 +393,7 @@
   <ul class="clean">
     <li><span class="bnum">۹.۱</span> موضوع، اولویت (کم / معمولی / زیاد)، متن، پیوست اختیاری، شماره‌ی تیکت یکتا.</li>
     <li><span class="bnum">۹.۲</span> وضعیت: باز / پاسخ داده شده / بسته، با گفت‌وگوی رفت‌وبرگشتی.</li>
-    <li><span class="bnum">۹.۳</span> امکان ارجاع تیکت به یک شماره‌ی حواله (مثلاً شکایت از یک معامله).</li>
+    <li><span class="bnum">۹.۳</span> امکان ارجاع تیکت به یک شماره‌ی حواله.</li>
     <li><span class="bnum">۹.۴</span> نشان‌گر «پیام خوانده‌نشده» هم برای نماینده و هم برای ادمین.</li>
   </ul>
 </section>
@@ -366,11 +403,12 @@
   <h2 class="sec"><span class="num">۱۰</span> داشبورد نماینده</h2>
   <ul class="clean">
     <li><span class="bnum">۱۰.۱</span> نوار وضعیت اشتراک: روزهای باقی‌مانده + دکمه‌ی تمدید.</li>
-    <li><span class="bnum">۱۰.۲</span> <b>آخرین حواله‌های ثبت‌شده در سامانه</b> (۱۰ مورد آخر، با مشخصات ماسک‌شده).</li>
+    <li><span class="bnum">۱۰.۲</span> <b>آخرین حواله‌های ثبت‌شده در سامانه</b> (۱۰ مورد آخر، با مشخصات مخفی).</li>
     <li><span class="bnum">۱۰.۳</span> <b>حواله‌هایی که مشخصات فروشنده‌شان را برای من باز کرده‌اند</b> — با اطلاعات تماس کامل؛ دقیقاً همان چیزی که خواستید.</li>
-    <li><span class="bnum">۱۰.۴</span> کارت‌های آماری: حواله‌های فعال من، درخواست‌های خرید من، چند نفر مشخصات حواله‌های <b>من</b> را باز کرده‌اند، سقف باقی‌مانده‌ی امروز.</li>
-    <li><span class="bnum">۱۰.۵</span> برای نماینده‌ی مادر: کارت ظرفیت زیرنمایندگی (خریداری‌شده / مصرف‌شده / باقی‌مانده).</li>
-    <li><span class="bnum">۱۰.۶</span> آخرین تیکت‌ها و وضعیت گزارش‌های تخلف من.</li>
+    <li><span class="bnum">۱۰.۴</span> کارت‌های آماری: حواله‌های فعال من، درخواست‌های خرید من، <b>تعداد</b> کسانی که مشخصات حواله‌های من را دیده‌اند (فقط عدد)، سقف باقی‌مانده‌ی امروز.</li>
+    <li><span class="bnum">۱۰.۵</span> هشدار حواله‌هایی که فردا خودکار بسته می‌شوند + دکمه‌ی تمدید یک‌کلیکی.</li>
+    <li><span class="bnum">۱۰.۶</span> برای نماینده‌ی مادر: کارت ظرفیت زیرنمایندگی (خریداری‌شده / مصرف‌شده / باقی‌مانده).</li>
+    <li><span class="bnum">۱۰.۷</span> آخرین تیکت‌ها و وضعیت گزارش‌های تخلف من.</li>
   </ul>
 </section>
 
@@ -381,15 +419,15 @@
     <thead><tr><th style="width:24%">بخش</th><th>قابلیت‌ها</th></tr></thead>
     <tbody>
       <tr><td><b>۱۱.۱ داشبورد</b></td><td>نماینده‌های فعال/منقضی، حواله‌های امروز، درخواست‌های خرید، گزارش‌های تخلف در انتظار، تیکت‌های باز، درخواست‌های ظرفیت در انتظار، درآمد ثبت‌شده، نمودار روند ثبت حواله</td></tr>
-      <tr><td><b>۱۱.۲ نمایندگی‌ها</b></td><td>ساخت حساب، ویرایش، تعلیق و فعال‌سازی، ریست پسورد، تغییر موبایل، <b>خروج اجباری از نشست</b>، مشاهده‌ی پرونده‌ی کامل</td></tr>
-      <tr><td><b>۱۱.۳ اشتراک‌ها</b></td><td>تخصیص پلن، تمدید، ابطال، تاریخچه‌ی اشتراک و مبالغ، هشدار اشتراک‌های نزدیک به انقضا (۷ روز آینده)</td></tr>
+      <tr><td><b>۱۱.۲ نمایندگی‌ها</b></td><td>ساخت حساب، ویرایش، تعلیق و فعال‌سازی، ریست پسورد، تغییر موبایل، <b>خروج اجباری از نشست</b>، <b>تغییر سقف روزانه‌ی همان حساب</b>، مشاهده‌ی پرونده‌ی کامل</td></tr>
+      <tr><td><b>۱۱.۳ اشتراک‌ها</b></td><td>تخصیص پلن، تمدید، ابطال، تاریخچه‌ی اشتراک و مبالغ، ثبت پرداخت دستی، هشدار اشتراک‌های نزدیک به انقضا (۷ روز آینده)</td></tr>
       <tr><td><b>۱۱.۴ حالت ماژول</b></td><td>روشن/خاموش کردن برای هر نماینده، مدیریت درخواست‌های خرید ظرفیت (تأیید/رد)، دیدن درخت زیرنماینده‌ها، تنظیم قیمت ظرفیت</td></tr>
-      <tr><td><b>۱۱.۵ حواله‌ها</b></td><td>دیدن همه با تمام فیلترها، تعلیق و رفع تعلیق، ویرایش، حذف، علامت «مشکوک»، خروجی اکسل</td></tr>
+      <tr><td><b>۱۱.۵ حواله‌ها</b></td><td>دیدن همه با تمام فیلترها، تعلیق و رفع تعلیق، ویرایش، حذف، علامت «مشکوک»، دیدن حواله‌های بسته‌شده و فروخته‌شده، خروجی اکسل</td></tr>
       <tr><td><b>۱۱.۶ گزارش تخلف</b></td><td>صف بررسی، دیدن حواله و سابقه‌ی دو طرف در یک صفحه، صدور حکم بند ۸.۳، یادداشت داخلی</td></tr>
-      <tr><td><b>۱۱.۷ پشتیبانی</b></td><td>صف تیکت‌ها، پاسخ، تغییر وضعیت و اولویت، ارجاع</td></tr>
-      <tr><td><b>۱۱.۸ مانیتورینگ</b></td><td><b>خواسته‌ی صریح شما:</b> تایم‌لاین کامل فعالیت هر نماینده (ورود، ثبت حواله، باز کردن مشخصات، گزارش، تیکت) با زمان و IP؛ آمار «چند مشخصات فروشنده دیده» روزانه/هفتگی/کل و اینکه <b>دقیقاً کدام حواله‌ها</b>؛ شناسایی رفتار مشکوک جمع‌آوری دیتا؛ تاریخچه‌ی ورود و نشست‌های باطل‌شده</td></tr>
-      <tr><td><b>۱۱.۹ پایه‌ها</b></td><td>مدیریت پلن‌ها، نوع خودرو، رنگ، شرکت عرضه کننده، شهرها، و تنظیمات (قیمت ظرفیت، سقف‌ها، آستانه‌ی اخطارها)</td></tr>
-      <tr><td><b>۱۱.۱۰ لاگ ادمین</b></td><td>⚙️ اقدامات خود ادمین‌ها هم ثبت می‌شود (چه کسی چه حسابی را تعلیق کرد) — برای وقتی چند نفر شدید</td></tr>
+      <tr><td><b>۱۱.۷ پشتیبانی</b></td><td>صف تیکت‌ها، پاسخ، تغییر وضعیت و اولویت</td></tr>
+      <tr><td><b>۱۱.۸ مانیتورینگ</b></td><td>تایم‌لاین کامل فعالیت هر نماینده (ورود، ثبت حواله، باز کردن مشخصات، گزارش، تیکت) با زمان و IP؛ <b>دقیقاً کی کدام آگهی را دیده</b>؛ آمار روزانه/هفتگی/کل؛ شناسایی رفتار مشکوک جمع‌آوری دیتا؛ تاریخچه‌ی ورود و نشست‌های باطل‌شده</td></tr>
+      <tr><td><b>۱۱.۹ پایه‌ها و تنظیمات</b></td><td>پلن‌ها، نوع خودرو، رنگ، شرکت عرضه کننده، شهرها، قیمت ظرفیت، سقف پیش‌فرض روزانه، آستانه‌ی اخطارها، <b>کلید الزام کد دو عاملی</b>، کلید API پیامک</td></tr>
+      <tr><td><b>۱۱.۱۰ لاگ ادمین</b></td><td>اقدامات خود ادمین‌ها هم ثبت می‌شود (چه کسی چه حسابی را تعلیق کرد) — برای وقتی چند نفر شدید</td></tr>
     </tbody>
   </table>
 </section>
@@ -398,28 +436,28 @@
 <section>
   <h2 class="sec"><span class="num">۱۲</span> نقشه‌ی صفحات — همین ۲۱ صفحه موک‌آپ می‌شود</h2>
   <table>
-    <thead><tr><th class="c" style="width:8%">#</th><th style="width:30%">صفحه</th><th>توضیح</th></tr></thead>
+    <thead><tr><th class="c" style="width:7%">#</th><th style="width:30%">صفحه</th><th>توضیح</th></tr></thead>
     <tbody>
       <tr><td class="c">۱</td><td>ورود — مرحله ۱</td><td>یوزرنیم و پسورد</td></tr>
-      <tr><td class="c">۲</td><td>ورود — مرحله ۲</td><td>کد پیامکی ۶ رقمی + شمارنده‌ی ارسال مجدد</td></tr>
-      <tr><td class="c">۳</td><td>داشبورد نماینده</td><td>بخش ۱۰</td></tr>
-      <tr><td class="c">۴</td><td>استعلام حواله‌ها</td><td>سرچ، فیلتر، ماسک، دکمه‌ی نمایش مشخصات</td></tr>
-      <tr><td class="c">۵</td><td>ثبت حواله جدید (فروش)</td><td>همه‌ی ۱۲ فیلد، همه الزامی</td></tr>
-      <tr><td class="c">۶</td><td>ثبت درخواست خرید</td><td>همان فرم، فقط ۳ فیلد اول الزامی</td></tr>
-      <tr><td class="c">۷</td><td>حواله‌های من</td><td>ویرایش، بستن، آمار بازدید</td></tr>
-      <tr><td class="c">۸</td><td>زیرنمایندگی‌ها (ماژول)</td><td>لیست، ساخت حساب، خرید ظرفیت</td></tr>
-      <tr><td class="c">۹</td><td>تیکت‌های پشتیبانی</td><td>لیست + صفحه‌ی گفت‌وگو</td></tr>
-      <tr><td class="c">۱۰</td><td>اشتراک من</td><td>وضعیت، تاریخچه، تمدید</td></tr>
-      <tr><td class="c">۱۱</td><td>حالت اشتراک منقضی</td><td>استعلام با ماسک کامل + نوار هشدار</td></tr>
-      <tr><td class="c">۱۲</td><td>داشبورد مدیریت</td><td>بند ۱۱.۱</td></tr>
-      <tr><td class="c">۱۳</td><td>لیست نمایندگی‌ها</td><td>با فیلتر وضعیت اشتراک</td></tr>
-      <tr><td class="c">۱۴</td><td>ساخت / ویرایش نمایندگی</td><td>+ تخصیص اشتراک</td></tr>
-      <tr><td class="c">۱۵</td><td>پرونده‌ی یک نماینده</td><td>اشتراک، حواله‌ها، فعالیت، زیرنماینده‌ها</td></tr>
-      <tr><td class="c">۱۶</td><td>مدیریت حواله‌ها</td><td>بند ۱۱.۵</td></tr>
-      <tr><td class="c">۱۷</td><td>گزارش تخلف</td><td>صف + صفحه‌ی بررسی و صدور حکم</td></tr>
-      <tr><td class="c">۱۸</td><td>تیکت‌ها (ادمین)</td><td>صف و پاسخ</td></tr>
-      <tr><td class="c">۱۹</td><td>مانیتورینگ فعالیت</td><td>بند ۱۱.۸</td></tr>
-      <tr><td class="c">۲۰</td><td>درخواست‌های خرید ظرفیت</td><td>تأیید / رد</td></tr>
+      <tr><td class="c">۲</td><td>ورود — مرحله ۲</td><td>کد پیامکی ۶ رقمی (فعلاً غیرفعال، ولی صفحه‌اش ساخته می‌شود)</td></tr>
+      <tr><td class="c">۳</td><td>تغییر اجباری پسورد</td><td>اولین ورود نماینده</td></tr>
+      <tr><td class="c">۴</td><td>داشبورد نماینده</td><td>بخش ۱۰</td></tr>
+      <tr><td class="c">۵</td><td>استعلام حواله‌ها</td><td>سرچ، فیلتر، مشخصات مخفی، دکمه‌ی نمایش</td></tr>
+      <tr><td class="c">۶</td><td>ثبت حواله جدید (فروش)</td><td>همه‌ی فیلدها الزامی</td></tr>
+      <tr><td class="c">۷</td><td>ثبت درخواست خرید</td><td>فقط نوع خودرو و امکان صلح الزامی</td></tr>
+      <tr><td class="c">۸</td><td>حواله‌های من</td><td>ویرایش، تمدید، «فروخته شد»، تعداد بازدید</td></tr>
+      <tr><td class="c">۹</td><td>زیرنمایندگی‌ها (ماژول)</td><td>لیست، ساخت حساب، خرید ظرفیت</td></tr>
+      <tr><td class="c">۱۰</td><td>تیکت‌های پشتیبانی</td><td>لیست + صفحه‌ی گفت‌وگو</td></tr>
+      <tr><td class="c">۱۱</td><td>اشتراک من</td><td>وضعیت، تاریخچه، تمدید</td></tr>
+      <tr><td class="c">۱۲</td><td>حالت اشتراک منقضی</td><td>استعلام با مشخصات مخفی + نوار هشدار</td></tr>
+      <tr><td class="c">۱۳</td><td>داشبورد مدیریت</td><td>بند ۱۱.۱</td></tr>
+      <tr><td class="c">۱۴</td><td>لیست نمایندگی‌ها</td><td>با فیلتر وضعیت اشتراک</td></tr>
+      <tr><td class="c">۱۵</td><td>ساخت / ویرایش نمایندگی</td><td>+ تخصیص اشتراک و سقف روزانه</td></tr>
+      <tr><td class="c">۱۶</td><td>پرونده‌ی یک نماینده</td><td>اشتراک، حواله‌ها، فعالیت، زیرنماینده‌ها</td></tr>
+      <tr><td class="c">۱۷</td><td>مدیریت حواله‌ها</td><td>بند ۱۱.۵</td></tr>
+      <tr><td class="c">۱۸</td><td>گزارش تخلف</td><td>صف + صفحه‌ی بررسی و صدور حکم</td></tr>
+      <tr><td class="c">۱۹</td><td>تیکت‌ها (ادمین)</td><td>صف و پاسخ</td></tr>
+      <tr><td class="c">۲۰</td><td>مانیتورینگ فعالیت</td><td>بند ۱۱.۸</td></tr>
       <tr><td class="c">۲۱</td><td>تنظیمات و پایه‌ها</td><td>بند ۱۱.۹</td></tr>
     </tbody>
   </table>
@@ -431,30 +469,42 @@
   <table>
     <thead><tr><th style="width:26%">جدول</th><th>کارکرد</th></tr></thead>
     <tbody>
-      <tr><td><code>User</code></td><td>ادمین، نماینده و زیرنماینده (با نماینده‌ی مادر)، پروفایل نمایندگی، اعتبار ظرفیت، شمارنده‌ی اخطارها</td></tr>
+      <tr><td><code>User</code></td><td>ادمین، نماینده و زیرنماینده (با نماینده‌ی مادر)، پروفایل نمایندگی، اعتبار ظرفیت، سقف روزانه‌ی اختصاصی، شمارنده‌ی اخطارها</td></tr>
       <tr><td><code>Plan</code></td><td>پلن اشتراک: مدت، مبلغ، سقف نمایش روزانه، سقف حواله‌ی فعال</td></tr>
       <tr><td><code>Subscription</code></td><td>اشتراک‌های صادرشده، تاریخ انقضا، و اینکه ادمین صادر کرده یا از ظرفیت مادر</td></tr>
-      <tr><td><code>Havale</code></td><td>حواله فروش و درخواست خرید (با فیلد نوع) و همه‌ی فیلدهای بند ۵.۲</td></tr>
-      <tr><td><code>ContactReveal</code></td><td>هر بار باز کردن مشخصات فروشنده — پایه‌ی داشبورد و مانیتورینگ</td></tr>
+      <tr><td><code>Havale</code></td><td>حواله فروش و درخواست خرید، همه‌ی فیلدهای بند ۵.۲، تاریخ بسته شدن خودکار</td></tr>
+      <tr><td><code>ContactReveal</code></td><td>هر بار باز کردن مشخصات — پایه‌ی داشبورد نماینده و مانیتورینگ ما</td></tr>
       <tr><td><code>ViolationReport</code></td><td>گزارش تخلف و حکم ادمین</td></tr>
       <tr><td><code>Ticket</code> / <code>TicketMessage</code></td><td>پشتیبانی و گفت‌وگو</td></tr>
       <tr><td><code>AuthSession</code></td><td>نشست فعال — پایه‌ی تک‌نشستی و خروج اجباری</td></tr>
-      <tr><td><code>OtpChallenge</code></td><td>کد دو عاملی پیامکی</td></tr>
+      <tr><td><code>OtpChallenge</code></td><td>کد دو عاملی (آماده، فعلاً با شبیه‌ساز)</td></tr>
       <tr><td><code>SeatOrder</code></td><td>درخواست خرید ظرفیت زیرنمایندگی</td></tr>
       <tr><td><code>ActivityLog</code></td><td>تایم‌لاین فعالیت برای مانیتورینگ</td></tr>
-      <tr><td><code>Setting</code></td><td>قیمت ظرفیت، سقف‌ها، آستانه‌ی اخطارها — بدون نیاز به تغییر کد</td></tr>
+      <tr><td><code>Setting</code></td><td>قیمت ظرفیت، سقف‌ها، آستانه‌ی اخطارها، کلید پیامک — بدون نیاز به تغییر کد</td></tr>
     </tbody>
   </table>
 </section>
 
 <!-- ۱۴ -->
 <section>
-  <h2 class="sec"><span class="num">۱۴</span> پیشنهاد فنی</h2>
+  <h2 class="sec"><span class="num">۱۴</span> انتخاب فنی و دلیلش</h2>
   <ul class="clean">
-    <li><b>فرانت و بک:</b> Next.js با TypeScript — یک پروژه، هم رابط کاربری هم سرور.</li>
-    <li><b>دیتابیس:</b> PostgreSQL با Prisma.</li>
-    <li><b>ظاهر:</b> کامل راست‌به‌چپ، فونت وزیرمتن، تاریخ شمسی، اعداد فارسی، جداکننده‌ی هزارگان.</li>
-    <li><b>موبایل:</b> کامل ریسپانسیو — نماینده‌ها عملاً با گوشی کار می‌کنند. <span class="qref">س۱</span> <span class="qref">س۲</span></li>
+    <li><span class="bnum">۱۴.۱</span> <b>انتخاب:</b> Next.js + TypeScript برای رابط کاربری و سرور، PostgreSQL برای دیتابیس، Prisma برای لایه‌ی داده، طراحی کامل راست‌به‌چپ با فونت وزیرمتن.</li>
+  </ul>
+  <div class="d">
+    <b>۱۴.۲ چرا این انتخاب، با توجه به اینکه فعلاً تیم ندارید:</b>
+    <ul class="clean" style="margin-top:6px">
+      <li><b>یک پروژه، نه دو تا.</b> رابط کاربری و سرور در یک کدبیس‌اند؛ نگهداری و دیباگ برای یک نفر بسیار سبک‌تر است.</li>
+      <li><b>TypeScript جلوی نصف خطاها را قبل از اجرا می‌گیرد.</b> وقتی تیم QA ندارید، این ارزش زیادی دارد.</li>
+      <li><b>Prisma مدل داده را یک‌جا و خوانا نگه می‌دارد</b> — دولوپری که بعداً اضافه شود، در نیم روز ساختار دیتابیس را می‌فهمد.</li>
+      <li><b>PostgreSQL</b> برای گزارش‌گیری و مانیتورینگ سنگین (که خواسته‌ی اصلی شماست) از MySQL قوی‌تر است.</li>
+      <li><b>بازار نیروی کار:</b> React/Next بین دولوپرهای ایرانی رایج است، پس جذب نفر بعدی سخت نیست.</li>
+      <li><b>کارایی:</b> رندر سمت سرور باعث می‌شود پنل روی موبایل و اینترنت ضعیف هم سریع باز شود — نماینده‌ها عملاً با گوشی کار می‌کنند.</li>
+    </ul>
+  </div>
+  <ul class="clean">
+    <li><span class="bnum">۱۴.۳</span> <b>سرور:</b> هنوز تهیه نشده. پروژه طوری نوشته می‌شود که روی هر سرور لینوکسی ایران بالا بیاید (با Docker، بدون وابستگی به سرویس خاص). مشخصات سرور پیشنهادی را موقع تحویل می‌دهم.</li>
+    <li><span class="bnum">۱۴.۴</span> <b>پشتیبان‌گیری:</b> بکاپ روزانه‌ی خودکار دیتابیس از روز اول — چون کل دارایی این کسب‌وکار همین دیتاست.</li>
   </ul>
 </section>
 
@@ -462,312 +512,88 @@
 <section>
   <h2 class="sec"><span class="num">۱۵</span> مسیر اجرا</h2>
   <table>
-    <thead><tr><th class="c" style="width:10%">گام</th><th style="width:34%">خروجی</th><th>وضعیت</th></tr></thead>
+    <thead><tr><th class="c" style="width:9%">گام</th><th style="width:34%">خروجی</th><th>وضعیت</th></tr></thead>
     <tbody>
-      <tr><td class="c">۱</td><td>همین بلوپرینت</td><td>تحویل شد — منتظر ادیت شما</td></tr>
-      <tr><td class="c">۲</td><td>موک‌آپ کلیک‌شدنی ۲۱ صفحه</td><td>بعد از تأیید شما — بدون دیتابیس، فقط ظاهر و جریان کار</td></tr>
-      <tr><td class="c">۳</td><td>پیاده‌سازی واقعی فاز ۱</td><td>بعد از تأیید موک‌آپ</td></tr>
-      <tr><td class="c">۴</td><td>تحویل، تست و راه‌اندازی روی سرور</td><td>—</td></tr>
+      <tr><td class="c">۱</td><td>بلوپرینت نسخه ۱</td><td>تحویل شد</td></tr>
+      <tr><td class="c">۲</td><td>پاسخ ۲۵ سؤال</td><td>گرفته شد و در همین سند اعمال شد</td></tr>
+      <tr><td class="c">۳</td><td><b>موک‌آپ کلیک‌شدنی ۲۱ صفحه</b></td><td>گام بعدی — بدون دیتابیس، فقط ظاهر و جریان کار</td></tr>
+      <tr><td class="c">۴</td><td>پیاده‌سازی واقعی فاز ۱</td><td>بعد از تأیید موک‌آپ</td></tr>
+      <tr><td class="c">۵</td><td>تست، راه‌اندازی روی سرور، وصل کردن پیامک</td><td>—</td></tr>
     </tbody>
   </table>
 </section>
 
-<!-- ۱۶ — پاسخ‌نامه -->
+<!-- ۱۶ -->
 <section class="pagebreak">
-  <h2 class="sec"><span class="num">۱۶</span> پاسخ‌نامه — ۲۵ سؤال من از شما</h2>
+  <h2 class="sec"><span class="num">۱۶</span> جدول نهایی ۲۵ تصمیم</h2>
+  <div class="d">این جدول سند مرجع در طول ساخت پروژه است. هر وقت خواستید چیزی عوض شود، شماره‌ی همین ردیف را بگویید.</div>
+  <table>
+    <thead><tr><th class="c" style="width:7%">#</th><th style="width:38%">موضوع</th><th>تصمیم نهایی</th></tr></thead>
+    <tbody>
+      <tr><td class="c">۱</td><td>تکنولوژی</td><td>Next.js + TypeScript + PostgreSQL + Prisma</td></tr>
+      <tr><td class="c">۲</td><td>سرور</td><td>ایران، هنوز تهیه نشده؛ قابل استقرار روی هر سرور لینوکسی</td></tr>
+      <tr><td class="c">۳</td><td>پنل پیامکی</td><td>ندارید؛ شبیه‌ساز + کلید خاموش/روشن برای کد دو عاملی</td></tr>
+      <tr><td class="c">۴</td><td>پرداخت فاز ۱</td><td>دستی، با تأیید ادمین</td></tr>
+      <tr><td class="c">۵</td><td>واحد پول</td><td>تومان</td></tr>
+      <tr><td class="c">۶</td><td>پلن اشتراک</td><td>فعلاً یک پلن؛ ساختار چندپلنی آماده</td></tr>
+      <tr><td class="c">۷</td><td>قیمت ظرفیت زیرنماینده</td><td>۱ میلیون تومان، از تنظیمات قابل تغییر</td></tr>
+      <tr><td class="c">۸</td><td>زمان تحویل</td><td>تعداد روز</td></tr>
+      <tr><td class="c">۹</td><td>مدت زمان واریز</td><td>تعداد روز مهلت خریدار برای واریز</td></tr>
+      <tr><td class="c">۱۰</td><td>مبلغ پرداخت شده</td><td>مبلغ واریزی تا امروز به شرکت خودروساز</td></tr>
+      <tr><td class="c">۱۱</td><td>لیست خودرو و شرکت</td><td>فعلاً مدیران خودرو؛ ساختار چندشرکتی</td></tr>
+      <tr><td class="c">۱۲</td><td>تعداد خودرو در حواله</td><td>هر حواله یک خودرو</td></tr>
+      <tr><td class="c">۱۳</td><td>انقضای آگهی</td><td>برابر «مدت زمان واریز»، با تمدید یک‌کلیکی</td></tr>
+      <tr><td class="c">۱۴</td><td>علامت «فروخته شد»</td><td>هست؛ از لیست عمومی خارج، در پنل ما می‌ماند</td></tr>
+      <tr><td class="c">۱۵</td><td>نمایش مشخصات</td><td>کاملاً مخفی + دکمه‌ی نمایش + ثبت در پنل ما</td></tr>
+      <tr><td class="c">۱۶</td><td>سقف روزانه</td><td>پیش‌فرض ۳۰، برای هر حساب جدا قابل تغییر</td></tr>
+      <tr><td class="c">۱۷</td><td>مشخصات در درخواست خرید</td><td>مخفی، با همان قاعده</td></tr>
+      <tr><td class="c">۱۸</td><td>آگهی‌دهنده چه ببیند</td><td>فقط تعداد بازدید، بدون هویت</td></tr>
+      <tr><td class="c">۱۹</td><td>سطح زیرنمایندگی</td><td>یک سطح</td></tr>
+      <tr><td class="c">۲۰</td><td>اختیارات زیرنماینده</td><td>کاملاً مثل نماینده‌ی عادی</td></tr>
+      <tr><td class="c">۲۱</td><td>مدت اشتراک زیرنماینده</td><td>تا پایان اشتراک مادر</td></tr>
+      <tr><td class="c">۲۲</td><td>دسترسی مادر</td><td>ساخت، تعلیق، ریست پسورد، دیدن آمار</td></tr>
+      <tr><td class="c">۲۳</td><td>آستانه‌ی تنبیه</td><td>۳ اخطار در هر طرف</td></tr>
+      <tr><td class="c">۲۴</td><td>تکلیف اشتراک متخلف</td><td>اشتراک بماند، فقط حساب تعلیق شود</td></tr>
+      <tr><td class="c">۲۵</td><td>پسورد اولیه</td><td>ادمین تعیین کند + تغییر اجباری در اولین ورود</td></tr>
+      <tr><td class="c">۲۶</td><td>رنگ خودرو</td><td>در فروش الزامی، در درخواست خرید اختیاری</td></tr>
+      <tr><td class="c">۲۷</td><td>تماس در درخواست خرید</td><td>کاملاً خودکار از پروفایل</td></tr>
+    </tbody>
+  </table>
+</section>
 
-  <div class="formintro">
-    <b>مهم:</b> اگر فقط همین بخش را پر کنید، برای شروع کافی است. کنار گزینه‌ای که می‌خواهید علامت بزنید،
-    یا هر جوابی که دارید در خط نقطه‌چین بنویسید. گزینه‌ای که <span class="chip">پیش‌فرض</span> خورده،
-    اگر چیزی نگویید همان اجرا می‌شود — پس <b>لازم نیست همه را جواب دهید</b>، فقط جاهایی که با نظر من موافق نیستید.
+<!-- ۱۷ -->
+<section>
+  <h2 class="sec"><span class="num">۱۷</span> سه سؤال کوچک باقی‌مانده</h2>
+  <div class="w">
+    این سه مورد از دل جواب‌های خودتان بیرون آمد. اگر جواب ندهید، پیش‌فرضی که نوشته‌ام اجرا می‌شود و بعداً هم قابل تغییر است — پس نگران نباشید، جلوی ساخت موک‌آپ را نمی‌گیرد.
   </div>
-
-  <div class="qgroup">
-    <h3>الف) زیرساخت و فنی</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱</span>سامانه با چه تکنولوژی ساخته شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> Next.js + PostgreSQL <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> لاراول + MySQL</span>
-        <span class="opt"><span class="box"></span> نظری ندارم، خودت انتخاب کن</span>
-      </div>
-      <div class="note">اگر تیم یا برنامه‌نویس فعلی‌تان با یکی از این‌ها راحت‌تر است، همان را بگویید.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲</span>سرور و هاست کجا باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> سرور ایران <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> سرور خارج</span>
-        <span class="opt"><span class="box"></span> نمی‌دانم</span>
-      </div>
-      <div class="note">روی انتخاب پنل پیامکی و درگاه پرداخت اثر مستقیم دارد.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۳</span>کد دو عاملی با کدام پنل پیامکی ارسال شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> کاوه‌نگار</span>
-        <span class="opt"><span class="box"></span> ملی پیامک</span>
-        <span class="opt"><span class="box"></span> فراز اس‌ام‌اس</span>
-        <span class="opt"><span class="box"></span> هنوز ندارم <span class="chip">پیش‌فرض</span></span>
-      </div>
-      <div class="note">اگر ندارید، شبیه‌ساز می‌گذارم و بعداً با یک کلید API واقعی وصل می‌شود. پنل پیامکی و «خط خدماتی» را باید خودتان تهیه کنید.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۴</span>پرداخت حق اشتراک در فاز ۱ چطور باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> دستی، تأیید ادمین <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> درگاه آنلاین همین فاز ۱</span>
-      </div>
-      <div class="note">درگاه آنلاین نیاز به نماد اعتماد و حساب تجاری دارد؛ اگر ندارید بهتر است فاز ۲ باشد.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qgroup">
-    <h3>ب) پول و مبالغ</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۵</span>واحد پول در کل سامانه چه باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> تومان</span>
-        <span class="opt"><span class="box"></span> ریال، نمایش تومان هم کنارش <span class="chip">پیش‌فرض</span></span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۶</span>پلن‌های اشتراک و قیمتشان چیست؟</div>
-      <div class="note">مثلاً: یک‌ماهه ۲ میلیون / سه‌ماهه ۵ میلیون / یک‌ساله ۱۵ میلیون. هر تعداد پلن که بخواهید. اگر ننویسید، سه پلن نمونه می‌گذارم که خودتان از پنل عوض کنید.</div>
-      <span class="fill"><span>پلن‌ها و قیمت:</span></span>
-      <span class="fill"><span></span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۷</span>قیمت هر ظرفیت زیرنماینده، ۱ میلیون <b>تومان</b> است یا <b>ریال</b>؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> ۱ میلیون تومان <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> ۱ میلیون ریال</span>
-        <span class="opt"><span class="box"></span> مبلغ دیگر</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qgroup">
-    <h3>ج) جزئیات حواله</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۸</span>«زمان تحویل» چطور وارد شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> تاریخ دقیق شمسی</span>
-        <span class="opt"><span class="box"></span> فقط ماه و سال، مثل «دی ۱۴۰۴» <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> متن آزاد، مثل «۳ ماهه»</span>
-      </div>
-      <div class="note">اگر متن آزاد شود، فیلتر «بازه‌ی زمان تحویل» دیگر دقیق کار نمی‌کند — عرف بازار خودتان را بگویید.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۹</span>«مدت زمان واریز» یعنی چه؟ واحدش روز است؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> تعداد روز تا موعد واریز <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> تاریخ مشخص</span>
-        <span class="opt"><span class="box"></span> چیز دیگری است (توضیح دهید)</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۰</span>«مبلغ پرداخت شده» یعنی چه؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> مبلغی که تا امروز به شرکت خودروساز واریز شده <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> بیعانه‌ی خریدار</span>
-        <span class="opt"><span class="box"></span> چیز دیگری است</span>
-      </div>
-      <div class="note">اگر معنی‌اش «واریزی به شرکت» باشد، سیستم می‌تواند «مانده تا تکمیل» را هم خودکار حساب و نمایش دهد.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۱</span>لیست «نوع خودرو» و «شرکت عرضه کننده» را شما می‌دهید؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> لیست را می‌دهم</span>
-        <span class="opt"><span class="box"></span> خودت یک لیست پایه بگذار، بعد کامل می‌کنیم <span class="chip">پیش‌فرض</span></span>
-      </div>
-      <div class="note">لیست ثابت باعث می‌شود سرچ و فیلتر درست کار کند؛ متن آزاد باعث می‌شود «پژو ۲۰۷» و «207» دو چیز جدا شوند.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۲</span>یک حواله می‌تواند چند دستگاه باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> بله، فیلد «تعداد» اضافه شود <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> نه، هر حواله همیشه یک دستگاه است</span>
-      </div>
-      <div class="note">این فیلد در لیست شما نبود ولی به نظرم لازم است — چون کسی که ۵ حواله‌ی یکسان دارد نباید ۵ بار فرم پر کند.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۳</span>آگهی حواله تاریخ انقضا داشته باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> بله، بعد از ۱۵ روز خودکار بسته شود <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> بله، ولی با تعداد روز دیگری</span>
-        <span class="opt"><span class="box"></span> نه، تا خودش نبندد باز بماند</span>
-      </div>
-      <div class="note">بدون انقضا، بعد از چند ماه لیست پر از حواله‌های سوخته می‌شود و کیفیت سامانه پایین می‌آید.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۴</span>نماینده بتواند حواله را «فروخته شد» علامت بزند؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> بله، و از لیست عمومی خارج شود <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> فقط حذف کند، بی‌نیاز به این علامت</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qgroup">
-    <h3>د) مشخصات فروشنده و مخفی‌سازی</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۵</span>برای نماینده‌ی <b>دارای اشتراک فعال</b>، مشخصات تماس چطور نمایش داده شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> پیش‌فرض ماسک، با دکمه‌ی «نمایش مشخصات» باز شود و ثبت گردد <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> همیشه باز و بدون دکمه</span>
-      </div>
-      <div class="note"><b>این مهم‌ترین سؤال است.</b> اگر همیشه باز باشد، کار نماینده یک کلیک راحت‌تر می‌شود ولی دو چیز را از دست می‌دهید: آمار دقیق «چه کسی چه حواله‌ای را دیده» برای مانیتورینگ، و سد جلوگیری از جمع‌آوری انبوه دیتا توسط رقیب. پیشنهاد جدی من گزینه‌ی اول است.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۶</span>سقف روزانه‌ی «باز کردن مشخصات» چند مورد باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> ۳۰ در روز <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> عدد دیگر</span>
-        <span class="opt"><span class="box"></span> بی‌نهایت</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۷</span>در «درخواست خرید»، مشخصات <b>خریدار</b> هم ماسک شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> بله، با همان قاعده <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> نه، آزاد باشد تا سریع‌تر معامله شود</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۸</span>آگهی‌دهنده ببیند چه کسی مشخصاتش را باز کرده؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> فقط تعداد را ببیند <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> نام و نمایندگی بازکننده‌ها را هم ببیند</span>
-        <span class="opt"><span class="box"></span> هیچ‌چیز نبیند</span>
-      </div>
-      <div class="note">اگر نام را ببیند، ممکن است نماینده‌ها بیرون از سامانه با هم هماهنگ شوند و شما را دور بزنند.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qgroup">
-    <h3>ه) حالت ماژول و زیرنمایندگی</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۱۹</span>چند سطح زیرنمایندگی؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> یک سطح: زیرنماینده نمی‌تواند زیرنماینده بسازد <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> چند سطح (درختی)</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۰</span>زیرنماینده چه اختیاراتی داشته باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> کاملاً مثل نماینده‌ی معمولی <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> فقط ببیند، حق ثبت حواله نداشته باشد</span>
-        <span class="opt"><span class="box"></span> مادر برای هر کدام جدا تعیین کند</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۱</span>مدت اشتراک زیرنماینده چقدر باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> تا پایان اشتراک مادر <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> مدت مستقل، ولی هرگز بیشتر از مادر</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۲</span>نماینده‌ی مادر روی زیرنماینده‌هایش چه دسترسی داشته باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> ساخت، تعلیق، ریست پسورد، دیدن آمار <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> به‌علاوه دیدن و مدیریت حواله‌های آن‌ها</span>
-        <span class="opt"><span class="box"></span> فقط ساخت حساب، دیگر هیچ</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qgroup">
-    <h3>و) تخلف و امنیت</h3>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۳</span>آستانه‌ی تنبیه خودکار چند اخطار باشد؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> ۳ اخطار آگهی جعلی → تعلیق حساب / ۳ اخطار گزارش بی‌مورد → قطع دکمه‌ی گزارش <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> اعداد دیگر</span>
-        <span class="opt"><span class="box"></span> تنبیه خودکار نباشد، همیشه دستی تصمیم بگیریم</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۴</span>وقتی تخلف «آگهی فیک» تأیید شد، با حق اشتراک آن نماینده چه کنیم؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> اشتراک بماند، فقط حساب تعلیق شود <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> اشتراک باطل و وجه ضبط شود</span>
-        <span class="opt"><span class="box"></span> هر بار دستی تصمیم بگیریم</span>
-      </div>
-      <div class="note">اگر ضبط وجه می‌خواهید، بهتر است در «قوانین و شرایط» هنگام ساخت حساب نوشته شود؛ می‌توانم صفحه‌ی پذیرش قوانین هم اضافه کنم.</div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-
-    <div class="qitem">
-      <div class="qhead"><span class="id">س۲۵</span>پسورد اولیه‌ی نماینده چطور تعیین شود؟</div>
-      <div class="opts">
-        <span class="opt"><span class="box"></span> ادمین تعیین کند، پیامک شود، اولین ورود تغییر اجباری <span class="chip">پیش‌فرض</span></span>
-        <span class="opt"><span class="box"></span> سیستم خودش تولید و پیامک کند</span>
-        <span class="opt"><span class="box"></span> ادمین تعیین کند و تغییر اجباری نباشد</span>
-      </div>
-      <span class="fill"><span>پاسخ شما:</span></span>
-    </div>
-  </div>
-
-  <div class="qitem" style="border-color:#1d4ed8; background:#f8fbff;">
-    <div class="qhead">هر نکته، خواسته یا اصلاح دیگری که در این سند نیست:</div>
-    <span class="fill"><span></span></span>
-    <span class="fill"><span></span></span>
-    <span class="fill"><span></span></span>
-    <span class="fill"><span></span></span>
-  </div>
+  <table>
+    <thead><tr><th class="c" style="width:6%">#</th><th style="width:44%">سؤال</th><th>پیش‌فرض من</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="c"><b>۱</b></td>
+        <td><b>عمر «درخواست خرید» چقدر باشد؟</b><br>
+        گفتید عمر آگهی = مدت زمان واریز. ولی در درخواست خرید، مدت واریز اختیاری است و ممکن است خالی بماند.</td>
+        <td>اگر مدت واریز پر شده باشد همان، وگرنه <b>۳۰ روز</b></td>
+      </tr>
+      <tr>
+        <td class="c"><b>۲</b></td>
+        <td><b>«مانده تا تکمیل وجه» را نمایش دهیم؟</b><br>
+        برای محاسبه‌اش به «مبلغ کل خودرو نزد شرکت» نیاز داریم که در لیست فیلدهای شما نبود. با اضافه کردن یک فیلد اختیاری، سیستم خودش مانده را حساب می‌کند و فیلترش هم ممکن می‌شود.</td>
+        <td>یک فیلد <b>اختیاری</b> «مبلغ کل خودرو» اضافه شود؛ اگر پر بود، مانده نمایش داده شود</td>
+      </tr>
+      <tr>
+        <td class="c"><b>۳</b></td>
+        <td><b>مدت پلن اشتراک چند روز و چند تومان است؟</b><br>
+        گفتید فعلاً یک پلن داریم ولی مدت و مبلغش را نگفتید.</td>
+        <td><b>۳۰ روز</b> با مبلغ نمونه، که خودتان از پنل عوض می‌کنید</td>
+      </tr>
+    </tbody>
+  </table>
 </section>
 
 <footer class="end">
-  پس از دریافت پاسخ‌های شما، بلوپرینت نسخه‌ی ۲ به‌روز می‌شود و بعد <b>موک‌آپ کلیک‌شدنی ۲۱ صفحه</b> ساخته می‌شود تا قبل از نوشتن کد واقعی، ظاهر و جریان کار را ببینید و تأیید کنید.
+  <b>گام بعدی:</b> موک‌آپ کلیک‌شدنی ۲۱ صفحه‌ی بخش ۱۲ ساخته می‌شود — راست‌به‌چپ، با داده‌ی نمونه‌ی واقعی (خودروهای مدیران خودرو)، بدون دیتابیس. آن را در مرورگر باز می‌کنید، بین صفحه‌ها کلیک می‌کنید و هر چه خواستید عوض می‌شود؛ بعد از تأیید، کد واقعی نوشته می‌شود.
 </footer>
 
 </body>
