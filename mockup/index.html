@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>موک‌آپ سامانه حواله خودرو — فاز ۱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="root"></div>
+<div id="overlay"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+<script>
+/* ================================================================
+   مودال‌ها
+   ================================================================ */
+
+function reportModal(id) {
+  if (!can.report) { S.modal = { type: 'blocked', what: 'گزارش تخلف' }; render(); return; }
+  S.modal = { type: 'report', id }; render();
+}
+function renewModal(id) {
+  if (!can.renew) { S.modal = { type: 'blocked', what: 'تمدید آگهی' }; render(); return; }
+  S.modal = { type: 'renew', id }; render();
+}
+function closeModal() { S.modal = null; render(); }
+
+function modalHTML() {
+  const m = S.modal; if (!m) return '';
+  const box = (title, body, foot) => `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <header>${title}</header>
+        <div class="body">${body}</div>
+        <footer>${foot}</footer>
+      </div>
+    </div>`;
+
+  if (m.type === 'blocked') return box(
+    'اشتراک شما تمام شده است',
+    `<div class="banner bad" style="margin:0"><span class="b-ico">⛔</span><div class="b-txt">
+       <b>${m.what || 'این اقدام'} با اشتراک تمام‌شده ممکن نیست</b>
+       ثبت حواله، ثبت درخواست خرید، تمدید آگهی، گزارش تخلف و دیدن مشخصات تماس همگی نیاز به اشتراک فعال دارند.
+       دیدن لیست حواله‌ها آزاد است.</div></div>`,
+    `<button class="btn primary" onclick="closeModal();go('subs')">تمدید اشتراک</button>
+     <button class="btn" onclick="closeModal()">بستن</button>`);
+
+  if (m.type === 'limit') return box(
+    'سقف روزانه پر شده است',
+    `<div class="banner warn" style="margin:0"><span class="b-ico">◷</span><div class="b-txt">
+       <b>امروز ${fa(S.limitDay)} بار مشخصات باز کرده‌اید</b>
+       سقف نیمه‌شب به وقت ایران صفر می‌شود. برای افزایش سقف، از پشتیبانی درخواست دهید.</div></div>`,
+    `<button class="btn primary" onclick="closeModal();go('tickets')">درخواست افزایش سقف</button>
+     <button class="btn" onclick="closeModal()">بستن</button>`);
+
+  if (m.type === 'confirmReveal') {
+    const h = HAVALES.find(x => x.id === m.id); const o = agent(h.owner);
+    return box(
+      'نمایش مشخصات فروشنده',
+      `<div>حواله <b class="num">HV-${fa(h.id)}</b> — ${esc(h.car)}</div>
+       <div class="banner info" style="margin:0"><span class="b-ico">◎</span><div class="b-txt">
+         <b>این اقدام ثبت می‌شود</b>
+         در پنل مدیریت ثبت می‌شود که شما این حواله را در چه ساعتی باز کرده‌اید. صاحب آگهی فقط عدد بازدید را می‌بیند، نه نام شما.</div></div>
+       <div style="font-size:12.5px;color:var(--ink-3)">
+         از سقف امروز <b class="num" style="color:var(--ink)">${fa(S.revealsToday)}</b> از ${fa(S.limitDay)} مصرف شده.
+         این حواله فقط یک‌بار از سقف کم می‌کند؛ دفعات بعد رایگان است.</div>`,
+      `<button class="btn primary" onclick="confirmReveal(${h.id})">نمایش مشخصات</button>
+       <button class="btn" onclick="closeModal()">انصراف</button>`);
+  }
+
+  if (m.type === 'report') {
+    const h = HAVALES.find(x => x.id === m.id);
+    return box(
+      `گزارش تخلف — HV-${fa(h.id)}`,
+      `<div class="field"><label>دلیل گزارش <span class="req">*</span></label>
+        <select>
+          <option>آگهی جعلی</option><option>مبلغ نادرست</option>
+          <option>عدم پاسخگویی</option><option>قبلاً فروخته شده</option>
+          <option>کلاهبرداری</option><option>سایر</option>
+        </select>
+        <div class="help">برای «عدم پاسخگویی» باید ابتدا مشخصات را باز کرده باشید</div></div>
+      <div class="field"><label>توضیح <span class="req">*</span></label>
+        <textarea rows="3" placeholder="حداقل ۲۰ کاراکتر…"></textarea></div>
+      <div class="banner warn" style="margin:0"><span class="b-ico">⚠</span><div class="b-txt">
+        گزارش بی‌مورد برای شما اخطار دارد. با ۳ اخطار، دکمه‌ی گزارش تخلف قطع می‌شود.
+        سقف شما ۵ گزارش در ۲۴ ساعت است.</div></div>`,
+      `<button class="btn primary" onclick="closeModal();toast('گزارش ثبت شد — در صف بررسی')">ثبت گزارش</button>
+       <button class="btn" onclick="closeModal()">انصراف</button>`);
+  }
+
+  if (m.type === 'renew') {
+    const h = HAVALES.find(x => x.id === m.id);
+    return box(
+      `تمدید آگهی — HV-${fa(h.id)}`,
+      `<div>${esc(h.car)} — ${esc(h.color || 'هر رنگ')}</div>
+       <div class="field"><label>زمان تحویل (روز) <span class="req">*</span></label>
+         <input class="in num" value="${fa(h.delivery || 0)}">
+         <div class="help copper">از ثبت اولیه‌ی این آگهی زمان گذشته — عدد را به‌روز کنید تا خریدار عدد درست ببیند</div></div>
+       <div class="field"><label>مدت زمان واریز (روز) <span class="req">*</span></label>
+         <input class="in num" value="${fa(h.deposit || 3)}">
+         <div class="help">بین ۱ تا ۳۰ روز — عمر آگهی هم همین است</div></div>`,
+      `<button class="btn primary" onclick="closeModal();toast('آگهی تمدید شد')">تمدید</button>
+       <button class="btn" onclick="closeModal()">انصراف</button>`);
+  }
+
+  if (m.type === 'newSub') return box(
+    'ساخت زیرنماینده',
+    `<div class="grid g2">
+       <div class="field"><label>نام و نام خانوادگی <span class="req">*</span></label><input class="in"></div>
+       <div class="field"><label>شهر <span class="req">*</span></label>
+         <select>${CITIES.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+       <div class="field"><label>موبایل <span class="req">*</span></label><input class="in num" dir="ltr"></div>
+       <div class="field"><label>کد نمایندگی</label><input class="in" value="MK-1042-08" readonly dir="ltr">
+         <div class="help">خودکار از کد شما ساخته شد</div></div>
+     </div>
+     <div class="banner info" style="margin:0"><span class="b-ico">⛁</span><div class="b-txt">
+       با ساخت این حساب، یک ظرفیت از ۵۰ ظرفیت پیش‌خریدشده‌ی شما مصرف می‌شود.
+       اشتراک این زیرنماینده دقیقاً تا پایان اشتراک خود شما اعتبار دارد.</div></div>`,
+    `<button class="btn primary" onclick="closeModal();toast('زیرنماینده MK-1042-08 ساخته شد')">ساخت حساب</button>
+     <button class="btn" onclick="closeModal()">انصراف</button>`);
+
+  if (m.type === 'buySeats') return box(
+    'خرید ظرفیت زیرنمایندگی',
+    `<div class="field"><label>تعداد ظرفیت برای ماه آینده</label><input class="in num" value="۵۰"></div>
+     <div style="font-size:13px;line-height:2;border-top:1px dotted var(--line);padding-top:9px">
+       <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">قیمت هر ظرفیت</span><b class="num">۱٬۰۰۰٬۰۰۰ تومان</b></div>
+       <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">ظرفیت</span><b class="num">۵۰٬۰۰۰٬۰۰۰ تومان</b></div>
+       <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">اشتراک ماهیانه</span><b class="num">۲۵٬۰۰۰٬۰۰۰ تومان</b></div>
+       <div style="display:flex;justify-content:space-between;font-size:15px;padding-top:5px"><span>مجموع</span><b class="num">۷۵٬۰۰۰٬۰۰۰ تومان</b></div>
+     </div>
+     <div class="banner warn" style="margin:0"><span class="b-ico">⚠</span><div class="b-txt">
+       پیش‌پرداخت است. تعلیق زیرنماینده وسط ماه پول برنمی‌گرداند و ظرفیتش تا پایان ماه آزاد نمی‌شود.</div></div>`,
+    `<button class="btn primary" onclick="closeModal();toast('درخواست ثبت شد — پس از واریز، ادمین تأیید می‌کند')">ثبت درخواست</button>
+     <button class="btn" onclick="closeModal()">انصراف</button>`);
+
+  if (m.type === 'newTicket') return box(
+    'تیکت جدید',
+    `<div class="field"><label>موضوع <span class="req">*</span></label><input class="in"></div>
+     <div class="grid g2">
+       <div class="field"><label>اولویت</label><select><option>معمولی</option><option>زیاد</option><option>کم</option></select></div>
+       <div class="field"><label>ارجاع به حواله</label><input class="in" placeholder="HV-2041 (اختیاری)" dir="ltr"></div>
+     </div>
+     <div class="field"><label>متن <span class="req">*</span></label><textarea rows="4"></textarea></div>`,
+    `<button class="btn primary" onclick="closeModal();toast('تیکت ثبت شد')">ثبت تیکت</button>
+     <button class="btn" onclick="closeModal()">انصراف</button>`);
+
+  return '';
+}
+
+/* ================================================================
+   نوار دموی بازبینی — برای پرش بین صفحه‌ها و تغییر حالت
+   ================================================================ */
+
+const PAGES = [
+  ['login',        '۱ — ورود، مرحله ۱'],
+  ['otp',          '۲ — ورود، مرحله ۲ (کد پیامکی)'],
+  ['changepass',   '۳ — تغییر اجباری رمز'],
+  ['dash',         '۴ — داشبورد نماینده'],
+  ['search',       '۵ — استعلام حواله‌ها'],
+  ['new',          '۶ — ثبت حواله جدید (فروش)'],
+  ['request',      '۷ — ثبت درخواست خرید'],
+  ['mine',         '۸ — حواله‌های من'],
+  ['sublist',      '۹ — زیرنمایندگی‌ها'],
+  ['tickets',      '۱۰ — تیکت‌های پشتیبانی'],
+  ['ticket',       '۱۱ — گفت‌وگوی تیکت'],
+  ['subs',         '۱۲ — اشتراک من'],
+  ['adm-dash',     '۱۳ — داشبورد مدیریت'],
+  ['adm-agents',   '۱۴ — لیست نمایندگی‌ها'],
+  ['adm-new',      '۱۵ — ساخت نمایندگی'],
+  ['adm-agent',    '۱۶ — پرونده‌ی نماینده'],
+  ['adm-havales',  '۱۷ — مدیریت حواله‌ها'],
+  ['adm-reports',  '۱۸ — گزارش تخلف'],
+  ['adm-tickets',  '۱۹ — تیکت‌ها (ادمین)'],
+  ['adm-monitor',  '۲۰ — مانیتورینگ فعالیت'],
+  ['adm-seats',    '۲۱ — درخواست ظرفیت'],
+  ['adm-settings', '۲۲ — تنظیمات و پایه‌ها'],
+];
+
+function demobar() {
+  const admin = S.page.startsWith('adm');
+  return `
+  <div class="demobar">
+    <span class="lbl">صفحه</span>
+    <select onchange="go(this.value)">
+      ${PAGES.map(([id, t]) => `<option value="${id}" ${S.page===id?'selected':''}>${t}</option>`).join('')}
+    </select>
+    ${!admin ? `
+      <span class="lbl" style="margin-inline-start:8px">اشتراک</span>
+      <button class="chip ${S.sub==='active'?'on':''}" onclick="S.sub='active';render()">فعال</button>
+      <button class="chip ${S.sub==='expired'?'on':''}" onclick="S.sub='expired';render()">منقضی</button>
+    ` : `
+      <span class="lbl" style="margin-inline-start:8px">نقش</span>
+      <button class="chip ${S.role==='super'?'on':''}" onclick="S.role='super';render()">مدیر کل</button>
+      <button class="chip ${S.role==='support'?'on':''}" onclick="S.role='support';render()">پشتیبانی</button>
+      <button class="chip ${S.role==='finance'?'on':''}" onclick="S.role='finance';render()">مالی</button>
+    `}
+    <div class="spacer"></div>
+    <span class="lbl">موک‌آپ فاز ۱ — داده نمونه است، دیتابیسی در کار نیست</span>
+  </div>`;
+}
+
+/* ================================================================
+   روتر
+   ================================================================ */
+
+const TITLES = {
+  dash: ['داشبورد', 'خلاصه‌ی وضعیت شما'],
+  search: ['استعلام حواله‌ها', 'جستجو و فیلتر در حواله‌های سامانه'],
+  new: ['ثبت حواله جدید', 'حواله فروش'],
+  request: ['ثبت درخواست خرید حواله', 'فقط ۲ فیلد الزامی'],
+  mine: ['حواله‌های من', 'ویرایش، تمدید و بستن'],
+  sublist: ['زیرنمایندگی‌ها', 'حالت ماژول'],
+  tickets: ['پشتیبانی', 'تیکت‌های من'],
+  ticket: ['گفت‌وگوی تیکت', ''],
+  subs: ['اشتراک من', 'وضعیت، سقف‌ها و تاریخچه'],
+  'adm-dash': ['داشبورد مدیریت', 'نمای کلی سامانه'],
+  'adm-agents': ['نمایندگی‌ها', 'همه‌ی حساب‌ها'],
+  'adm-new': ['ساخت نمایندگی', ''],
+  'adm-agent': ['پرونده‌ی نماینده', 'اشتراک، فعالیت، زیرنماینده‌ها'],
+  'adm-havales': ['مدیریت حواله‌ها', 'همه‌ی آگهی‌های سامانه'],
+  'adm-reports': ['گزارش تخلف', 'صف بررسی و صدور حکم'],
+  'adm-tickets': ['تیکت‌ها', 'صف پشتیبانی'],
+  'adm-monitor': ['مانیتورینگ فعالیت', 'چه کسی چه کاری کرده'],
+  'adm-seats': ['درخواست ظرفیت', 'پیش‌پرداخت زیرنمایندگی'],
+  'adm-settings': ['تنظیمات و پایه‌ها', 'قابل تغییر بدون برنامه‌نویس'],
+};
+
+const VIEWS = {
+  dash: pageDash, search: pageSearch, mine: pageMine, sublist: pageSubList,
+  tickets: pageTickets, ticket: pageTicket, subs: pageSubs,
+  new: () => formHavale('offer'), request: () => formHavale('request'),
+  'adm-dash': admDash, 'adm-agents': admAgents, 'adm-new': admNew,
+  'adm-agent': admAgent, 'adm-havales': admHavales, 'adm-reports': admReports,
+  'adm-tickets': admTickets, 'adm-monitor': admMonitor, 'adm-seats': admSeats,
+  'adm-settings': admSettings,
+};
+
+function render() {
+  const root = document.getElementById('root');
+  const p = S.page;
+
+  if (p === 'login' || p === 'otp' || p === 'changepass') {
+    root.innerHTML = p === 'login' ? pageLogin() : p === 'otp' ? pageOtp() : pageChangePass();
+  } else {
+    const [title, crumb] = TITLES[p] || ['', ''];
+    root.innerHTML = `
+      <div class="shell">
+        ${sidebar()}
+        <div class="main">
+          ${topbar(title, crumb)}
+          <div class="content"><div class="wrap">${(VIEWS[p] || (() => ''))()}</div></div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('overlay').innerHTML =
+    modalHTML() + demobar() + (S.toast ? `<div class="toast">${S.toast}</div>` : '');
+}
+
+render();
+</script>
+</body>
+</html>
