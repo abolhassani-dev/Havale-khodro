@@ -114,11 +114,16 @@ model User {
   mustChangePassword Boolean @default(true) // اولین ورود: تغییر اجباری پسورد
 
   // ---- سقف نمایش مشخصات ----
-  // اگر پر باشد، سقف روزانه‌ی پلن را برای همین حساب بازنویسی می‌کند
-  dailyRevealLimitOverride Int?
+  // اگر پر باشند، سقف پلن را برای همین حساب بازنویسی می‌کنند
+  dailyRevealLimitOverride   Int?
+  monthlyRevealLimitOverride Int?
 
   // ---- حالت ماژول / زیرنمایندگی ----
+  // حساب هرگز حذف نمی‌شود؛ فقط status به SUSPENDED می‌رود.
+  // کد نمایندگی زیرنماینده خودکار از کد مادر ساخته می‌شود: G-1024-07
   isReseller  Boolean @default(false)
+  // سقف زیرنماینده‌های مجاز. صورتحساب ماهانه‌ی مادر بر اساس تعداد
+  // زیرنماینده‌ی فعال محاسبه می‌شود، نه این عدد.
   seatCredits Int     @default(0)
   parentId    String?
   parent      User?   @relation("AgentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
@@ -152,13 +157,14 @@ model User {
 }
 
 model Plan {
-  id               String  @id @default(cuid())
-  name             String  @unique
-  durationDays     Int
-  priceToman       BigInt
-  dailyRevealLimit Int     @default(30)
-  maxActiveHavale  Int     @default(100)
-  isActive         Boolean @default(true)
+  id                 String  @id @default(cuid())
+  name               String  @unique
+  durationDays       Int
+  priceToman         BigInt
+  dailyRevealLimit   Int     @default(30)
+  monthlyRevealLimit Int     @default(300)
+  maxActiveHavale    Int     @default(100)
+  isActive           Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,6 +181,8 @@ model Subscription {
   plan   Plan   @relation(fields: [planId], references: [id])
 
   startsAt   DateTime           @default(now())
+  // برای اشتراک‌های PARENT_SEAT این تاریخ مرجع نیست؛ انقضای مؤثر همیشه
+  // از اشتراک فعال نماینده‌ی مادر خوانده می‌شود تا تمدید مادر آنی اعمال شود.
   expiresAt  DateTime
   status     SubscriptionStatus @default(ACTIVE)
   priceToman BigInt             @default(0)
@@ -219,6 +227,9 @@ model Havale {
   status      HavaleStatus @default(ACTIVE)
 
   suspendReason String?
+  // حذف نرم: از دید نماینده‌ها ناپدید می‌شود ولی سابقه‌ی بازدید و
+  // گزارش‌های تخلف مربوط به آن در پنل مدیریت باقی می‌ماند.
+  deletedAt     DateTime?
 
   // شمارنده‌ی بازدید — صاحب آگهی فقط همین عدد را می‌بیند، نه هویت بازدیدکننده‌ها
   revealCount Int @default(0)
@@ -237,6 +248,7 @@ model Havale {
   reports ViolationReport[]
 
   @@index([status, closesAt])
+  @@index([deletedAt])
   @@index([kind, status, createdAt])
   @@index([ownerId, kind, status])
   @@index([carType, carColor])
@@ -275,10 +287,12 @@ model ViolationReport {
   description String
   status      ReportStatus @default(PENDING)
 
-  adminNote    String?
-  reviewedById String?
-  reviewedBy   User?     @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt   DateTime?
+  adminNote       String?
+  // زمان اطلاع‌رسانی به آگهی‌دهنده پس از تأیید تخلف، تا فرصت پاسخ از راه تیکت داشته باشد
+  ownerNotifiedAt DateTime?
+  reviewedById    String?
+  reviewedBy      User?     @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
 
   createdAt DateTime @default(now())
 
@@ -375,11 +389,13 @@ model SeatOrder {
   totalToman     BigInt
   status         SeatOrderStatus @default(PENDING)
 
-  buyerNote    String?
-  adminNote    String?
-  reviewedById String?
-  reviewedBy   User?     @relation("SeatOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt   DateTime?
+  buyerNote       String?
+  adminNote       String?
+  // زمان اطلاع‌رسانی به آگهی‌دهنده پس از تأیید تخلف، تا فرصت پاسخ از راه تیکت داشته باشد
+  ownerNotifiedAt DateTime?
+  reviewedById    String?
+  reviewedBy      User?     @relation("SeatOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
 
   createdAt DateTime @default(now())
 
