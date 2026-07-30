@@ -11,8 +11,10 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
-  AGENT
+  SUPER_ADMIN // مدیر کل — دسترسی کامل
+  SUPPORT // پشتیبانی — فقط تیکت و گزارش تخلف
+  FINANCE // مالی — فقط اشتراک و پرداخت‌ها
+  AGENT // نماینده و زیرنماینده
 }
 
 enum UserStatus {
@@ -104,6 +106,9 @@ model User {
   status       UserStatus @default(ACTIVE)
 
   // ---- پروفایل نمایندگی ----
+  // برای هر نماینده الزامی است. کد زیرنماینده خودکار از کد مادر ساخته می‌شود.
+  // این فیلدها «قفل‌شده»‌اند: تغییرشان فقط با تیکت و تأیید ادمین ممکن است و
+  // با تغییر، همه‌ی آگهی‌های همان نماینده به‌روز می‌شوند.
   agencyCode       String? @unique
   agencyName       String?
   city             String?
@@ -163,7 +168,7 @@ model Plan {
   priceToman         BigInt
   dailyRevealLimit   Int     @default(30)
   monthlyRevealLimit Int     @default(300)
-  maxActiveHavale    Int     @default(100)
+  maxActiveHavale    Int     @default(0) // ۰ یعنی بدون سقف
   isActive           Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -219,9 +224,8 @@ model Havale {
   depositDays     Int? // مدت زمان واریز: مهلت خریدار، به روز
   supplierCompany String?
 
-  // اطلاعات تماس مسئول هماهنگی (پیش‌فرض از پروفایل نمایندگی)
-  coordinatorName  String?
-  coordinatorPhone String?
+  // اطلاعات تماس روی حواله ذخیره نمی‌شود؛ همیشه از پروفایل مالک خوانده می‌شود
+  // تا با تغییر پروفایل، همه‌ی آگهی‌ها یکجا به‌روز شوند.
 
   description String?
   status      HavaleStatus @default(ACTIVE)
@@ -283,6 +287,7 @@ model ViolationReport {
   reporterId String
   reporter   User   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
 
+  // گزارش تا ۳۰ روز پس از بسته شدن آگهی هم پذیرفته می‌شود
   reason      ReportReason
   description String
   status      ReportStatus @default(PENDING)
