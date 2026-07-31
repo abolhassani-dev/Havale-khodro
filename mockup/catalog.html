@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>سامانه حواله خودرو — کاتالوگ موک‌آپ فاز ۱</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Vazirmatn', Tahoma, sans-serif; font-size: 10.5pt; line-height: 1.8; color: #17211f; }
+
+  .cover { border: 2px solid #0f5a52; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; background: #f0fdf9; }
+  .cover .kicker { color: #0f5a52; font-size: 10pt; font-weight: 600; }
+  .cover h1 { font-size: 22pt; font-weight: 800; margin: 6px 0 10px; color: #064e3b; letter-spacing: -.02em; }
+  .cover p { font-size: 10.5pt; color: #374151; }
+  .cover .meta { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #6ee7b7; display: flex; gap: 22px; flex-wrap: wrap; font-size: 9.5pt; color: #4b5563; }
+  .cover .meta b { color: #064e3b; }
+
+  .intro { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+  .intro h3 { font-size: 12pt; color: #92400e; margin-bottom: 5px; }
+  .intro ul { padding-inline-start: 20px; }
+  .intro li { margin-bottom: 4px; }
+
+  h2.part {
+    font-size: 15pt; font-weight: 800; color: #fff; background: #0f5a52;
+    border-radius: 9px; padding: 9px 16px; margin: 0 0 16px;
+    display: flex; align-items: center; gap: 10px;
+    break-before: page; break-after: avoid;
+  }
+  h2.part:first-of-type { break-before: auto; }
+  h2.part .cnt { margin-inline-start: auto; font-size: 10pt; font-weight: 600; opacity: .85; }
+
+  .shot { margin-bottom: 22px; break-inside: avoid; }
+  .shot h3 {
+    font-size: 12.5pt; font-weight: 700; color: #064e3b; margin-bottom: 3px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .shot h3 .n {
+    background: #0f5a52; color: #fff; border-radius: 6px; padding: 1px 9px;
+    font-size: 10pt; font-weight: 700; flex: none;
+  }
+  .shot .desc { font-size: 10pt; color: #45524f; margin-bottom: 8px; }
+  .shot .desc b { color: #17211f; }
+  .shot .look {
+    font-size: 9.5pt; background: #eff6ff; border: 1px solid #bfdbfe; border-right: 3px solid #2563eb;
+    border-radius: 7px; padding: 7px 12px; margin-bottom: 9px; color: #1e40af;
+  }
+  .shot .look b { color: #12275c; }
+  .shot img {
+    width: 100%; display: block; border: 1px solid #d7d2c6; border-radius: 8px;
+    box-shadow: 0 2px 10px #17211f14;
+  }
+
+  .ask { background: #f0fdf9; border: 2px solid #0f5a52; border-radius: 10px; padding: 16px 20px; margin-top: 6px; break-inside: avoid; }
+  .ask h3 { font-size: 13pt; color: #064e3b; margin-bottom: 7px; }
+  .ask ol { padding-inline-start: 20px; }
+  .ask li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">موک‌آپ فاز ۱ — برای بازبینی</div>
+  <h1>سامانه حواله خودرو</h1>
+  <p>
+    این کاتالوگ همه‌ی صفحه‌های موک‌آپ است، با توضیح اینکه هر صفحه چه کار می‌کند و در آن دنبال چه چیزی باشید.
+    <b>هنوز کدی نوشته نشده</b> — این فقط ظاهر و جریان کار است تا قبل از شروع ساخت، ایرادها را بگیریم.
+  </p>
+  <div class="meta">
+    <span><b>صفحه‌ها:</b> ۲۸ نما</span>
+    <span><b>دسته‌ها:</b> ورود، پنل نمایندگی، پنل مدیریت</span>
+    <span><b>داده:</b> نمونه — واقعی نیست</span>
+    <span><b>وضعیت:</b> در انتظار نظر شما</span>
+  </div>
+</div>
+
+<div class="intro">
+  <h3>سامانه در یک نگاه</h3>
+  <ul>
+    <li><b>مسئله‌ای که حل می‌کند:</b> نمایندگی‌هایی که حواله‌ی خودرو دارند و نمایندگی‌هایی که دنبال حواله‌اند، همدیگر را پیدا نمی‌کنند. این سامانه آن‌ها را به هم وصل می‌کند.</li>
+    <li><b>مدل درآمد:</b> اشتراک ماهیانه‌ی نمایندگی. نماینده‌ی بزرگ می‌تواند برای زیرمجموعه‌هایش هم ظرفیت بخرد.</li>
+    <li><b>هسته‌ی اصلی:</b> اطلاعات تماس صاحب حواله <b>مخفی</b> است. نماینده‌ی دارای اشتراک با یک کلیک آن را باز می‌کند و همان لحظه ثبت می‌شود که چه کسی چه آگهی‌ای را دیده.</li>
+    <li><b>دو پنل:</b> «نمایندگی‌ها» برای مشتری‌ها، و «مدیریت» برای خودمان.</li>
+  </ul>
+</div>
+
+<!-- ================= بخش ۱ ================= -->
+<h2 class="part">ورود به سامانه <span class="cnt">۳ صفحه</span></h2>
+
+<div class="shot">
+  <h3><span class="n">۱</span> ورود — مرحله اول</h3>
+  <div class="desc">نام کاربری و رمز. <b>ثبت‌نام عمومی وجود ندارد</b> — حساب فقط توسط ما ساخته می‌شود.</div>
+  <div class="look"><b>دقت کنید:</b> پایین کادر نوشته «هر حساب همزمان فقط یک نشست فعال دارد». اگر کسی رمزش را به دوستش بدهد، هر بار که یکی وارد شود آن یکی بیرون می‌افتد.</div>
+  <img src="screens/01-login.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲</span> ورود — کد پیامکی</h3>
+  <div class="desc">کد ۶ رقمی، اعتبار ۲ دقیقه، حداکثر ۵ تلاش. تا خرید پنل پیامک این مرحله خاموش می‌ماند و با یک کلید در تنظیمات روشن می‌شود.</div>
+  <img src="screens/02-otp.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۳</span> تغییر اجباری رمز</h3>
+  <div class="desc">رمز اولیه را ادمین می‌سازد؛ نماینده در <b>اولین ورود</b> مجبور است عوضش کند، تا رمزش دست ما نماند.</div>
+  <img src="screens/03-changepass.png">
+</div>
+
+<!-- ================= بخش ۲ ================= -->
+<h2 class="part">پنل نمایندگی‌ها <span class="cnt">۱۱ نما</span></h2>
+
+<div class="shot">
+  <h3><span class="n">۴</span> داشبورد</h3>
+  <div class="desc">اولین صفحه بعد از ورود. وضعیت اشتراک، آمار حواله‌ها، و مهم‌ترین بخش: <b>«مشخصاتی که برای من باز شده»</b> — یعنی هر آگهی‌ای که هزینه‌اش را داده و شماره‌اش را گرفته، اینجا با شماره‌ی کامل می‌ماند تا دوباره لازم نباشد دنبالش بگردد.</div>
+  <div class="look"><b>دقت کنید:</b> کارت «بازدید از حواله‌های من» فقط <b>عدد</b> نشان می‌دهد. صاحب آگهی هرگز نمی‌فهمد چه کسی شماره‌اش را دیده — این را عمداً بستیم تا نمایندگی‌ها بیرون از سامانه با هم هماهنگ نشوند.</div>
+  <img src="screens/04-dash.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۵</span> استعلام حواله‌ها</h3>
+  <div class="desc">قلب سامانه. جستجو و فیلتر روی نوع خودرو، رنگ، صلح/وکالتی، شهر، مبلغ و زمان تحویل. سه تب دارد: حواله‌های فروش، درخواست‌های خرید، و حواله‌های من.</div>
+  <div class="look"><b>دقت کنید:</b> روی هر کارت، کادر <b>«اطلاعات تماس و کد نمایندگی مخفی است»</b> با دکمه‌ی «نمایش مشخصات». دو کارت که قبلاً باز شده‌اند، شماره را کامل نشان می‌دهند. تفاوت این دو حالت را ببینید.</div>
+  <img src="screens/05-search.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۶</span> باز کردن مشخصات فروشنده</h3>
+  <div class="desc">قبل از باز شدن شماره، این پیام می‌آید. صریح می‌گوید که این اقدام ثبت می‌شود و چقدر از سقف روزانه مانده.</div>
+  <div class="look"><b>چرا مهم است:</b> همین یک دکمه، هم مدل درآمدی را می‌سازد و هم گزارش‌های پنل مدیریت را. هر آگهی برای هر نماینده فقط یک‌بار از سقف کم می‌کند؛ دفعات بعد رایگان است.</div>
+  <img src="screens/14-reveal.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۷</span> ثبت حواله جدید (فروش)</h3>
+  <div class="desc">همه‌ی فیلدها جز توضیحات الزامی است. زیر فیلد مبلغ، عدد را <b>حروفی</b> هم می‌نویسد تا اشتباه صفر پیش نیاید.</div>
+  <div class="look"><b>دقت کنید:</b> دو فیلد پایین قفل ۰ دارند — «کد نمایندگی/شهر» و «اطلاعات تماس». نماینده نمی‌تواند خودش عوضشان کند؛ فقط با تیکت و تأیید ما. اینطور کسی نمی‌تواند با شماره‌ی الکی آگهی بزند و بعد عوضش کند.</div>
+  <img src="screens/06-new.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۸</span> ثبت درخواست خرید</h3>
+  <div class="desc">همان فرم، ولی فقط <b>نوع خودرو</b> و <b>صلح/وکالتی</b> الزامی است. کسی که دنبال حواله می‌گردد لازم نیست همه چیز را بداند.</div>
+  <div class="look"><b>دقت کنید:</b> اگر رنگ را خالی بگذارد یعنی «هر رنگی قبول» و درخواستش در جستجوی همه‌ی رنگ‌ها دیده می‌شود.</div>
+  <img src="screens/07-request.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۹</span> حواله‌های من</h3>
+  <div class="desc">آگهی‌های خود نماینده با وضعیتشان: فعال، منقضی، فروخته‌شده. عمر هر آگهی برابر «مدت زمان واریز» آن است.</div>
+  <div class="look"><b>دقت کنید:</b> آگهی منقضی پاک نمی‌شود؛ با دکمه‌ی «فعال‌سازی مجدد» برمی‌گردد. ولی این کار حکم ثبت جدید دارد، پس با اشتراک تمام‌شده ممکن نیست.</div>
+  <img src="screens/08-mine.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۰</span> زیرنمایندگی‌ها (حالت ماژول)</h3>
+  <div class="desc">برای نماینده‌های بزرگ. مثال: آقایی با ۵۰ زیرمجموعه. خودش حساب می‌سازد، تعلیق می‌کند و رمز ریست می‌کند — بدون دخالت ما.</div>
+  <div class="look"><b>عدد مهم:</b> صورتحساب این نماینده = ۲۵ میلیون اشتراک خودش + ۵۰ میلیون ظرفیت = <b>۷۵ میلیون در هر دوره</b>. ظرفیت پیش‌پرداخت است، پس تعلیق وسط دوره پول برنمی‌گرداند.</div>
+  <img src="screens/09-sublist.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۱</span> تیکت‌های پشتیبانی</h3>
+  <div class="desc">لیست تیکت‌ها با اولویت و وضعیت.</div>
+  <img src="screens/10-tickets.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۲</span> گفت‌وگوی تیکت</h3>
+  <div class="desc">نمونه‌ی واقعی: نماینده درخواست تغییر شماره‌ی مسئول هماهنگی داده. با تأیید ما، شماره روی <b>همه‌ی آگهی‌هایش یکجا</b> عوض می‌شود.</div>
+  <img src="screens/11-ticket.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۳</span> اشتراک من</h3>
+  <div class="desc">وضعیت اشتراک، ریز صورتحساب، و سقف نمایش مشخصات (روزانه و دوره‌ای). پرداخت دستی است و ما تأیید می‌کنیم.</div>
+  <img src="screens/12-subs.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۴</span> وقتی اشتراک تمام می‌شود</h3>
+  <div class="desc">همان صفحه‌ی استعلام، ولی با اشتراک منقضی. <b>این مهم‌ترین نمای این دسته است.</b></div>
+  <div class="look"><b>دقت کنید:</b> حواله‌ها را می‌بیند — خودرو، مبلغ، مدل، زمان تحویل — ولی <b>هیچ راهی برای تماس ندارد</b>. حتی شماره‌هایی که قبلاً باز کرده بود هم بسته شده‌اند. دکمه‌های ثبت و تمدید هم غیرفعالند. یعنی سامانه را می‌بیند ولی نمی‌تواند از آن استفاده کند — بهترین انگیزه برای تمدید.</div>
+  <img src="screens/13-expired.png">
+</div>
+
+<!-- ================= بخش ۳ ================= -->
+<h2 class="part">پنل مدیریت (سمت ما) <span class="cnt">۱۴ نما</span></h2>
+
+<div class="shot">
+  <h3><span class="n">۱۵</span> داشبورد مدیریت</h3>
+  <div class="desc">نمای کلی: نمایندگی فعال و منقضی، حواله‌های امروز، گزارش‌های تخلف در انتظار، تیکت باز، درآمد دوره، و نمودار روند ثبت حواله.</div>
+  <img src="screens/15-adm-dash.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۶</span> لیست نمایندگی‌ها</h3>
+  <div class="desc">همه‌ی حساب‌ها با وضعیت اشتراک، تعداد زیرمجموعه و تعداد حواله. از همین‌جا می‌شود نشست کاربر را به زور بست.</div>
+  <img src="screens/16-adm-agents.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۷</span> ساخت نمایندگی</h3>
+  <div class="desc">اطلاعات حساب، پلن اشتراک، سقف اختصاصی نمایش، و کلید روشن/خاموش «حالت ماژول».</div>
+  <div class="look"><b>دقت کنید:</b> سقف روزانه و دوره‌ای برای <b>هر حساب جداگانه</b> قابل تنظیم است — نه فقط روی پلن.</div>
+  <img src="screens/17-adm-new.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۸</span> پرونده‌ی یک نماینده</h3>
+  <div class="desc">همه چیز درباره‌ی یک حساب در یک صفحه: آمار، تایم‌لاین فعالیت با IP، وضعیت اشتراک و لیست زیرمجموعه‌ها.</div>
+  <img src="screens/18-adm-agent.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۱۹</span> مدیریت حواله‌ها</h3>
+  <div class="desc">همه‌ی آگهی‌های سامانه با فیلتر کامل. ستون «گزارش» نشان می‌دهد کدام آگهی گزارش تخلف خورده.</div>
+  <img src="screens/19-adm-havales.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۰</span> گزارش تخلف — صف و بررسی</h3>
+  <div class="desc">صف گزارش‌ها و صفحه‌ی صدور حکم. سیستم <b>سابقه‌ی هر دو طرف را کنار هم</b> می‌گذارد تا معلوم شود کدام‌یک بدسابقه است.</div>
+  <div class="look"><b>مکانیزم ضد سوءاستفاده:</b> چهار حکم داریم. «تخلف تأیید شد» به آگهی‌دهنده اخطار می‌دهد، «گزارش بی‌مورد» به گزارش‌دهنده. یعنی هم جلوی آگهی فیک را می‌گیرد، هم جلوی ریپورت الکی رقبا. با ۳ اخطار حساب تعلیق می‌شود.</div>
+  <img src="screens/20-adm-reports.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۱</span> تیکت‌ها (سمت ما)</h3>
+  <div class="desc">صف تیکت‌ها. تیکت‌های «تغییر اطلاعات تماس» جدا برجسته می‌شوند چون تأیید ما را لازم دارند.</div>
+  <img src="screens/21-adm-tickets.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۲</span> مانیتورینگ فعالیت</h3>
+  <div class="desc">تایم‌لاین کل سامانه: چه کسی، چه کاری، چه ساعتی، با چه IP. کنارش جدول «چه کسی چند مشخصات دیده».</div>
+  <div class="look"><b>دقت کنید:</b> نوار قرمز بالای صفحه یک نماینده را علامت زده که ۹۱ بار مشخصات باز کرده ولی فقط ۳ حواله ثبت کرده — الگوی مشکوک جمع‌آوری دیتا. سیستم خودش این را برجسته می‌کند.</div>
+  <img src="screens/22-adm-monitor.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۳</span> جزئیات یک رویداد</h3>
+  <div class="desc">با کلیک روی هر ردیف تایم‌لاین، پرونده‌ی کامل باز می‌شود — با یک جمله‌ی فارسی که دقیقاً می‌گوید چه اتفاقی افتاده.</div>
+  <div class="look"><b>نکته‌ی حقوقی:</b> لاگ <b>خودِ شماره‌ای که آن لحظه نشان داده شد</b> را ذخیره می‌کند، نه شماره‌ی امروز. چون شماره‌ها قابل تغییرند، بدون این کار در دعوای «شما شماره‌ی اشتباه دادید» هیچ مدرکی نداشتیم.</div>
+  <img src="screens/23-adm-act.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۴</span> کدام آگهی‌ها را باز کرده؟</h3>
+  <div class="desc">با کلیک روی هر نماینده در جدول آمار، فهرست دقیق آگهی‌هایی که مشخصاتشان را دیده می‌آید — با شماره، زمان و IP.</div>
+  <img src="screens/24-adm-reveals.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۵</span> درخواست خرید ظرفیت</h3>
+  <div class="desc">وقتی نماینده‌ی بزرگ ظرفیت زیرمجموعه می‌خرد، درخواستش اینجا می‌آید و بعد از دریافت پول تأیید می‌کنیم.</div>
+  <img src="screens/25-adm-seats.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۶</span> تنظیمات و پایه‌ها</h3>
+  <div class="desc">قیمت‌ها، سقف‌ها، آستانه‌ی اخطارها، لیست خودروها و شهرها — همه از پنل قابل تغییرند، <b>بدون نیاز به برنامه‌نویس</b>.</div>
+  <div class="look"><b>دقت کنید:</b> فعلاً فقط «مدیران خودرو» در لیست شرکت‌هاست، ولی ساختار طوری است که هر وقت خواستید شرکت جدید اضافه کنید.</div>
+  <img src="screens/26-adm-settings.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۷</span> نقش پشتیبانی — محدودیت‌ها</h3>
+  <div class="desc">پنل مدیریت سه سطح دارد: مدیر کل، پشتیبانی، مالی. این همان صفحه‌ی گزارش تخلف است، ولی از دید کارمند پشتیبانی.</div>
+  <div class="look"><b>دقت کنید:</b> کادر زرد می‌گوید چون پشتیبانی حق تعلیق حساب ندارد، اخطار سوم به صف تأیید مدیر کل می‌رود. همچنین آمار کامل بازدید طرفین را نمی‌بیند، فقط اینکه آیا این شخص مشخصات همین حواله را باز کرده یا نه.</div>
+  <img src="screens/27-adm-support.png">
+</div>
+
+<div class="shot">
+  <h3><span class="n">۲۸</span> دسترسی ندارید</h3>
+  <div class="desc">وقتی پشتیبانی سراغ مانیتورینگ می‌رود. <b>خروجی اکسل و دیدن انبوه شماره‌ها فقط مال مدیر کل است.</b></div>
+  <div class="look"><b>چرا مهم است:</b> کل دارایی این کسب‌وکار همان دیتای تماس است. اگر فردا کارمند پشتیبانی بگیریم، نباید بتواند یک‌جا خروجی بگیرد و برود.</div>
+  <img src="screens/28-adm-denied.png">
+</div>
+
+<div class="ask">
+  <h3>نظر شما را روی این‌ها می‌خواهیم</h3>
+  <ol>
+    <li>آیا فرم ثبت حواله چیزی <b>کم</b> دارد؟ فیلدی هست که نمایندگی‌ها واقعاً لازم دارند و ما ندیده‌ایم؟</li>
+    <li>مدل «مشخصات مخفی + دکمه‌ی نمایش» برای بازار جواب می‌دهد، یا نمایندگی‌ها اذیت می‌شوند؟</li>
+    <li>عمر آگهی برابر «مدت زمان واریز» است. با عرف بازار می‌خواند؟</li>
+    <li>سقف ۳۰ مورد در روز برای دیدن مشخصات، کم است یا زیاد؟</li>
+    <li>اسم‌ها و کلمه‌ها درست‌اند؟ («حواله»، «امکان صلح»، «مسئول هماهنگی»، «استعلام»)</li>
+    <li>هر چیزی که به چشمتان غلط یا گیج‌کننده آمد.</li>
+  </ol>
+</div>
+
+</body>
+</html>
