@@ -268,8 +268,12 @@ model ContactReveal {
   viewerId String
   viewer   User   @relation(fields: [viewerId], references: [id], onDelete: Cascade)
 
-  ip        String?
-  createdAt DateTime @default(now())
+  ip              String?
+  // شماره و کدی که *همان لحظه* نشان داده شد. چون اطلاعات تماس با تأیید
+  // ادمین قابل تغییر است، بدون این دو فیلد مدرکی از آنچه واقعاً دیده شده نمی‌ماند.
+  phoneShown      String?
+  agencyCodeShown String?
+  createdAt       DateTime @default(now())
 
   @@unique([havaleId, viewerId])
   @@index([viewerId, createdAt])

@@ -4,9 +4,9 @@
 
 /* دسترسی بر اساس نقش — جدول بند ۱۱.۱۲ */
 const RIGHTS = {
-  super:   { tickets:1, reports:1, subs:1, seats:1, agents:1, monitor:1, excel:1, contacts:1, settings:1 },
-  support: { tickets:1, reports:1, subs:0, seats:0, agents:0, monitor:0, excel:0, contacts:0, settings:0 },
-  finance: { tickets:0, reports:0, subs:1, seats:1, agents:0, monitor:0, excel:0, contacts:0, settings:0 },
+  super:   { tickets:1, reports:1, contactEdit:1, subs:1, seats:1, agents:1, monitor:1, excel:1, contacts:1, settings:1, thirdStrike:1 },
+  support: { tickets:1, reports:1, contactEdit:1, subs:0, seats:0, agents:0, monitor:0, excel:0, contacts:0, settings:0, thirdStrike:0 },
+  finance: { tickets:0, reports:0, contactEdit:0, subs:1, seats:1, agents:0, monitor:0, excel:0, contacts:0, settings:0, thirdStrike:0 },
 };
 const may = k => !!RIGHTS[S.role][k];
 
@@ -162,7 +162,7 @@ function admAgent() {
     <div class="body">
       <div class="stats" style="margin:0">
         <div class="stat"><div class="lbl">حواله‌های ثبت‌شده</div><div class="val num">${fa(HAVALES.filter(h=>h.owner===a.id).length)}</div></div>
-        <div class="stat c-copper"><div class="lbl">مشخصات باز کرده</div><div class="val num">${fa(37)}</div><div class="delta">این ماه</div></div>
+        <div class="stat c-copper"><div class="lbl">مشخصات باز کرده</div><div class="val num">${fa(37)}</div><div class="delta">این دوره</div></div>
         <div class="stat c-ok"><div class="lbl">زیرنماینده</div><div class="val num">${fa(SUBAGENTS.length)}</div><div class="delta">از ۵۰ ظرفیت</div></div>
         <div class="stat"><div class="lbl">اخطارها</div><div class="val num">۰ / ۰</div><div class="delta">آگهی جعلی / گزارش بی‌مورد</div></div>
       </div>
@@ -284,7 +284,8 @@ function admReports() {
             <b>${esc(rep.agency)}</b> — ${esc(rep.code)}
             <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">گزارش‌های ثبت‌شده</span><b class="num">۴</b></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">اخطار گزارش بی‌مورد</span><b class="num" style="color:var(--copper)">۱ از ۳</b></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">مشخصات باز کرده (این ماه)</span><b class="num">۹۱</b></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">مشخصات این حواله را باز کرده؟</span><b style="color:var(--ok)">بله</b></div>
+            ${may('monitor') ? `<div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">کل مشخصات باز کرده (این دوره)</span><b class="num">۹۱</b></div>` : ''}
           </div>
         </div>
         <div class="card" style="margin:0;box-shadow:none">
@@ -301,13 +302,16 @@ function admReports() {
       <div class="banner warn" style="margin:14px 0">
         <span class="b-ico">⚠</span>
         <div class="b-txt"><b>هشدار: این آگهی‌دهنده ۲ اخطار دارد</b>
-          با تأیید این تخلف، اخطار سوم ثبت و حسابش <b>خودکار تعلیق</b> می‌شود. اشتراکش باطل نمی‌شود و به او اطلاع داده می‌شود تا از راه تیکت پاسخ دهد.</div>
+          با تأیید این تخلف، اخطار سوم ثبت می‌شود و حسابش تعلیق می‌گردد —
+          ${may('thirdStrike') ? 'شما اختیار این کار را دارید.' : '<b>ولی چون نقش پشتیبانی حق تعلیق ندارد، به صف تأیید مدیر کل می‌رود.</b>'} اشتراکش باطل نمی‌شود و به او اطلاع داده می‌شود تا از راه تیکت پاسخ دهد.</div>
       </div>
 
       <div class="field"><label>یادداشت داخلی</label><textarea rows="2" placeholder="فقط برای ما…"></textarea></div>
 
       <div class="btnrow" style="margin-top:14px">
-        <button class="btn danger" onclick="toast('تخلف تأیید شد — اخطار ثبت و به آگهی‌دهنده اطلاع داده شد')">تخلف تأیید شد</button>
+        <button class="btn danger" onclick="toast(${may('thirdStrike')
+          ? "'تخلف تأیید شد — اخطار سوم ثبت و حساب تعلیق شد'"
+          : "'تخلف تأیید شد — چون اخطار سوم است، به صف تأیید مدیر کل رفت'"})">تخلف تأیید شد</button>
         <button class="btn" onclick="toast('گزارش رد شد')">گزارش رد شد</button>
         <button class="btn" onclick="toast('اخطار «گزارش بی‌مورد» برای گزارش‌دهنده ثبت شد')">گزارش بی‌مورد</button>
         <button class="btn" onclick="toast('حواله موقتاً پنهان شد')">نیاز به بررسی بیشتر</button>
@@ -353,14 +357,14 @@ function admMonitor() {
   return `
   <div class="stats">
     <div class="stat"><div class="lbl">بازکردن مشخصات امروز</div><div class="val num">${fa(48)}</div><div class="delta">کل سامانه</div></div>
-    <div class="stat c-copper"><div class="lbl">پرمصرف‌ترین نماینده</div><div class="val" style="font-size:16px">اتو کاظمی</div><div class="delta">۹۱ مورد این ماه</div></div>
+    <div class="stat c-copper"><div class="lbl">پرمصرف‌ترین نماینده</div><div class="val" style="font-size:16px">اتو کاظمی</div><div class="delta">۹۱ مورد این دوره</div></div>
     <div class="stat c-danger"><div class="lbl">رفتار مشکوک</div><div class="val num">${fa(1)}</div><div class="delta">نیازمند بررسی</div></div>
     <div class="stat"><div class="lbl">ورود ناموفق امروز</div><div class="val num">${fa(3)}</div></div>
   </div>
 
   <div class="banner bad"><span class="b-ico">◎</span><div class="b-txt">
     <b>اتو کاظمی (MK-1088) — الگوی جمع‌آوری دیتا</b>
-    ۹۱ بار باز کردن مشخصات این ماه، در برابر ثبت تنها ۳ حواله. سقف ماهانه‌اش ۳۰۰ است ولی نسبت بازدید به ثبت غیرعادی است.
+    ۹۱ بار باز کردن مشخصات این ماه، در برابر ثبت تنها ۳ حواله. سقف دوره‌ای‌اش ۳۰۰ است ولی نسبت بازدید به ثبت غیرعادی است.
   </div>
   <button class="btn" onclick="toast('سقف این حساب به ۱۰ در روز کاهش یافت')">کاهش سقف این حساب</button></div>
 
@@ -384,7 +388,7 @@ function admMonitor() {
     <div class="card">
       <header><h2>چه کسی چند مشخصات دیده</h2></header>
       <div class="body tight"><table class="tbl">
-        <thead><tr><th>نمایندگی</th><th class="c">امروز</th><th class="c">این ماه</th></tr></thead>
+        <thead><tr><th>نمایندگی</th><th class="c">امروز</th><th class="c">این دوره</th></tr></thead>
         <tbody>
           ${[['a2','۲۲','۹۱',1],['a1','۴','۳۷',0],['a4','۹','۲۸',0],['a5','۱۳','۴۵',0]].map(([id,d,m,hot])=>`
             <tr onclick="revealsOf('${id}')" style="cursor:pointer" title="کدام آگهی‌ها را باز کرده؟">
@@ -499,7 +503,8 @@ function admSettings() {
         <div class="body tight"><table class="tbl">
           <thead><tr><th>دسترسی</th><th class="c">مدیر کل</th><th class="c">پشتیبانی</th><th class="c">مالی</th></tr></thead>
           <tbody>
-            ${[['تیکت‌ها','tickets'],['گزارش تخلف','reports'],['اشتراک و پرداخت','subs'],
+            ${[['تیکت‌ها','tickets'],['گزارش تخلف','reports'],['اعمال تغییر اطلاعات تماس','contactEdit'],
+               ['تأیید اخطار سوم (تعلیق)','thirdStrike'],['اشتراک و پرداخت','subs'],
                ['ساخت و تعلیق حساب','agents'],['مانیتورینگ','monitor'],['خروجی اکسل','excel'],
                ['دیدن انبوه تماس','contacts'],['تنظیمات','settings']].map(([t,k])=>`
               <tr><td>${t}</td>

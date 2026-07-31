@@ -310,7 +310,7 @@ function pageDash() {
             <div class="stat c-copper"><div class="lbl">مصرف‌شده</div><div class="val num">${fa(SUBAGENTS.length)}</div></div>
           </div>
           <div style="margin-top:11px;font-size:12px;color:var(--ink-3)">
-            صورتحساب مرداد: اشتراک ۲۵٬۰۰۰٬۰۰۰ + ظرفیت ۵۰٬۰۰۰٬۰۰۰ =
+            صورتحساب این دوره: اشتراک ۲۵٬۰۰۰٬۰۰۰ + ظرفیت ۵۰٬۰۰۰٬۰۰۰ =
             <b style="color:var(--ink)">۷۵٬۰۰۰٬۰۰۰ تومان</b>
           </div>
           <button class="btn" style="width:100%;margin-top:10px" onclick="go('sublist')">مدیریت زیرنمایندگی‌ها</button>
@@ -617,10 +617,10 @@ function pageMine() {
 function pageSubList() {
   return `${expiredBanner()}
   <div class="stats">
-    <div class="stat"><div class="lbl">ظرفیت پیش‌خریدشده‌ی این ماه</div><div class="val num">${fa(50)}</div><div class="delta">مرداد ۱۴۰۴</div></div>
+    <div class="stat"><div class="lbl">ظرفیت پیش‌خریدشده‌ی این دوره</div><div class="val num">${fa(50)}</div><div class="delta">دوره‌ی جاری</div></div>
     <div class="stat c-copper"><div class="lbl">مصرف‌شده</div><div class="val num">${fa(SUBAGENTS.length)}</div><div class="delta">${fa(SUBAGENTS.filter(s=>s.st==='active').length)} فعال</div></div>
     <div class="stat c-ok"><div class="lbl">باقی‌مانده</div><div class="val num">${fa(50 - SUBAGENTS.length)}</div></div>
-    <div class="stat"><div class="lbl">صورتحساب ماه</div><div class="val num">۷۵</div><div class="delta">میلیون تومان — اشتراک + ظرفیت</div></div>
+    <div class="stat"><div class="lbl">صورتحساب دوره</div><div class="val num">۷۵</div><div class="delta">میلیون تومان — اشتراک + ظرفیت</div></div>
   </div>
 
   <div class="banner info"><span class="b-ico">⛁</span><div class="b-txt">
@@ -753,11 +753,11 @@ function pageSubs() {
       <div class="body">
         <div class="stats" style="margin:0;grid-template-columns:1fr 1fr">
           <div class="stat"><div class="lbl">امروز</div><div class="val num">${fa(S.revealsToday)} <small>از ${fa(S.limitDay)}</small></div><div class="delta">روز تقویمی</div></div>
-          <div class="stat c-copper"><div class="lbl">این ماه</div><div class="val num">۸۴ <small>از ۳۰۰</small></div><div class="delta">ماه شمسی</div></div>
+          <div class="stat c-copper"><div class="lbl">این دوره</div><div class="val num">۸۴ <small>از ۳۰۰</small></div><div class="delta">دوره‌ی ۳۰ روزه</div></div>
         </div>
         <div class="banner info" style="margin:13px 0 0">
           <span class="b-ico">◷</span>
-          <div class="b-txt">سقف روزانه نیمه‌شب و سقف ماهانه اول هر ماه شمسی صفر می‌شود — به وقت ایران.</div>
+          <div class="b-txt">سقف روزانه نیمه‌شب صفر می‌شود و سقف دوره‌ای در روز تمدید اشتراک — به وقت ایران.</div>
         </div>
       </div>
     </div>

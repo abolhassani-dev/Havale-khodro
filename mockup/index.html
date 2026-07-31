@@ -257,7 +257,7 @@ function modalHTML() {
                 ${esc(who.agency)} — ${esc(who.code)}. هر ردیف یعنی شماره‌ی آن فروشنده برای این نماینده باز شده است.</div>
             </div>
             <div class="tblwrap"><table class="tbl">
-              <thead><tr><th>حواله</th><th>خودرو</th><th>صاحب آگهی</th><th>شماره‌ی دیده‌شده</th><th>زمان</th><th>IP</th></tr></thead>
+              <thead><tr><th>حواله</th><th>خودرو</th><th>صاحب آگهی</th><th>شماره‌ای که آن لحظه دیده شد</th><th>زمان</th><th>IP</th></tr></thead>
               <tbody>${list.map(r => {
                 const h = HAVALES.find(x => x.id === r.hv) || {}, o = agent(h.owner);
                 return `<tr>
