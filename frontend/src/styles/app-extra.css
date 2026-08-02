@@ -299,3 +299,82 @@ tr.dim, .dim { opacity: 0.55; }
   .msg { max-width: 100%; }
   .hcard dl { grid-template-columns: 1fr; }
 }
+
+/* ================================================================
+   استایل‌هایی که مارک‌آپ واقعی مصرف می‌کند.
+   شیت موک‌آپ برای «.tbl» و «.card > header» نوشته شده بود؛ صفحه‌های
+   واقعی با «.card-h» و جدول خام ساخته شدند — یعنی جدول‌ها و سربرگ
+   کارت‌ها تا این‌جا هیچ استایلی نمی‌گرفتند. این بخش آن شکاف را می‌بندد.
+   ================================================================ */
+
+/* ---- سربرگ کارت ---- */
+
+.card-h {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-2);
+  background: linear-gradient(180deg, #fff, #fbfaf6);
+}
+.card-h h2 {
+  font-size: 15.5px; font-weight: 800;
+  position: relative; padding-inline-start: 13px;
+}
+.card-h h2::before {
+  content: ''; position: absolute; inset-inline-start: 0; top: 50%;
+  transform: translateY(-50%); width: 4px; height: 17px;
+  border-radius: 3px; background: var(--primary);
+}
+
+/* ---- کارت آماری ---- */
+
+.stat .s-l { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.stat .s-v { font-size: 29px; font-weight: 800; letter-spacing: -.02em; line-height: 1.4; }
+.stat .s-h { font-size: 12px; color: var(--ink-3); }
+
+/* ---- جدول: هر رکورد یک قاب جدا ----
+   border-spacing عمودی بین ردیف‌ها فاصله می‌اندازد و هر ردیف با حاشیه‌ی
+   کامل و گوشه‌ی گرد، یک رکورد مستقل می‌شود — نه سطرهایی چسبیده به هم. */
+
+.card table {
+  width: calc(100% - 32px);
+  margin: 6px 16px 14px;
+  border-collapse: separate;
+  border-spacing: 0 9px;
+  font-size: 14px;
+}
+.card table th {
+  text-align: right; font-size: 12px; font-weight: 700; color: var(--ink-3);
+  padding: 2px 16px 0; letter-spacing: .03em; white-space: nowrap;
+}
+.card table tbody td {
+  background: #fdfcf8;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 11px 16px;
+  vertical-align: middle;
+}
+.card table tbody td:first-child {
+  border-inline-start: 1px solid var(--line);
+  border-start-start-radius: 10px; border-end-start-radius: 10px;
+}
+.card table tbody td:last-child {
+  border-inline-end: 1px solid var(--line);
+  border-start-end-radius: 10px; border-end-end-radius: 10px;
+}
+.card table tbody tr:hover td { background: #f7f4ea; border-color: #c3b88f; }
+
+/* جمع کل صورتحساب — باید مثل خط آخر یک رسید، از بقیه سنگین‌تر باشد */
+.card table tfoot th {
+  padding: 11px 16px; font-size: 14.5px; font-weight: 800; color: var(--primary-2);
+  background: var(--primary-08);
+  border-top: 1px solid var(--primary-15);
+  border-bottom: 1px solid var(--primary-15);
+}
+.card table tfoot th:first-child {
+  border-inline-start: 1px solid var(--primary-15);
+  border-start-start-radius: 10px; border-end-start-radius: 10px;
+}
+.card table tfoot th:last-child {
+  border-inline-end: 1px solid var(--primary-15);
+  border-start-end-radius: 10px; border-end-end-radius: 10px;
+}

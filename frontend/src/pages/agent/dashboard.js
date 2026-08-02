@@ -73,7 +73,7 @@ export function dashboardPage() {
       : ''
   }
 
-  <div class="cols">
+  <div class="cols c3">
     <div class="card">
       <div class="card-h"><h2>آخرین حواله‌های من</h2>
         <button class="btn sm" data-go="mine">همه</button></div>
