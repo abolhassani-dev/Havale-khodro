@@ -1,0 +1,79 @@
+# The whole system: nginx, the API, and PostgreSQL.
+#
+#   cp .env.example .env      # fill in the secrets it asks for
+#   docker compose up -d --build
+#
+# One file for staging and for production. A staging environment that differs
+# from production only tells you about staging.
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Read-only: nginx has no reason to write to the application it serves,
+      # and a container that cannot write cannot be used to plant a file.
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./deploy/nginx:/etc/nginx/conf.d:ro
+      - certbot-webroot:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    networks: [appnet]
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Built from the same credentials the database container uses, so the two
+      # cannot drift apart. A connection string in one place and a password in
+      # another is how a stack comes up unable to reach its own database.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-havale}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-havale}?schema=public
+    # No published port: the API is reachable through nginx and from nowhere
+    # else. Publishing 3000 would leave a second door with no TLS on it.
+    expose:
+      - '3000'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [appnet]
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-havale}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-havale}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-havale} -d ${POSTGRES_DB:-havale}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [appnet]
+
+  # Renewal runs from cron on the host (see docs/deployment.md). This service
+  # exists so the first certificate can be issued with one command.
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ['certs']
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: ['/bin/sh', '-c']
+    command: ['echo "run: docker compose run --rm certbot certonly ..."']
+
+networks:
+  appnet:
+    driver: bridge
+
+volumes:
+  dbdata:
+  certbot-webroot:
+  certbot-certs:

@@ -1,0 +1,366 @@
+# استقرار روی سرور
+
+سرور: `45.94.213.252` — Ubuntu 24.04، دسترسی `root` با کلید SSH.
+
+**ترتیب کار عمدی است:** اول سیستم را روی همان IP بالا می‌آوریم و مطمئن می‌شویم کار می‌کند،
+بعد سراغ دامنه و SSL می‌رویم. اگر برعکس عمل کنیم و جایی خطا بخورد، نمی‌دانیم مشکل از
+اپلیکیشن است یا از DNS یا از گواهی.
+
+هر گام یک **بررسی** دارد. تا وقتی بررسی سبز نشده، به گام بعد نروید — و خروجی را برای من
+بفرستید.
+
+> **هیچ رمزی را در چت نفرستید.** رمزها را روی خود سرور تولید می‌کنید و همان‌جا در `.env`
+> می‌مانند. من فقط دستور می‌دهم.
+
+---
+
+## گام ۰ — اتصال
+
+روی کامپیوتر خودتان:
+
+```bash
+ssh root@45.94.213.252
+```
+
+اگر وصل شد، ادامه دهید.
+
+---
+
+## گام ۱ — امن کردن پایه‌ی سرور
+
+```bash
+# به‌روزرسانی
+apt update && apt upgrade -y
+
+# ساعت سرور روی وقت ایران — لاگ‌ها و سقف روزانه‌ی نمایش مشخصات به آن وابسته‌اند
+timedatectl set-timezone Asia/Tehran
+
+# فایروال: فقط SSH و وب. بقیه بسته.
+apt install -y ufw
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+```
+
+**ورود با رمز را ببندید.** شما با کلید وارد می‌شوید، پس رمز فقط یک راه حمله است که
+استفاده‌اش نمی‌کنید:
+
+```bash
+sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+systemctl restart ssh
+```
+
+> ⚠️ **قبل از بستن این ترمینال**، یک ترمینال دیگر باز کنید و دوباره `ssh root@...` بزنید.
+> اگر وصل شد، خیالتان راحت. اگر نه، از همین ترمینال باز که هنوز دارید برش گردانید.
+> قفل کردن خودتان بیرون از سرور، کلاسیک‌ترین اشتباه این مرحله است.
+
+**بررسی:**
+
+```bash
+ufw status && timedatectl | grep "Time zone"
+```
+
+انتظار: `Status: active` و `Asia/Tehran`.
+
+---
+
+## گام ۲ — نصب Docker
+
+```bash
+apt install -y ca-certificates curl git
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+**بررسی:**
+
+```bash
+docker --version && docker compose version
+```
+
+> اگر `download.docker.com` از داخل ایران باز نشد، بگویید — راه جایگزین با مخزن داخلی هست.
+
+---
+
+## گام ۳ — آوردن کد
+
+```bash
+mkdir -p /opt && cd /opt
+git clone https://github.com/abolhassani-dev/Havale-khodro.git feranocar
+cd feranocar
+git checkout claude/delegation-platform-phase-one-0xfqz7
+```
+
+اگر مخزن خصوصی است، گیت نام کاربری و **توکن** می‌خواهد (نه رمز گیت‌هاب). از
+Settings → Developer settings → Personal access tokens یک توکن با دسترسی `repo` بسازید.
+
+**بررسی:**
+
+```bash
+ls -la /opt/feranocar
+```
+
+انتظار: پوشه‌های `backend`، `frontend`، `deploy` و فایل `docker-compose.yml`.
+
+---
+
+## گام ۴ — تنظیمات و رمزها
+
+```bash
+cd /opt/feranocar
+cp .env.example .env
+
+# سه راز را همین‌جا تولید و جایگزین می‌کنیم — هیچ‌کدام از چشم شما یا من رد نمی‌شود
+sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -base64 24)|"   .env
+sed -i "s|^SESSION_SECRET=.*|SESSION_SECRET=$(openssl rand -hex 32)|"            .env
+sed -i "s|^SEED_ADMIN_PASSWORD=.*|SEED_ADMIN_PASSWORD=$(openssl rand -base64 18)|" .env
+
+# فایل رمزها فقط برای root خواندنی باشد
+chmod 600 .env
+```
+
+**داده‌ی نمونه** برای اینکه عرفان و مهدی صفحه‌ی خالی نبینند:
+
+```bash
+sed -i 's|^SEED_DEMO=.*|SEED_DEMO=true|' .env
+```
+
+> ⚠️ روزی که نمایندگی واقعی وارد سیستم شد، `SEED_DEMO=false` کنید و حساب‌های
+> `alborz`, `pars`, `zagros`, `khalij` را از پنل مدیریت تعلیق کنید. رمزشان در مخزن نوشته شده.
+
+رمز مدیر کل را برای خودتان بردارید (روی سرور، نه در چت):
+
+```bash
+grep SEED_ADMIN_PASSWORD .env
+```
+
+---
+
+## گام ۵ — بالا آوردن سیستم
+
+```bash
+cd /opt/feranocar
+docker compose up -d --build
+```
+
+بار اول چند دقیقه طول می‌کشد (دانلود ایمیج‌ها و ساخت). بعدش:
+
+```bash
+docker compose ps
+docker compose logs api --tail 40
+```
+
+انتظار در لاگ: `applying migrations` → `Super admin created` → `Catalog ready` → `starting`.
+
+**بررسی — این مهم‌ترین بررسی این سند است:**
+
+```bash
+curl -s http://localhost/api/v1/health
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost/
+```
+
+انتظار: JSON با `"status":"ok"` و `"database":"up"`، و کد `200`.
+
+**و از مرورگر خودتان:** `http://45.94.213.252` را باز کنید. باید صفحه‌ی ورود فارسی بیاید.
+با `admin` و رمزی که در گام ۴ گرفتید وارد شوید — در اولین ورود رمز را عوض می‌کند.
+
+> **اگر `docker compose up` خطا داد، خروجی کامل را بفرستید.** این اولین باری است که این
+> Dockerfile واقعاً build می‌شود — من در محیطی کار می‌کنم که Docker ندارد، پس نحو compose را
+> اعتبارسنجی کرده‌ام ولی خودِ build را شما اول اجرا می‌کنید.
+>
+> **کانفیگ nginx را اما واقعاً تست کردم:** nginx را محلی نصب کردم و روی همین فایل اجرا
+> کردم — سرو فایل استاتیک، پروکسی `/api`، fallback مسیرهای SPA، هدرهای امنیتی، مسیر ACME،
+> کش‌ها، و بلوک HTTPS (با گواهی خودامضا). همه جواب دادند.
+
+---
+
+## گام ۶ — دامنه
+
+در پنل دامنه (یا کلادفلیر) دو رکورد بسازید:
+
+| نوع | نام | مقدار | پروکسی |
+|---|---|---|---|
+| A | `@` | `45.94.213.252` | **ابر خاکستری** |
+| A | `www` | `45.94.213.252` | **ابر خاکستری** |
+
+**ابر نارنجی نه.** دلیلش را در `staging.md` بخش ۷ نوشته‌ام: کلادفلیر داخل ایران PoP ندارد،
+پس ترافیک کاربر تهرانی از دبی رد می‌شود و برمی‌گردد — هم کندتر، هم روز اختلال بین‌الملل
+سایت می‌خوابد در حالی که سرورش سالم است.
+
+**بررسی** (روی سرور، بعد از چند دقیقه صبر برای انتشار DNS):
+
+```bash
+apt install -y dnsutils
+dig +short feranocar.com
+dig +short www.feranocar.com
+```
+
+انتظار: هر دو `45.94.213.252` را برگردانند. **تا وقتی این جواب نداده، گام ۷ را شروع نکنید** —
+Let's Encrypt باید بتواند دامنه را به این سرور برساند، وگرنه صدور گواهی رد می‌شود و
+سهمیه‌ی هفتگی‌تان مصرف می‌شود.
+
+---
+
+## گام ۷ — گواهی SSL
+
+```bash
+cd /opt/feranocar
+
+docker compose run --rm --entrypoint certbot certbot certonly \
+  --webroot -w /var/www/certbot \
+  -d feranocar.com -d www.feranocar.com \
+  --email YOUR_EMAIL@example.com \
+  --agree-tos --no-eff-email
+```
+
+`YOUR_EMAIL` را با ایمیل خودتان عوض کنید (برای هشدار انقضای گواهی).
+
+**بررسی:**
+
+```bash
+docker compose run --rm --entrypoint certbot certbot certificates
+```
+
+انتظار: گواهی `feranocar.com` با تاریخ انقضای حدود ۹۰ روز بعد.
+
+سپس بلوک TLS را فعال کنید:
+
+```bash
+nano deploy/nginx/app.conf
+```
+
+- بلوک انتهایی `server { listen 443 ssl; ... }` را از حالت کامنت دربیاورید
+  (در nano: علامت `#` ابتدای خطوط را پاک کنید)
+- در بلوک پورت ۸۰، خط آخر `location / { try_files ... }` را با این عوض کنید:
+  `location / { return 301 https://$host$request_uri; }`
+- بلوک `location ^~ /.well-known/acme-challenge/` را **دست نزنید** — تمدید خودکار به آن نیاز دارد
+
+بعد:
+
+```bash
+docker compose exec web nginx -t && docker compose exec web nginx -s reload
+```
+
+`nginx -t` اول تست می‌کند؛ اگر خطا داد، reload نکنید و خروجی را بفرستید.
+
+**بررسی:** از مرورگر `https://feranocar.com` — باید قفل سبز بیاید و
+`http://feranocar.com` خودکار به HTTPS برود.
+
+---
+
+## گام ۸ — تمدید خودکار گواهی
+
+گواهی Let's Encrypt ۹۰ روزه است. اگر تمدید نشود، یک روز صبح سایت با خطای گواهی بالا می‌آید.
+
+```bash
+cat > /etc/cron.d/feranocar-certbot <<'CRON'
+# ساعت ۳:۱۷ بامداد، دوبار در هفته. certbot خودش می‌فهمد هنوز وقتش نرسیده و کاری نمی‌کند.
+17 3 * * 1,4 root cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew --quiet && docker compose exec -T web nginx -s reload
+CRON
+chmod 644 /etc/cron.d/feranocar-certbot
+```
+
+**بررسی — تمدید را شبیه‌سازی کنید تا روز واقعی غافلگیر نشوید:**
+
+```bash
+cd /opt/feranocar
+docker compose run --rm --entrypoint certbot certbot renew --dry-run
+```
+
+انتظار: `Congratulations, all simulated renewals succeeded`.
+
+---
+
+## گام ۹ — بکاپ
+
+بکاپی که روی همان سرور بماند، با از دست رفتن سرور از بین می‌رود — یعنی بکاپ نیست.
+اسکریپت زیر یک فایل فشرده می‌سازد و ۱۴ نسخه‌ی آخر را نگه می‌دارد. **بردن نسخه‌ها به بیرون
+از سرور کار شماست** و تا آن را نکرده‌اید، بکاپ کامل نیست.
+
+```bash
+mkdir -p /var/backups/feranocar
+cat > /usr/local/bin/feranocar-backup <<'SH'
+#!/bin/sh
+set -e
+cd /opt/feranocar
+STAMP=$(date +%Y%m%d-%H%M)
+OUT=/var/backups/feranocar/db-$STAMP.sql.gz
+# --clean --if-exists: the dump can be restored onto a database that already has
+# tables, which is the situation you are actually in when you need it.
+docker compose exec -T db pg_dump -U "${POSTGRES_USER:-havale}" --clean --if-exists "${POSTGRES_DB:-havale}" | gzip > "$OUT"
+chmod 600 "$OUT"
+# Keep fourteen. Unbounded backups fill the disk, and a full disk takes the
+# application down — a backup policy that causes an outage is not a policy.
+ls -1t /var/backups/feranocar/db-*.sql.gz | tail -n +15 | xargs -r rm --
+echo "$OUT"
+SH
+chmod 700 /usr/local/bin/feranocar-backup
+
+cat > /etc/cron.d/feranocar-backup <<'CRON'
+30 2 * * * root /usr/local/bin/feranocar-backup >> /var/log/feranocar-backup.log 2>&1
+CRON
+chmod 644 /etc/cron.d/feranocar-backup
+```
+
+**بررسی — یک بکاپ بگیرید و مطمئن شوید خالی نیست:**
+
+```bash
+/usr/local/bin/feranocar-backup
+ls -lh /var/backups/feranocar/
+```
+
+انتظار: فایلی با حجم قابل توجه (نه چند بایت).
+
+> **بکاپی که بازگردانی‌اش را امتحان نکرده‌اید، بکاپ نیست — یک فایل است.** یک بار روی یک
+> سرور دیگر یا یک دیتابیس موقت بازگردانی‌اش کنید. اگر خواستید، دستورش را می‌دهم.
+
+---
+
+## گام ۱۰ — به‌روزرسانی در آینده
+
+```bash
+cd /opt/feranocar
+/usr/local/bin/feranocar-backup     # اول بکاپ، بعد تغییر
+git pull
+docker compose up -d --build
+docker compose logs api --tail 30
+```
+
+مهاجرت دیتابیس خودکار موقع بالا آمدن اعمال می‌شود.
+
+---
+
+## اگر روزی خواستید سرور را عوض کنید
+
+سیستم عمداً به این سرور گره نخورده است:
+
+1. روی سرور جدید گام‌های ۱ تا ۴ را انجام دهید
+2. آخرین بکاپ را منتقل کنید
+3. `docker compose up -d --build` و سپس بازگردانی بکاپ
+4. رکورد DNS را به IP جدید ببرید
+
+تنها چیزی که منتقل نمی‌شود، فایل `.env` است — رمزها را دوباره تولید کنید یا همان فایل را
+امن منتقل کنید.
+
+---
+
+## دستورهای روزمره
+
+| کار | دستور |
+|---|---|
+| وضعیت سرویس‌ها | `docker compose ps` |
+| لاگ زنده | `docker compose logs -f api` |
+| ری‌استارت | `docker compose restart api` |
+| بکاپ دستی | `/usr/local/bin/feranocar-backup` |
+| ورود به دیتابیس | `docker compose exec db psql -U havale havale` |
+| مصرف منابع | `docker stats --no-stream` |
