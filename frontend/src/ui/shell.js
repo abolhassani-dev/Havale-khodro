@@ -63,7 +63,7 @@ export function sidebar() {
   return html`
   <aside class="sidebar" id="sb">
     <div class="brand">
-      <div class="mark"><span class="glyph">ف</span> ${BRAND.nameFa}</div>
+      <div class="mark"><img src="/assets/logo.svg" alt=""> ${BRAND.nameFa}</div>
       <div class="sub">${admin ? 'پنل مدیریت' : 'پنل نمایندگی‌ها'}</div>
     </div>
     <nav class="nav">${items.map((item) => navItem(item, s.page))}</nav>

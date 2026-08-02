@@ -5,12 +5,8 @@
    and the pieces the real data brought with it.
    --------------------------------------------------------------- */
 
-@font-face {
-  font-family: 'Vazirmatn';
-  src: url('/assets/vazirmatn.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
-}
+/* @font-face فقط در app.css تعریف می‌شود — دو تعریف موازی همان چیزی بود که
+   یک نسخه فونت را به local() سپرد و روی سیستم‌های بدون Vazirmatn به Tahoma رساند. */
 
 .boot {
   display: grid;
@@ -23,19 +19,19 @@
 /* ---- states ---- */
 
 .empty {
-  padding: 40px 16px;
+  padding: 44px 16px;
   text-align: center;
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 .hint {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink-3);
   line-height: 1.9;
 }
 
-.opt { color: var(--ink-3); font-weight: 400; font-size: 11px; }
+.opt { color: var(--ink-3); font-weight: 400; font-size: 12px; }
 
 .banner.danger { background: var(--danger-08); border-color: #9d2b2133; }
 .banner.ok { background: var(--ok-08); border-color: #2c6b4133; }
@@ -53,7 +49,7 @@
   border-radius: var(--r);
   box-shadow: var(--shadow-pop);
   z-index: 60;
-  font-size: 13px;
+  font-size: 13.5px;
   max-width: 90vw;
 }
 .toast.danger { background: var(--danger); }
@@ -90,7 +86,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
-.modal-h h3 { font-size: 15px; }
+.modal-h h3 { font-size: 15.5px; font-weight: 800; }
 
 .modal-b { padding: 14px 16px; overflow-y: auto; }
 .modal-b p { margin-bottom: 8px; }
@@ -145,12 +141,12 @@
 .filters .field { min-width: 150px; flex: 1; }
 
 .readonly {
-  padding: 8px 10px;
+  padding: 9px 12px;
   background: var(--paper-2);
   border: 1px dashed var(--line);
   border-radius: var(--r-sm);
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 textarea.in { resize: vertical; min-height: 60px; }
@@ -159,8 +155,8 @@ textarea.in { resize: vertical; min-height: 60px; }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 14px;
 }
 
 .hcard {
@@ -181,21 +177,21 @@ textarea.in { resize: vertical; min-height: 60px; }
   gap: 10px;
   padding: 12px 14px 8px;
 }
-.hcard h3 { font-size: 15px; margin-top: 4px; }
+.hcard h3 { font-size: 16.5px; font-weight: 800; margin-top: 4px; }
 
 .hcard dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
+  gap: 5px 12px;
   padding: 0 14px 10px;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .hcard dt { color: var(--ink-3); display: inline; }
 .hcard dd { font-weight: 600; }
 
 .hcard .desc {
   padding: 0 14px 10px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--ink-2);
   /* User-entered text: never let a long unbroken string stretch the card. */
   overflow-wrap: anywhere;
@@ -208,7 +204,7 @@ textarea.in { resize: vertical; min-height: 60px; }
   flex-wrap: wrap;
   gap: 6px 10px;
   padding: 8px 14px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink-3);
 }
 
@@ -217,22 +213,24 @@ textarea.in { resize: vertical; min-height: 60px; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-top: 1px dashed var(--line);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .contact.hidden { background: var(--paper-2); color: var(--ink-3); }
-.contact.shown { background: var(--ok-08); }
-.contact.own { background: var(--primary-08); }
+/* بازشده باید در یک نگاه از مخفی جدا باشد — این تفاوت همان چیزی است که
+   نماینده بابتش از سقف روزانه خرج کرده. */
+.contact.shown { background: #e7f1e6; border-top: 1px solid #2c6b4142; color: #1d4a2d; }
+.contact.own { background: var(--primary-08); border-top: 1px solid var(--primary-15); }
 .contact .phone { font-weight: 700; display: block; direction: ltr; text-align: right; }
 
 /* ---- tabs, rows, catalogue ---- */
 
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .tab {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3);
   border: 1px solid transparent;
 }
@@ -242,7 +240,7 @@ textarea.in { resize: vertical; min-height: 60px; }
 
 tr.dim, .dim { opacity: 0.55; }
 
-.sub { font-size: 11px; color: var(--ink-3); font-weight: 400; }
+.sub { font-size: 12px; color: var(--ink-3); font-weight: 400; }
 
 .cat-company { border-top: 1px solid var(--line); padding: 12px 14px; }
 .cat-brand {
@@ -258,8 +256,8 @@ tr.dim, .dim { opacity: 0.55; }
   flex-wrap: wrap;
   margin-bottom: 6px;
 }
-.cat-h h3 { font-size: 14px; }
-.cat-h h4 { font-size: 13px; color: var(--ink-2); }
+.cat-h h3 { font-size: 15px; font-weight: 800; }
+.cat-h h4 { font-size: 14px; color: var(--ink-2); }
 
 /* ---- ticket thread ---- */
 
@@ -279,11 +277,11 @@ tr.dim, .dim { opacity: 0.55; }
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-3);
   margin-bottom: 4px;
 }
-.msg-b { font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-b { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .reply { padding: 12px 14px; border-top: 1px solid var(--line); }
 .reply-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; }

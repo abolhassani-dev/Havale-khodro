@@ -17,7 +17,9 @@
 <link rel="preload" href="/assets/vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/src/styles/app.css">
 <link rel="stylesheet" href="/src/styles/app-extra.css">
-<link rel="icon" href="/assets/favicon.svg">
+<!-- ?v=2: nginx serves /assets/ as immutable for a year, so a changed file
+     needs a changed URL or returning browsers keep the old icon. -->
+<link rel="icon" href="/assets/favicon.svg?v=2">
 </head>
 <body>
 

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="فرانوکار">
+  <!--
+    The mark: two arrows exchanging — a transfer (حواله) changing hands.
+    White for the outgoing, warm gold for the incoming; the same two tones
+    the interface uses for "primary action" and "money".
+  -->
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#178a7b"/>
+      <stop offset="1" stop-color="#093f39"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#badge)"/>
+  <rect x="1.25" y="1.25" width="61.5" height="61.5" rx="13.75" fill="none" stroke="#ffffff2b" stroke-width="1.5"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5">
+    <path stroke="#ffffff" d="M45.5 24.5 H24 M30.5 17.5 L23.5 24.5 L30.5 31.5"/>
+    <path stroke="#eec27f" d="M18.5 41.5 H40 M33.5 34.5 L40.5 41.5 L33.5 48.5"/>
+  </g>
+</svg>

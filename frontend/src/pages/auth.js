@@ -15,7 +15,7 @@ export function loginPage() {
   <div class="auth">
     <form class="authbox" data-form="login">
       <div class="head">
-        <div class="glyph">ف</div>
+        <img class="logo" src="/assets/logo.svg" alt="نشان فرانوکار">
         <h1>${BRAND.nameFa}</h1>
         <p>${BRAND.tagline}</p>
       </div>
