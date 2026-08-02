@@ -3,6 +3,15 @@
 
 generator client {
   provider = "prisma-client-js"
+  // The engine is a compiled binary that links against OpenSSL, so the build it
+  // needs depends on the operating system it will run on. Stated explicitly
+  // because leaving it to detection is what failed on the first deploy: the
+  // engine could not identify the platform and returned a plain-text error
+  // where Prisma expected JSON, which hid the real cause completely.
+  //
+  // `native` covers a developer's own machine; `debian-openssl-3.0.x` is the
+  // container (node:20-slim, Debian bookworm).
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
