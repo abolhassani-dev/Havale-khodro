@@ -74,6 +74,27 @@ A listing stores both the model id *and* the model's name at the time it was pos
 Renaming a model therefore never rewrites what an old listing advertised, and deactivating
 one stops new listings without breaking the ones already up. See `docs/car-catalog.md`.
 
+## Subscriptions and module mode
+
+An account's entitlement is answered in one place, `subscription.service.resolveAccess()`.
+Every rule in the access table reduces to that question, and scattering
+`if (expiresAt > now)` across controllers is how a system ends up allowing through one
+endpoint what it blocks on another.
+
+Two rules there are worth knowing before changing anything:
+
+- **A sub-agency's expiry is never stored.** It is read from the parent every time, so the
+  parent renewing restores all of them at once and the two can never disagree. The date on
+  the seat's own row is a placeholder the resolver does not read.
+- **Capacity is prepaid, and suspending mid-period does not release a seat.** Otherwise a
+  reseller could suspend everyone on the last day of the month, reactivate on the first, and
+  never pay for capacity at all. `countSeatsUsed` therefore counts accounts suspended inside
+  the current period as still occupying their seat.
+
+Prices and caps that a business decision might revise live in `settings.service` — the seat
+price, the SMS switch, the reporting cap. The rule of thumb is whether changing it is a
+business decision or an engineering one.
+
 ## SMS
 
 There is no SMS panel yet, so delivery is switched off — but the whole path is built and

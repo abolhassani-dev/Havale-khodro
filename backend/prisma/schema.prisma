@@ -134,6 +134,10 @@ model User {
   children    User[]  @relation("AgentHierarchy")
 
   // ---- سلامت رفتاری ----
+  // زمان تعلیق. برای محاسبه‌ی ظرفیت لازم است: تعلیق وسط دوره ظرفیت را آزاد
+  // نمی‌کند (بند ۴.۸)، پس باید بدانیم تعلیق در کدام دوره اتفاق افتاده.
+  suspendedAt DateTime?
+
   fakeStrikes        Int     @default(0)
   falseReportStrikes Int     @default(0)
   adminNote          String?

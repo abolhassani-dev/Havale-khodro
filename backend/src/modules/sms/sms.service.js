@@ -1,5 +1,6 @@
-const config = require('../../config');
 const logger = require('../../utils/logger');
+const config = require('../../config');
+const settingsService = require('../settings/settings.service');
 const smsRepository = require('./sms.repository');
 const { render } = require('./sms.templates');
 const { resolveDriver } = require('./drivers');
@@ -23,8 +24,13 @@ const { resolveDriver } = require('./drivers');
  * gets a result object; nothing here throws for a delivery problem.
  */
 const smsService = {
+  /**
+   * The runtime switch, a stored setting rather than an environment variable so
+   * it can be turned on from the admin panel the hour a panel is bought —
+   * without a deploy, and without anyone editing a file on a server at speed.
+   */
   async isEnabled() {
-    return smsRepository.isEnabled(config.sms.enabled);
+    return settingsService.get('sms.enabled');
   },
 
   /**
@@ -78,7 +84,7 @@ const smsService = {
 
   /** Turns the panel on or off at runtime, from the admin panel. */
   async setEnabled(enabled) {
-    await smsRepository.setEnabled(enabled);
+    await settingsService.set('sms.enabled', enabled);
     logger.info('SMS panel switched', { enabled });
     return { enabled };
   },

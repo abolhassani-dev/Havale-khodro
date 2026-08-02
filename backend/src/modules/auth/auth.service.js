@@ -98,6 +98,15 @@ const authService = {
     const session = await authRepository.findLiveSession(hashToken(token));
     if (!session) throw new UnauthorizedError(MESSAGES.AUTH.SESSION_INVALID);
 
+    // Account status is checked before the session state on purpose. Suspending
+    // an account also ends its sessions, so checking the session first would
+    // answer "your session is invalid" — sending the user to support to find out
+    // why, when the interface could have told them. Nothing is leaked by saying
+    // it: the account is theirs.
+    if (session.user.status !== 'ACTIVE') {
+      throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
+    }
+
     if (session.endedAt) {
       if (session.endReason === 'KICKED') {
         throw new UnauthorizedError(MESSAGES.AUTH.SESSION_KICKED, ERROR_CODES.SESSION_KICKED);
@@ -108,10 +117,6 @@ const authService = {
     if (session.expiresAt < new Date()) {
       await authRepository.endSession(session.id, 'EXPIRED');
       throw new UnauthorizedError(MESSAGES.AUTH.SESSION_INVALID);
-    }
-
-    if (session.user.status !== 'ACTIVE') {
-      throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
     }
 
     return { session, user: session.user };

@@ -5,6 +5,9 @@ const authRoutes = require('../modules/auth/auth.routes');
 const havaleRoutes = require('../modules/havale/havale.routes');
 const catalogRoutes = require('../modules/catalog/catalog.routes');
 const smsRoutes = require('../modules/sms/sms.routes');
+const subscriptionRoutes = require('../modules/subscription/subscription.routes');
+const subagentRoutes = require('../modules/subagent/subagent.routes');
+const settingsRoutes = require('../modules/settings/settings.routes');
 
 const router = Router();
 
@@ -13,5 +16,8 @@ router.use('/auth', authRoutes);
 router.use('/havales', havaleRoutes);
 router.use('/catalog', catalogRoutes);
 router.use('/sms', smsRoutes);
+router.use('/subscriptions', subscriptionRoutes);
+router.use('/sub-agents', subagentRoutes);
+router.use('/settings', settingsRoutes);
 
 module.exports = router;
