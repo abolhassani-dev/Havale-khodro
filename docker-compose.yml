@@ -16,6 +16,16 @@ services:
     volumes:
       # Read-only: nginx has no reason to write to the application it serves,
       # and a container that cannot write cannot be used to plant a file.
+      #
+      # Both of these are bound to the *directory*, resolved once when the
+      # container is created. Replacing ./frontend on disk — mv the old one
+      # aside, extract a new one in its place — leaves this container attached
+      # to the old directory, and deleting that one leaves it attached to
+      # nothing. nginx then answers the home page with 403, because the
+      # document root it can see has no index.html in it.
+      #
+      # Update with deploy/update.sh, which changes the files inside these
+      # directories instead of replacing the directories.
       - ./frontend:/usr/share/nginx/html:ro
       - ./deploy/nginx:/etc/nginx/conf.d:ro
       - certbot-webroot:/var/www/certbot
