@@ -95,6 +95,24 @@ Prices and caps that a business decision might revise live in `settings.service`
 price, the SMS switch, the reporting cap. The rule of thumb is whether changing it is a
 business decision or an engineering one.
 
+## Violation reports
+
+Reports cut both ways on purpose. A system that only punishes the accused becomes a weapon:
+report every competitor three times and they are suspended. So a verdict can land on either
+party — `CONFIRMED` strikes the advertiser, `ABUSIVE` strikes the reporter — and both sides
+accumulate strikes toward the same threshold.
+
+The third strike suspends an account, and support staff do not hold that authority. When a
+verdict would be somebody's third, it is recorded and queued for the super admin instead of
+taking effect. Support can still do their job; they just cannot end an agency's month on
+their own.
+
+Everything refused when filing a report closes a specific hole: one report per agency per
+listing (three colleagues could otherwise manufacture a suspension), a daily cap, a
+mandatory explanation long enough to investigate, and — for "nobody answers" — proof in the
+reveal log that the reporter actually called. Reports stay open for thirty days after a
+listing closes, deleted listings included, so deleting is not an escape route.
+
 ## SMS
 
 There is no SMS panel yet, so delivery is switched off — but the whole path is built and

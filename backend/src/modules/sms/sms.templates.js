@@ -1,3 +1,5 @@
+const { toPersianDigits } = require('../../utils/persian');
+
 /**
  * Message bodies.
  *
@@ -11,6 +13,9 @@
  */
 
 const TEMPLATES = {
+  // The code stays in Latin digits on purpose: it is typed back into a field
+  // that takes Latin digits, and phones autofill Latin digits. Persian numerals
+  // here would mean transcribing by hand, which is where people give up.
   OTP: {
     name: 'OTP',
     build: ({ code }) => `کد ورود شما: ${code}\nاین کد تا ۲ دقیقه معتبر است.`,
@@ -26,13 +31,13 @@ const TEMPLATES = {
   HAVALE_CLOSING: {
     name: 'HAVALE_CLOSING',
     build: ({ carType, hoursLeft }) =>
-      `آگهی «${carType}» تا ${hoursLeft} ساعت دیگر بسته می‌شود. برای تمدید وارد پنل شوید.`,
+      `آگهی «${carType}» تا ${toPersianDigits(hoursLeft)} ساعت دیگر بسته می‌شود. برای تمدید وارد پنل شوید.`,
   },
 
   SUBSCRIPTION_EXPIRING: {
     name: 'SUBSCRIPTION_EXPIRING',
     build: ({ daysLeft }) =>
-      `اشتراک شما تا ${daysLeft} روز دیگر تمام می‌شود. برای جلوگیری از قطع دسترسی تمدید کنید.`,
+      `اشتراک شما تا ${toPersianDigits(daysLeft)} روز دیگر تمام می‌شود. برای جلوگیری از قطع دسترسی تمدید کنید.`,
   },
 
   /** The owner is told when a report against them is upheld, so they can answer
@@ -40,7 +45,7 @@ const TEMPLATES = {
   VIOLATION_STRIKE: {
     name: 'VIOLATION_STRIKE',
     build: ({ strikes, limit }) =>
-      `یک گزارش تخلف علیه شما تأیید شد (${strikes} از ${limit}). برای پیگیری از بخش تیکت اقدام کنید.`,
+      `یک گزارش تخلف علیه شما تأیید شد (${toPersianDigits(strikes)} از ${toPersianDigits(limit)}). برای پیگیری از بخش تیکت اقدام کنید.`,
   },
 };
 

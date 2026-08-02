@@ -305,17 +305,22 @@ model ViolationReport {
   description String
   status      ReportStatus @default(PENDING)
 
-  adminNote       String?
+  adminNote          String?
   // زمان اطلاع‌رسانی به آگهی‌دهنده پس از تأیید تخلف، تا فرصت پاسخ از راه تیکت داشته باشد
-  ownerNotifiedAt DateTime?
-  reviewedById    String?
-  reviewedBy      User?     @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt      DateTime?
+  ownerNotifiedAt    DateTime?
+  // اخطار سوم حساب را تعلیق می‌کند و پشتیبانی حق تعلیق ندارد؛ پس در صف تأیید
+  // مدیر کل می‌نشیند (بازبینی سوم، اصلاح ۴).
+  needsSuperApproval Boolean   @default(false)
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
 
   createdAt DateTime @default(now())
 
   @@unique([havaleId, reporterId])
   @@index([status, createdAt])
+  @@index([needsSuperApproval, createdAt])
   @@index([reporterId, createdAt])
 }
 
