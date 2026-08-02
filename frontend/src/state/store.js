@@ -1,0 +1,64 @@
+/**
+ * Application state.
+ *
+ * Small and deliberate: who is signed in, which page is showing, and whatever
+ * that page loaded. Anything the server owns — listings, subscriptions, reveal
+ * counts — is fetched when a page opens rather than cached here, because a stale
+ * copy of a reveal count or a subscription date is worse than a short wait.
+ */
+
+const state = {
+  user: null,
+  access: null,
+  page: null,
+  params: {},
+  data: {},
+  loading: false,
+  error: null,
+  modal: null,
+  toast: null,
+};
+
+const subscribers = new Set();
+
+export function getState() {
+  return state;
+}
+
+export function setState(patch) {
+  Object.assign(state, patch);
+  subscribers.forEach((fn) => fn(state));
+}
+
+export function subscribe(fn) {
+  subscribers.add(fn);
+  return () => subscribers.delete(fn);
+}
+
+export function isAdmin() {
+  return Boolean(state.user && state.user.isAdmin);
+}
+
+/**
+ * Permissions, mirroring the server's table.
+ *
+ * This decides what to *show*, never what to allow — the server checks every
+ * request regardless. Hiding a button the server would refuse is courtesy;
+ * relying on the hidden button for security would be the classic mistake, since
+ * this code runs on the viewer's machine.
+ */
+const PERMISSIONS = {
+  SUPER_ADMIN: {
+    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
+    subscriptions: true, seats: true, agents: true, monitoring: true,
+    bulkContacts: true, settings: true, catalog: true,
+  },
+  SUPPORT: { tickets: true, reports: true, contactEdit: true },
+  FINANCE: { subscriptions: true, seats: true },
+  AGENT: {},
+};
+
+export function can(permission) {
+  const role = state.user?.role;
+  return Boolean(role && PERMISSIONS[role] && PERMISSIONS[role][permission]);
+}

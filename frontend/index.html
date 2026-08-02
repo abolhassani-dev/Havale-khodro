@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>فرانوکار — سامانه حواله خودرو</title>
+
+<!--
+  The font is served from this origin, not from a CDN.
+
+  Two reasons, and the second matters more: a Google Fonts request goes out of
+  the country, so on a day when the international link is disrupted the panel
+  would render in a fallback font for users whose own server is reachable. And
+  every such request tells a third party who is using this system and when.
+-->
+<link rel="preload" href="/assets/vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/src/styles/app.css">
+<link rel="stylesheet" href="/src/styles/app-extra.css">
+<link rel="icon" href="/assets/favicon.svg">
+</head>
+<body>
+
+<div id="root">
+  <div class="boot">در حال بارگذاری…</div>
+</div>
+
+<!-- Modals and toasts live above the page so a re-render of the page below
+     cannot tear them out mid-interaction. -->
+<div id="layer"></div>
+
+<noscript>
+  <div class="boot">این سامانه برای کار کردن به جاوااسکریپت نیاز دارد.</div>
+</noscript>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
