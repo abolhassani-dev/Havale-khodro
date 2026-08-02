@@ -4,8 +4,8 @@ const app = require('../../src/app');
 const { prisma, connectDatabase, disconnectDatabase } = require('../../src/config/database');
 const {
   api,
-  OFFER,
-  REQUEST,
+  offer,
+  purchaseRequest,
   createAgent,
   giveSubscription,
   signIn,
@@ -47,14 +47,14 @@ maybe('havale', () => {
   });
 
   /** An owner with one live listing, and a separate agent to look at it. */
-  async function twoAgentsAndAListing(listing = OFFER) {
+  async function twoAgentsAndAListing(listing) {
     const owner = await agent();
     const viewer = await agent();
 
     const res = await request(app)
       .post(api('/havales'))
       .set('Cookie', owner.cookie)
-      .send(listing)
+      .send(listing || (await offer()))
       .expect(201);
 
     return { owner, viewer, havale: res.body.data };
@@ -236,7 +236,7 @@ maybe('havale', () => {
         const res = await request(app)
           .post(api('/havales'))
           .set('Cookie', owner.cookie)
-          .send(OFFER)
+          .send(await offer())
           .expect(201);
         ids.push(res.body.data.id);
       }
@@ -289,7 +289,7 @@ maybe('havale', () => {
       const res = await request(app)
         .post(api('/havales'))
         .set('Cookie', owner.cookie)
-        .send(OFFER)
+        .send(await offer())
         .expect(201);
 
       await prisma.subscription.updateMany({
@@ -306,7 +306,7 @@ maybe('havale', () => {
       await request(app)
         .post(api('/havales'))
         .set('Cookie', owner.cookie)
-        .send(OFFER)
+        .send(await offer())
         .expect(403);
 
       await request(app)
@@ -343,20 +343,20 @@ maybe('havale', () => {
   });
 
   describe('listing rules', () => {
-    it('requires colour, price and company on a sale but not on a request', async () => {
+    it('requires colour and price on a sale but not on a request', async () => {
       const { cookie } = await agent();
 
-      const { carColor, ...offerWithoutColour } = OFFER;
+      const { carColor, ...withoutColour } = await offer();
       expect(carColor).toBeTruthy();
 
+      await request(app).post(api('/havales')).set('Cookie', cookie).send(withoutColour).expect(422);
+
+      // A buyer who will take any colour should not have to invent one.
       await request(app)
         .post(api('/havales'))
         .set('Cookie', cookie)
-        .send(offerWithoutColour)
-        .expect(422);
-
-      // A buyer who will take any colour should not have to invent one.
-      await request(app).post(api('/havales')).set('Cookie', cookie).send(REQUEST).expect(201);
+        .send(await purchaseRequest())
+        .expect(201);
     });
 
     it('rejects a paid amount larger than the total', async () => {
@@ -365,7 +365,7 @@ maybe('havale', () => {
       await request(app)
         .post(api('/havales'))
         .set('Cookie', cookie)
-        .send({ ...OFFER, paidAmountToman: OFFER.amountToman + 1 })
+        .send(await offer({ paidAmountToman: 2_000_000_000 }))
         .expect(422);
     });
 
@@ -375,7 +375,7 @@ maybe('havale', () => {
       const res = await request(app)
         .post(api('/havales'))
         .set('Cookie', cookie)
-        .send({ ...OFFER, depositDays: 3 })
+        .send(await offer({ depositDays: 3 }))
         .expect(201);
 
       const days = (new Date(res.body.data.closesAt) - Date.now()) / (24 * 60 * 60 * 1000);
@@ -389,7 +389,7 @@ maybe('havale', () => {
       const res = await request(app)
         .post(api('/havales'))
         .set('Cookie', cookie)
-        .send(REQUEST)
+        .send(await purchaseRequest())
         .expect(201);
 
       const days = (new Date(res.body.data.closesAt) - Date.now()) / (24 * 60 * 60 * 1000);
@@ -402,7 +402,7 @@ maybe('havale', () => {
       await request(app)
         .post(api('/havales'))
         .set('Cookie', owner.cookie)
-        .send(REQUEST)
+        .send(await purchaseRequest())
         .expect(201);
 
       const viewer = await agent();
@@ -415,7 +415,8 @@ maybe('havale', () => {
       // No colour on a request means "any colour will do" — it is the most
       // willing match in the list, so dropping it inverts its meaning
       // (review round 1, fix 7).
-      const mine = res.body.data.items.filter((i) => i.carType === REQUEST.carType);
+      const request2 = await purchaseRequest();
+      const mine = res.body.data.items.filter((i) => i.carModelId === request2.carModelId);
       expect(mine.length).toBeGreaterThan(0);
     });
 
@@ -477,7 +478,7 @@ maybe('havale', () => {
       const res = await request(app)
         .post(api('/havales'))
         .set('Cookie', owner.cookie)
-        .send({ ...OFFER, depositDays: 2 })
+        .send(await offer({ depositDays: 2 }))
         .expect(201);
 
       const renewed = await request(app)
@@ -511,7 +512,7 @@ maybe('havale', () => {
       await request(app)
         .post(api('/havales'))
         .set('Cookie', childCookie)
-        .send(REQUEST)
+        .send(await purchaseRequest())
         .expect(201);
 
       await prisma.subscription.updateMany({
@@ -522,7 +523,7 @@ maybe('havale', () => {
       await request(app)
         .post(api('/havales'))
         .set('Cookie', childCookie)
-        .send(REQUEST)
+        .send(await purchaseRequest())
         .expect(403);
     });
   });

@@ -4,6 +4,7 @@ const request = require('supertest');
 const app = require('../../src/app');
 const config = require('../../src/config');
 const { prisma } = require('../../src/config/database');
+const { seedCatalog } = require('../../src/modules/catalog/catalog.seed');
 
 /**
  * Test data.
@@ -84,24 +85,52 @@ async function signedInAgent(overrides = {}) {
   return { user, cookie: await signIn(user) };
 }
 
-const OFFER = {
-  kind: 'OFFER',
-  carType: 'فیدلیتی پرایم',
-  solh: 'SOLH',
-  carColor: 'سفید',
-  model: '1404',
-  amountToman: 1_800_000_000,
-  paidAmountToman: 900_000_000,
-  deliveryDays: 60,
-  depositDays: 5,
-  supplierCompany: 'مدیران خودرو',
-};
+/**
+ * The catalogue, loaded once per run.
+ *
+ * Listings reference a model id rather than free text, so the tests need real
+ * catalogue rows. Seeding is idempotent, so calling it from several suites is
+ * safe.
+ */
+let catalogPromise = null;
 
-const REQUEST = {
-  kind: 'REQUEST',
-  carType: 'آریزو ۶',
-  solh: 'VEKALATI',
-};
+function catalog() {
+  if (!catalogPromise) {
+    catalogPromise = seedCatalog().then(async () => {
+      const models = await prisma.carModel.findMany({
+        orderBy: { name: 'asc' },
+        take: 2,
+        select: { id: true, name: true },
+      });
+      const colors = await prisma.carColor.findMany({ take: 1, select: { name: true } });
+      return { models, color: colors[0].name };
+    });
+  }
+  return catalogPromise;
+}
+
+/** A fully specified sale listing, ready to POST. */
+async function offer(overrides = {}) {
+  const { models, color } = await catalog();
+  return {
+    kind: 'OFFER',
+    carModelId: models[0].id,
+    solh: 'SOLH',
+    carColor: color,
+    model: '1405',
+    amountToman: 1_800_000_000,
+    paidAmountToman: 900_000_000,
+    deliveryDays: 60,
+    depositDays: 5,
+    ...overrides,
+  };
+}
+
+/** A purchase request: car and transfer form only, as the product rule allows. */
+async function purchaseRequest(overrides = {}) {
+  const { models } = await catalog();
+  return { kind: 'REQUEST', carModelId: models[1].id, solh: 'VEKALATI', ...overrides };
+}
 
 /** Removes everything a suite created, children first. */
 async function cleanup(userIds) {
@@ -125,8 +154,9 @@ async function cleanup(userIds) {
 module.exports = {
   api,
   PASSWORD,
-  OFFER,
-  REQUEST,
+  catalog,
+  offer,
+  purchaseRequest,
   createAgent,
   giveSubscription,
   ensurePlan,

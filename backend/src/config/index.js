@@ -46,6 +46,16 @@ module.exports = {
     },
   },
 
+  sms: {
+    // The default for the runtime switch, used until a value is stored in the
+    // settings table. Off, because there is no panel yet and a system that
+    // demands a code it cannot deliver locks everyone out.
+    enabled: process.env.SMS_ENABLED === 'true',
+    driver: process.env.SMS_DRIVER || 'log',
+    apiKey: process.env.SMS_API_KEY || null,
+    sender: process.env.SMS_SENDER || null,
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },

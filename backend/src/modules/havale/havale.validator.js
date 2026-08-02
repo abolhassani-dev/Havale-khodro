@@ -34,7 +34,10 @@ const createBody = Joi.object({
     .required(),
 
   // Required in both: without these two a listing says nothing at all.
-  carType: Joi.string().trim().min(2).max(120).required(),
+  // The model is chosen from the catalogue rather than typed, so that filtering
+  // works — as free text «فونیکس FX» and «فونیکس اف ایکس» are two different cars
+  // and neither ever finds the other.
+  carModelId: Joi.string().trim().max(40).required(),
   solh: Joi.string()
     .valid(...Object.values(SOLH_STATUS))
     .required(),
@@ -51,7 +54,9 @@ const createBody = Joi.object({
   depositDays: requiredForOffer(
     Joi.number().integer().min(DEPOSIT_DAYS.MIN).max(DEPOSIT_DAYS.MAX)
   ),
-  supplierCompany: requiredForOffer(Joi.string().trim().max(120)),
+
+  // The supplying company is not an input: it is read from the chosen model, so
+  // a listing cannot claim a Fownix is built by someone else.
 
   description: Joi.string().trim().max(1000).allow('', null).optional(),
 })
@@ -78,14 +83,13 @@ const createBody = Joi.object({
 // An update may not change the listing's kind: the required-field rules differ
 // between the two, so flipping it would leave a half-filled row behind.
 const updateBody = Joi.object({
-  carType: Joi.string().trim().min(2).max(120),
+  carModelId: Joi.string().trim().max(40),
   solh: Joi.string().valid(...Object.values(SOLH_STATUS)),
   carColor: Joi.string().trim().max(60).allow(null),
   model: Joi.string().trim().max(20).allow(null),
   amountToman: toman.allow(null),
   paidAmountToman: toman.allow(null),
   deliveryDays: days.allow(null),
-  supplierCompany: Joi.string().trim().max(120).allow(null),
   description: Joi.string().trim().max(1000).allow('', null),
 })
   .min(1)
@@ -102,6 +106,10 @@ const renewBody = Joi.object({
 
 const listQuery = Joi.object({
   kind: Joi.string().valid(...Object.values(HAVALE_KIND)),
+  // Exact when the agent picks from the list, free text when they type in the
+  // search box — both are useful and they are not the same query.
+  carModelId: Joi.string().trim().max(40),
+  brandId: Joi.string().trim().max(40),
   carType: Joi.string().trim().max(120),
   carColor: Joi.string().trim().max(60),
   model: Joi.string().trim().max(20),

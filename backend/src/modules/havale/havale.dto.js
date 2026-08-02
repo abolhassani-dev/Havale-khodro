@@ -31,6 +31,7 @@ function baseFields(havale) {
     serial: havale.serial,
     kind: havale.kind,
     status: havale.status,
+    carModelId: havale.carModelId,
     carType: havale.carType,
     carColor: havale.carColor,
     model: havale.model,

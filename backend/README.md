@@ -64,6 +64,31 @@ log. The interface runs on the viewer's machine and cannot be trusted to keep a 
 `tests/e2e/havale.test.js` asserts this against the raw response payload rather than a
 parsed field. If that test goes red, treat it as an incident, not a broken test.
 
+## Car catalogue
+
+Companies, brands, models and colours are rows, not free text — `CarCompany → CarBrand →
+CarModel`, plus `CarColor`. As free text «فونیکس FX» and «فونیکس اف ایکس» are two different
+cars that never find each other in a filter.
+
+A listing stores both the model id *and* the model's name at the time it was posted.
+Renaming a model therefore never rewrites what an old listing advertised, and deactivating
+one stops new listings without breaking the ones already up. See `docs/car-catalog.md`.
+
+## SMS
+
+There is no SMS panel yet, so delivery is switched off — but the whole path is built and
+tested. With the switch off, every message is still rendered and written to the `SmsMessage`
+outbox; only the final hand-off to a provider is skipped. That means the notification
+behaviour can be demonstrated now, and buying a panel later is a setting plus two
+environment variables rather than a development task.
+
+- Drivers live in `src/modules/sms/drivers/`. Adding a provider is one file and one line in
+  `drivers/index.js`; nothing outside that folder knows which provider is in use.
+- The switch is the stored setting `sms.enabled`, not an environment variable, so it can be
+  flipped from the admin panel without a deploy. `SMS_ENABLED` is only the initial default.
+- `smsService.send()` never throws for a delivery problem. A user must not be unable to
+  sign in because a gateway is down.
+
 ## Commands
 
 | Command | What it does |

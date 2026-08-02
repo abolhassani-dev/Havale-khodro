@@ -1,6 +1,7 @@
 const { havaleRepository } = require('./havale.repository');
 const { toHavaleCard, toOwnHavale, toRevealResult } = require('./havale.dto');
 const authRepository = require('../auth/auth.repository');
+const catalogRepository = require('../catalog/catalog.repository');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
 const { ERROR_CODES } = require('../../constants/errorCodes');
 const { MESSAGES } = require('../../constants/messages');
@@ -49,6 +50,8 @@ function publicWhere(filters) {
 
   if (filters.kind) where.kind = filters.kind;
   if (filters.solh) where.solh = filters.solh;
+  if (filters.carModelId) where.carModelId = filters.carModelId;
+  if (filters.brandId) where.carModel = { brandId: filters.brandId };
   if (filters.supplierCompany) where.supplierCompany = filters.supplierCompany;
   if (filters.model) where.model = filters.model;
 
@@ -94,10 +97,13 @@ function encodeCursor(row) {
 
 const havaleService = {
   async create({ user, payload }) {
+    const { carModelId, carColor, ...rest } = payload;
+    const catalog = await this.resolveCatalog({ carModelId, carColor });
     const closesAt = closingDate(payload.kind, payload.depositDays);
 
     const havale = await havaleRepository.create({
-      ...payload,
+      ...rest,
+      ...catalog,
       ownerId: user.id,
       closesAt,
     });
@@ -186,7 +192,10 @@ const havaleService = {
       throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
     }
 
-    const updated = await havaleRepository.update(id, payload);
+    const { carModelId, carColor, ...rest } = payload;
+    const catalog = await this.resolveCatalog({ carModelId, carColor });
+
+    const updated = await havaleRepository.update(id, { ...rest, ...catalog });
     await authRepository.recordActivity({
       userId: user.id,
       action: 'HAVALE_UPDATED',
@@ -351,6 +360,38 @@ const havaleService = {
       monthlyUsed,
       monthlyLimit: access.monthlyLimit,
     };
+  },
+
+  /**
+   * Turns catalogue choices into the values stored on the listing.
+   *
+   * The model's name and its company are copied onto the row rather than only
+   * referenced. A listing has to keep saying what it said when it was posted: if
+   * the operator renames a model next year, an agent looking at an old حواله
+   * would otherwise see a car description that changed underneath them — and the
+   * violation reports filed against it would stop matching what was advertised.
+   */
+  async resolveCatalog({ carModelId, carColor }) {
+    const data = {};
+
+    if (carModelId !== undefined && carModelId !== null) {
+      const model = await catalogRepository.findModel(carModelId);
+      if (!model) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_MODEL);
+
+      data.carModelId = model.id;
+      data.carType = model.name;
+      data.supplierCompany = model.brand.company.name;
+    }
+
+    if (carColor !== undefined && carColor !== null) {
+      const colour = await catalogRepository.findColorByName(carColor);
+      if (!colour) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_COLOR);
+      data.carColor = colour.name;
+    } else if (carColor === null) {
+      data.carColor = null;
+    }
+
+    return data;
   },
 
   async requireOwn(user, id) {

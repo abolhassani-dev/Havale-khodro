@@ -155,6 +155,7 @@ model User {
   seatOrders          SeatOrder[]       @relation("SeatOrderBuyer")
   seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
   activityLogs        ActivityLog[]
+  smsMessages         SmsMessage[]
 
   @@index([role, status])
   @@index([parentId])
@@ -210,9 +211,13 @@ model Havale {
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  // الزامی در هر دو نوع
-  carType String
-  solh    SolhStatus
+  // الزامی در هر دو نوع.
+  // carModelId مرجع کاتالوگ است و فیلتر روی آن انجام می‌شود؛ carType اسنپ‌شات
+  // نام همان لحظه است تا تغییر نام مدل، حواله‌های قدیمی را بازنویسی نکند.
+  carModelId String?
+  carModel   CarModel?  @relation(fields: [carModelId], references: [id], onDelete: SetNull)
+  carType    String
+  solh       SolhStatus
 
   // در «حواله فروش» الزامی، در «درخواست خرید» اختیاری
   carColor        String?
@@ -254,6 +259,7 @@ model Havale {
   @@index([deletedAt])
   @@index([kind, status, createdAt])
   @@index([ownerId, kind, status])
+  @@index([carModelId, status])
   @@index([carType, carColor])
   @@index([supplierCompany])
 }
@@ -435,4 +441,125 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// کاتالوگ خودرو
+//
+// شرکت عرضه‌کننده، برند و مدل به‌صورت جدول نگه داشته می‌شوند تا از پنل مدیریت
+// قابل ویرایش باشند و «فیلتر بر اساس مدل» دقیق کار کند. متن آزاد این را نمی‌دهد:
+// «فونیکس FX» و «فونیکس اف ایکس» دو چیز متفاوت می‌شوند و هیچ‌کدام همدیگر را
+// پیدا نمی‌کنند.
+//
+// نام برند و مدل روی خود حواله هم ذخیره می‌شود (اسنپ‌شات)، چون اگر بعداً اسم یک
+// مدل عوض شود، حواله‌های قدیمی باید همان چیزی را نشان دهند که موقع ثبت بوده‌اند.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// شرکت خودروساز / واردکننده — مثل «مدیران خودرو»
+model CarCompany {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  slug      String  @unique
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brands CarBrand[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// برند زیرمجموعه — مثل ام‌وی‌ام، فونیکس، اکستریم
+model CarBrand {
+  id        String     @id @default(cuid())
+  companyId String
+  company   CarCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name      String
+  slug      String  @unique
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models CarModel[]
+
+  @@unique([companyId, name])
+  @@index([isActive, sortOrder])
+}
+
+/// مدل خودرو — مثل «فونیکس FX پریمیوم»
+model CarModel {
+  id      String   @id @default(cuid())
+  brandId String
+  brand   CarBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  // بدون slug: مدل‌ها با شناسه ارجاع داده می‌شوند و اسم فارسی‌شان چیزی برای
+  // ساختن slug یکتا نمی‌دهد — «فونیکس FX» و «فونیکس FX پریمیوم» هر دو fx می‌شدند.
+  name      String
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  havales Havale[]
+
+  @@unique([brandId, name])
+  @@index([isActive, sortOrder])
+}
+
+/// رنگ استاندارد. لیست بسته باعث می‌شود فیلتر رنگ واقعاً کار کند.
+model CarColor {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// پیامک
+//
+// تا وقتی پنل پیامک خریداری نشود، سامانه با کلید خاموش کار می‌کند: پیام‌ها ساخته
+// و ذخیره می‌شوند ولی ارسال نمی‌شوند. این‌طور در دمو معلوم است دقیقاً چه چیزی
+// قرار بوده برای چه کسی برود، و روزی که پنل فعال شد فقط کلید عوض می‌شود.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum SmsStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED // پنل خاموش بوده؛ پیام ساخته شد ولی ارسال نشد
+}
+
+model SmsMessage {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  to       String
+  template String
+  // متن نهایی همان لحظه ذخیره می‌شود؛ اگر بعداً قالب عوض شود، سابقه دست‌نخورده می‌ماند.
+  body     String
+
+  status     SmsStatus @default(PENDING)
+  driver     String
+  providerId String?
+  error      String?
+
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  @@index([status, createdAt])
+  @@index([to, createdAt])
+  @@index([userId, createdAt])
 }

@@ -7,6 +7,7 @@ const config = require('../src/config');
 const { prisma, connectDatabase, disconnectDatabase } = require('../src/config/database');
 const logger = require('../src/utils/logger');
 const { ROLES } = require('../src/constants/roles');
+const { seedCatalog } = require('../src/modules/catalog/catalog.seed');
 
 /**
  * First-run data.
@@ -88,6 +89,7 @@ async function seed() {
   await connectDatabase();
   await seedAdmin();
   await seedPlans();
+  await seedCatalog();
   await disconnectDatabase();
 }
 
