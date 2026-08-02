@@ -21,22 +21,26 @@ const isAdmin = (role) => ADMIN_ROLES.includes(role);
  * Permissions per admin role, mirroring clause 11.12 of the blueprint.
  * Kept as data rather than scattered `if (role === ...)` checks so the whole
  * policy can be read — and audited — in one place.
+ *
+ * `catalog` is not in the blueprint's table: the car catalogue was added after
+ * it was written. It sits with the super admin because editing it changes what
+ * every agency can advertise.
  */
 const PERMISSIONS = {
   SUPER_ADMIN: {
     tickets: true, reports: true, contactEdit: true, thirdStrike: true,
     subscriptions: true, seats: true, agents: true, monitoring: true,
-    export: true, bulkContacts: true, settings: true,
+    export: true, bulkContacts: true, settings: true, catalog: true,
   },
   SUPPORT: {
     tickets: true, reports: true, contactEdit: true, thirdStrike: false,
     subscriptions: false, seats: false, agents: false, monitoring: false,
-    export: false, bulkContacts: false, settings: false,
+    export: false, bulkContacts: false, settings: false, catalog: false,
   },
   FINANCE: {
     tickets: false, reports: false, contactEdit: false, thirdStrike: false,
     subscriptions: true, seats: true, agents: false, monitoring: false,
-    export: false, bulkContacts: false, settings: false,
+    export: false, bulkContacts: false, settings: false, catalog: false,
   },
   AGENT: {},
 };

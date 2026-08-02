@@ -113,6 +113,33 @@ mandatory explanation long enough to investigate, and — for "nobody answers" �
 reveal log that the reporter actually called. Reports stay open for thirty days after a
 listing closes, deleted listings included, so deleting is not an escape route.
 
+## The admin panel
+
+Being an admin gets you through the door at `/admin`; each section is then gated by its own
+named permission from `constants/roles.js`. The three roles exist so that hiring a support
+person does not hand them the contact data the business rests on, and `tests/e2e/admin.test.js`
+spends as much effort on who may *not* do things as on who may — a role table nobody tests
+is a role table that quietly stops being true.
+
+The reveal log (`/admin/reveals`) sits behind `bulkContacts`, not `monitoring`: it is a list
+of phone numbers. It shows the number **as it read at the time of the reveal**, not as the
+profile reads today, so correcting a number through a ticket cannot rewrite the evidence.
+
+`/admin/activity/:id` resolves a log row's identifiers into the actual records and returns a
+sentence. An audit trail nobody can read is not an audit trail.
+
+Suspicious agencies are **flagged, not blocked** — the caps already stop the volume, so this
+is about noticing a shape. Every flag comes back with the numbers behind it, because a flag
+somebody has to take on trust gets ignored after the first false positive.
+
+### Catalogue editing
+
+`/admin/catalog` has no delete, on purpose. A model that has been used is referenced by
+listings, reveal records and violation reports, so removing it would take history with it.
+"Remove a car" means `isActive: false`: no new listing can use it, every existing listing
+stays exactly as it was. `/admin/catalog/models/:id/usage` says how many listings are
+affected before anyone flips the switch.
+
 ## SMS
 
 There is no SMS panel yet, so delivery is switched off — but the whole path is built and
