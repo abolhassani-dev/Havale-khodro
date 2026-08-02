@@ -50,6 +50,20 @@ SHA-256 hash is stored, so a database dump does not hand anyone a set of working
 The token never appears in a response body — putting it there would invite the frontend to
 keep it somewhere readable and undo `httpOnly`.
 
+## Contact masking
+
+`src/modules/havale/havale.dto.js` is the only place a coordinator's phone number is
+allowed into a response, and it only puts it there once the caller has proved the reveal
+was recorded. Nothing else in the codebase should ever serialise it.
+
+The reason is worth stating rather than assuming: if the API returned the number and the
+interface merely hid it, anyone with a login and the browser's network tab could read every
+number in the database — consuming none of the daily cap and leaving nothing in the audit
+log. The interface runs on the viewer's machine and cannot be trusted to keep a secret.
+
+`tests/e2e/havale.test.js` asserts this against the raw response payload rather than a
+parsed field. If that test goes red, treat it as an incident, not a broken test.
+
 ## Commands
 
 | Command | What it does |
