@@ -42,7 +42,9 @@ module.exports = {
     bodyLimit: process.env.BODY_LIMIT || '1mb',
     rateLimit: {
       windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-      max: Number(process.env.RATE_LIMIT_MAX) || 100,
+      // ~80/min per IP. A working panel view is 5-7 calls; 100 per window
+      // locked an ordinary admin out after a few pages (see rateLimiter.js).
+      max: Number(process.env.RATE_LIMIT_MAX) || 1200,
     },
   },
 

@@ -407,3 +407,15 @@ tr.dim, .dim { opacity: 0.55; }
   content: ''; position: absolute; top: -4px; inset-inline-start: 17px;
   width: 9px; height: 9px; background: #1b2422; transform: rotate(45deg);
 }
+
+/* ---- مقدار تنظیمات: قاب‌دار، نه رها در سلول ---- */
+
+.val-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-width: 64px; justify-content: center;
+  padding: 4px 12px; border-radius: 8px;
+  background: #fdfcf8; border: 1px solid var(--line);
+  font-size: 13.5px; font-weight: 700;
+}
+.val-chip.on  { background: var(--ok-08); border-color: #2c6b4140; color: var(--ok); }
+.val-chip.off { background: #f0ede5; border-color: var(--line); color: var(--ink-3); }

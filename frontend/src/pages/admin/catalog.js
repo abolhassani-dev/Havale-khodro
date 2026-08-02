@@ -2,7 +2,7 @@ import { html, raw } from '../../ui/html.js';
 import { admin } from '../../api/index.js';
 import { getState } from '../../state/store.js';
 import { faDigits } from '../../ui/format.js';
-import { emptyBox, toast, openModal } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal , qtip } from '../../ui/feedback.js';
 import { resolve } from '../../router.js';
 
 /**
@@ -27,7 +27,7 @@ export function catalogPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>کاتالوگ خودرو</h2>
+      <h2>کاتالوگ خودرو ${qtip('فهرست شرکت‌ها، برندها و مدل‌هایی که نمایندگی‌ها موقع ثبت حواله از بینشان انتخاب می‌کنند. مدل استفاده‌شده حذف نمی‌شود — غیرفعالش کنید تا از فرم ثبت بیفتد و آگهی‌های قبلی سالم بمانند.')}</h2>
       <div style="display:flex;gap:8px">
         <button class="btn sm" data-new-company>شرکت جدید</button>
         <button class="btn sm" data-new-brand>برند جدید</button>
@@ -50,7 +50,7 @@ export function catalogPage() {
 
   <div class="card">
     <div class="card-h">
-      <h2>رنگ‌ها</h2>
+      <h2>رنگ‌ها ${qtip('رنگ‌هایی که در فرم ثبت حواله پیشنهاد می‌شوند. «ترتیب» جای رنگ در فهرست را تعیین می‌کند.')}</h2>
       <button class="btn primary sm" data-new-color>رنگ جدید</button>
     </div>
     <table>

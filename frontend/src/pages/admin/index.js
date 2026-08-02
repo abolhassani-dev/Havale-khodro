@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, errorBox , qtip } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 
@@ -92,7 +92,7 @@ function dashPage() {
 
   <div class="card">
     <div class="card-h">
-      <h2>رفتار قابل بررسی</h2>
+      <h2>رفتار قابل بررسی ${qtip('الگوهایی که ارزش نگاه دارند: نمایندگی‌ای که آگهی ندارد ولی مشخصات زیاد باز می‌کند، مصرف خیلی بالای سقف، یا اخطار تخلف. این‌ها فقط علامت‌گذاری‌اند — سامانه خودش کسی را مسدود نمی‌کند.')}</h2>
       <span class="tag ${flagged.length ? 'w' : 'g'}">${faDigits(flagged.length)} مورد</span>
     </div>
     ${
@@ -138,7 +138,7 @@ function agentsPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>نمایندگی‌ها</h2>
+      <h2>نمایندگی‌ها ${qtip('همه‌ی حساب‌های نمایندگی. از «پرونده» وضعیت، سقف‌ها، اشتراک و سابقه‌ی هر حساب را می‌بینید و می‌توانید تعلیق یا فعال کنید.')}</h2>
       <span class="tag">${faDigits(data.agents?.total ?? 0)} حساب</span>
     </div>
 
@@ -258,7 +258,7 @@ function newAgentPage() {
 
   return html`
   <form class="card form" data-form="new-agent">
-    <div class="card-h"><h2>ساخت حساب نمایندگی</h2></div>
+    <div class="card-h"><h2>ساخت حساب نمایندگی ${qtip('حساب تازه برای یک نمایندگی. رمز اولیه فقط همین یک بار نمایش داده می‌شود و نماینده در اولین ورود باید عوضش کند.')}</h2></div>
     <div style="padding:0 14px">${errorBox(error)}</div>
     <div class="fields">
       ${field('username', 'نام کاربری', 'text', 'ltr')}
@@ -308,7 +308,7 @@ function reportsPage() {
     approvals.length
       ? html`<div class="card">
           <div class="card-h">
-            <h2>در انتظار تأیید مدیر کل</h2>
+            <h2>در انتظار تأیید مدیر کل ${qtip('اخطار سوم یعنی تعلیق خودکار حساب — برای همین اعمالش فقط دست مدیر کل است، نه پشتیبانی.')}</h2>
             <span class="tag w">${faDigits(approvals.length)}</span>
           </div>
           <div class="hint" style="padding:8px 14px">
@@ -335,7 +335,7 @@ function reportsPage() {
 
   <div class="card">
     <div class="card-h">
-      <h2>گزارش‌های تخلف</h2>
+      <h2>گزارش‌های تخلف ${qtip('گزارش‌هایی که نمایندگی‌ها علیه هم ثبت می‌کنند. «تأیید» برای فروشنده اخطار ثبت می‌کند و با سه اخطار حساب تعلیق می‌شود؛ «بی‌مورد» برای خود گزارش‌دهنده اخطار می‌زند تا گزارش الکی صرف نکند.')}</h2>
       <div class="tabs">
         ${[['PENDING', 'در انتظار'], ['CONFIRMED', 'تأییدشده'], ['REJECTED', 'ردشده'], ['ABUSIVE', 'بی‌مورد']].map(
           ([value, label]) => html`<button class="tab ${(params.status || 'PENDING') === value ? 'on' : ''}"
@@ -425,7 +425,7 @@ function adminTicketsPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>تیکت‌ها</h2>
+      <h2>تیکت‌ها ${qtip('پیام‌های پشتیبانی نمایندگی‌ها: سؤال، مشکل و درخواست تمدید اشتراک. پاسخ شما در پنل خودشان زیر همان تیکت می‌آید.')}</h2>
       <div class="tabs">
         ${[['', 'همه'], ['OPEN', 'باز'], ['ANSWERED', 'پاسخ داده'], ['CLOSED', 'بسته']].map(
           ([value, label]) => html`<button class="tab ${(params.status || '') === value ? 'on' : ''}"
@@ -464,8 +464,8 @@ function monitorPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>تایم‌لاین فعالیت</h2>
-      <span class="tag">${faDigits(data.activity?.total ?? 0)} رکورد</span>
+      <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.')}</h2>
+      <span class="tag">نمایش ${faDigits(activity.length)} از ${faDigits(data.activity?.total ?? 0)} رکورد</span>
     </div>
     <div class="hint" style="padding:8px 14px">
       روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.
@@ -486,13 +486,20 @@ function monitorPage() {
           </table>`
         : emptyBox('رکوردی نیست.')
     }
+    ${
+      activity.length < (data.activity?.total ?? 0)
+        ? html`<div style="text-align:center;padding:4px 0 14px">
+            <button class="btn" data-more-activity>بارگذاری ${faDigits(Math.min(50, (data.activity?.total ?? 0) - activity.length))} رکورد بعدی</button>
+          </div>`
+        : ''
+    }
   </div>
 
   ${
     reveals
       ? html`<div class="card">
           <div class="card-h">
-            <h2>سابقه‌ی نمایش مشخصات</h2>
+            <h2>سابقه‌ی نمایش مشخصات ${qtip('چه کسی مشخصات تماس کدام آگهی را کی دیده. شماره‌ی ثبت‌شده همان لحظه‌ی نمایش است و به‌خاطر حساسیتش فقط مدیر کل این را می‌بیند.')}</h2>
             <span class="tag r">فقط مدیر کل</span>
           </div>
           <div class="hint" style="padding:8px 14px">
@@ -552,7 +559,7 @@ function seatsPage() {
 
   return html`
   <div class="card">
-    <div class="card-h"><h2>درخواست‌های ظرفیت</h2>
+    <div class="card-h"><h2>درخواست‌های ظرفیت ${qtip('نماینده برای ساخت زیرنمایندگی ظرفیت می‌خرد. چون پرداخت دستی است، فقط بعد از دریافت وجه «تأیید» بزنید تا ظرفیت شارژ شود.')}</h2>
       <span class="tag ${pending.length ? 'w' : 'g'}">${faDigits(pending.length)} در انتظار</span></div>
     <div class="hint" style="padding:8px 14px">
       ظرفیت پیش‌پرداخت است: فقط بعد از دریافت وجه تأیید کنید.
@@ -592,7 +599,7 @@ function settingsPage() {
 
   return html`
   <div class="card">
-    <div class="card-h"><h2>تنظیمات سامانه</h2></div>
+    <div class="card-h"><h2>تنظیمات سامانه ${qtip('مقادیری که بدون تغییر کد عوض می‌شوند و همان لحظه اعمال می‌شوند: قیمت ظرفیت، سقف گزارش، کلید پیامک و کد دوعاملی.')}</h2></div>
     <div class="hint" style="padding:8px 14px">
       این‌ها بدون نیاز به استقرار مجدد اعمال می‌شوند.
     </div>
@@ -601,10 +608,12 @@ function settingsPage() {
       <tbody>
         ${settings.map(
           (s) => html`<tr>
-            <td>${s.description}<div class="sub num">${s.key}</div></td>
-            <td class="num">
-              ${s.type === 'boolean' ? (s.value ? 'روشن' : 'خاموش') : faDigits(s.value)}
-              ${s.isDefault ? html`<span class="tag">پیش‌فرض</span>` : ''}
+            <td>${s.description}</td>
+            <td>
+              <span class="val-chip ${s.type === 'boolean' ? (s.value ? 'on' : 'off') : ''}">
+                ${s.type === 'boolean' ? (s.value ? 'روشن' : 'خاموش') : html`<span class="num">${faDigits(s.value)}</span>`}
+              </span>
+              ${s.isDefault ? html`<span class="tag n">پیش‌فرض</span>` : ''}
             </td>
             <td style="text-align:left">
               <button class="btn sm" data-edit-setting="${s.key}" data-type="${s.type}"
@@ -618,7 +627,7 @@ function settingsPage() {
 
   <div class="card">
     <div class="card-h">
-      <h2>پیامک</h2>
+      <h2>پیامک ${qtip('تا وقتی پنل پیامکی وصل نشده این کلید خاموش است: پیام‌ها ساخته و ذخیره می‌شوند ولی ارسال نمی‌شوند. بعد از قرارداد با پنل، از تنظیمات روشنش کنید.')}</h2>
       <span class="tag ${data.sms?.enabled ? 'g' : ''}">
         ${data.sms?.enabled ? 'ارسال فعال' : 'ارسال خاموش'}
       </span>
@@ -650,8 +659,21 @@ function settingsPage() {
 
 // ── event handling ──────────────────────────────────────────────────────────
 
+async function loadMoreActivity() {
+  const { data, params } = getState();
+  const loaded = data.activity?.items || [];
+  const more = await admin.activity({ take: 50, skip: loaded.length, userId: params.userId });
+  setState({
+    data: {
+      ...data,
+      activity: { ...more, items: [...loaded, ...(more.items || [])] },
+    },
+  });
+}
+
 export function handleAdminClick(d, el) {
   if (d.activity) return showActivityDetail(d.activity);
+  if (d.moreActivity !== undefined) return loadMoreActivity();
   if (d.reviewReport) return reviewReportModal(d.reviewReport);
   if (d.approveSuspension) return approveSuspension(d.approveSuspension);
   if (d.seatReview) return seatReview(d.seatReview, d.approve === 'true');

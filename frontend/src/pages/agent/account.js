@@ -51,7 +51,7 @@ export function subscriptionPage() {
         }
 
         <div class="banner" style="margin-top:10px">
-          <span class="b-ico">⌥</span>
+          <span class="b-ico">ⓘ</span>
           <div class="b-txt">
             پرداخت در این مرحله <b>دستی</b> است: مبلغ را واریز کنید و از بخش پشتیبانی
             تیکت بزنید تا اشتراک ثبت شود.

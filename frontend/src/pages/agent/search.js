@@ -91,12 +91,29 @@ export function searchPage() {
   }
 
   ${
-    list?.nextCursor
-      ? html`<div style="text-align:center;padding:12px">
-          <button class="btn" data-next-cursor="${list.nextCursor}">صفحه‌ی بعد</button>
+    list?.nextCursor || params.cursor
+      ? html`<div style="text-align:center;padding:12px;display:flex;gap:8px;justify-content:center">
+          ${
+            params.cursor
+              ? html`<button class="btn" data-go="search"
+                  data-go-params="${firstPageParams(params)}">بازگشت به صفحه‌ی اول</button>`
+              : ''
+          }
+          ${
+            list?.nextCursor
+              ? html`<button class="btn primary" data-next-cursor="${list.nextCursor}">صفحه‌ی بعد</button>`
+              : ''
+          }
         </div>`
       : ''
   }`;
+}
+
+/** The same filters, minus the cursor — page one of this exact search. */
+function firstPageParams(params) {
+  const rest = { ...params };
+  delete rest.cursor;
+  return new URLSearchParams(rest).toString();
 }
 
 function select(name, label, options, current) {
