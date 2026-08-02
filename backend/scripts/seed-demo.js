@@ -135,10 +135,14 @@ async function demoReveals(agencies) {
 
 async function seedDemo() {
   if (config.isProduction && process.env.ALLOW_DEMO_SEED !== 'true') {
-    // These accounts have a password written in this file. Refusing loudly beats
-    // discovering them on a live system later.
+    // These accounts have a password written in this file, so refusing loudly
+    // beats discovering them on a live system later. The message says what to do
+    // about it, not only what went wrong — a refusal the reader cannot act on
+    // gets worked around badly or ignored entirely.
     throw new Error(
-      'Refusing to seed demo accounts with NODE_ENV=production. Set ALLOW_DEMO_SEED=true only on a throwaway staging box.'
+      'Refusing to create demo accounts while NODE_ENV=production — their password is written in this repository. ' +
+        'If this machine is a staging box nobody real uses yet, add ALLOW_DEMO_SEED=true to .env and restart. ' +
+        'Remove it, and suspend the demo agencies, before the first real agency signs in.'
     );
   }
 
