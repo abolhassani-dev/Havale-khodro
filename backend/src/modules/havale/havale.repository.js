@@ -50,7 +50,7 @@ const havaleRepository = {
    * row of the previous page costs the same at any depth — which is the
    * difference that shows up when ten thousand agents are browsing at once.
    */
-  list({ where, cursor, take }) {
+  list({ where, cursor, take, skip }) {
     return prisma.havale.findMany({
       where: cursor
         ? {
@@ -66,6 +66,10 @@ const havaleRepository = {
           }
         : where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      // skip serves the numbered pager the panel shows people; cursor serves
+      // depth-proof scanning. The two are never combined: a numbered page is
+      // an absolute position, a cursor is a relative one.
+      skip: cursor ? undefined : skip,
       take,
       include: { owner: OWNER_SELECT },
     });

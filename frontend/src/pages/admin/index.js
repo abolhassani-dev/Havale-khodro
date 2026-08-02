@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox , qtip } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, errorBox, qtip, pager } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 
@@ -41,10 +41,14 @@ export function registerAdminRoutes(route) {
 
   route('adm-tickets', async (params) => ({ list: await tickets.list(params.status) }));
 
-  route('adm-monitor', async (params) => ({
-    activity: await admin.activity({ take: 50, userId: params.userId }),
-    reveals: can('bulkContacts') ? await admin.reveals({ take: 30 }).catch(() => null) : null,
-  }));
+  route('adm-monitor', async (params) => {
+    const page = Number(params.page) || 1;
+    return {
+      activity: await admin.activity({ take: 50, skip: (page - 1) * 50, userId: params.userId }),
+      activityPage: page,
+      reveals: can('bulkContacts') ? await admin.reveals({ take: 30 }).catch(() => null) : null,
+    };
+  });
 
   route('adm-seats', async () => ({ pending: await subscription.pendingOrders() }));
 
@@ -465,7 +469,7 @@ function monitorPage() {
   <div class="card">
     <div class="card-h">
       <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.')}</h2>
-      <span class="tag">نمایش ${faDigits(activity.length)} از ${faDigits(data.activity?.total ?? 0)} رکورد</span>
+      <span class="tag">صفحه‌ی ${faDigits(data.activityPage || 1)} — ${faDigits(data.activity?.total ?? 0)} رکورد</span>
     </div>
     <div class="hint" style="padding:8px 14px">
       روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.
@@ -486,13 +490,12 @@ function monitorPage() {
           </table>`
         : emptyBox('رکوردی نیست.')
     }
-    ${
-      activity.length < (data.activity?.total ?? 0)
-        ? html`<div style="text-align:center;padding:4px 0 14px">
-            <button class="btn" data-more-activity>بارگذاری ${faDigits(Math.min(50, (data.activity?.total ?? 0) - activity.length))} رکورد بعدی</button>
-          </div>`
-        : ''
-    }
+    ${pager({
+      page: data.activityPage || 1,
+      pages: Math.max(1, Math.ceil((data.activity?.total ?? 0) / 50)),
+      go: 'adm-monitor',
+      params: getState().params?.userId ? { userId: getState().params.userId } : {},
+    })}
   </div>
 
   ${
@@ -659,21 +662,8 @@ function settingsPage() {
 
 // ── event handling ──────────────────────────────────────────────────────────
 
-async function loadMoreActivity() {
-  const { data, params } = getState();
-  const loaded = data.activity?.items || [];
-  const more = await admin.activity({ take: 50, skip: loaded.length, userId: params.userId });
-  setState({
-    data: {
-      ...data,
-      activity: { ...more, items: [...loaded, ...(more.items || [])] },
-    },
-  });
-}
-
 export function handleAdminClick(d, el) {
   if (d.activity) return showActivityDetail(d.activity);
-  if (d.moreActivity !== undefined) return loadMoreActivity();
   if (d.reviewReport) return reviewReportModal(d.reviewReport);
   if (d.approveSuspension) return approveSuspension(d.approveSuspension);
   if (d.seatReview) return seatReview(d.seatReview, d.approve === 'true');

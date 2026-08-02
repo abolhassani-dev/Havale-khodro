@@ -134,7 +134,7 @@ const CLICK_KEYS = new Set([
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword',
   'newTicket', 'closeTicket',
-  'activity', 'moreActivity', 'reviewReport', 'approveSuspension', 'seatReview',
+  'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'editAgent',
   'grant', 'editSetting',
   'newCompany', 'newBrand', 'newModel', 'newColor',

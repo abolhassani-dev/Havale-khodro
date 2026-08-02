@@ -2,7 +2,7 @@ import { html, raw } from '../../ui/html.js';
 import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import { num, money, faDigits, until, KIND_LABEL, SOLH_LABEL } from '../../ui/format.js';
-import { emptyBox, toast, openModal, qtip } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip, pager } from '../../ui/feedback.js';
 import { usageChip } from '../../ui/shell.js';
 import { resolve } from '../../router.js';
 
@@ -27,7 +27,10 @@ export async function loadSearch(params) {
       maxDeliveryDays: params.maxDeliveryDays,
       minAmount: params.minAmount,
       maxAmount: params.maxAmount,
-      cursor: params.cursor,
+      // Numbered pages, twelve cards each — enough to fill the grid, few
+      // enough that the pager and the filters stay within reach.
+      page: Number(params.page) || 1,
+      limit: 12,
     }),
     havale.usage().catch(() => null),
   ]);
@@ -47,11 +50,18 @@ export function searchPage() {
   <div class="card">
     <div class="card-h">
       <h2>استعلام حواله‌ها ${qtip('همه‌ی حواله‌های فعال نمایندگی‌های دیگر. مشخصات تماس هر آگهی مخفی است؛ با زدن «نمایش مشخصات» شماره باز می‌شود و یکی از سقف روزانه‌ی شما کم می‌شود. باز کردن دوباره‌ی همان آگهی رایگان است.')}</h2>
+      <div class="kind-tabs">
+        ${[['', 'همه'], ['OFFER', 'حواله فروش'], ['REQUEST', 'درخواست خرید']].map(
+          ([value, label]) => html`<button class="tab ${(params.kind || '') === value ? 'on' : ''}"
+            data-go="search" data-go-params="${kindParams(params, value)}">${label}</button>`
+        )}
+      </div>
+      <span class="tag">${faDigits(list?.total ?? 0)} حواله</span>
       ${usageChip(usage)}
     </div>
 
     <form class="filters" data-form="search-filters">
-      ${select('kind', 'نوع', [['', 'همه'], ['OFFER', 'حواله فروش'], ['REQUEST', 'درخواست خرید']], params.kind)}
+      <input type="hidden" name="kind" value="${params.kind || ''}">
       ${select('brandId', 'برند', [['', 'همه'], ...brands.map((b) => [b.id, b.name])], params.brandId)}
       ${select('carModelId', 'مدل', [['', 'همه'], ...models.map((m) => [m.id, m.name])], params.carModelId)}
       ${select('carColor', 'رنگ', [['', 'همه'], ...(tree?.colors || []).map((c) => [c.name, c.name])], params.carColor)}
@@ -90,29 +100,27 @@ export function searchPage() {
       : emptyBox('حواله‌ای با این فیلترها پیدا نشد.')
   }
 
-  ${
-    list?.nextCursor || params.cursor
-      ? html`<div style="text-align:center;padding:12px;display:flex;gap:8px;justify-content:center">
-          ${
-            params.cursor
-              ? html`<button class="btn" data-go="search"
-                  data-go-params="${firstPageParams(params)}">بازگشت به صفحه‌ی اول</button>`
-              : ''
-          }
-          ${
-            list?.nextCursor
-              ? html`<button class="btn primary" data-next-cursor="${list.nextCursor}">صفحه‌ی بعد</button>`
-              : ''
-          }
-        </div>`
-      : ''
-  }`;
+  ${pager({
+    page: list?.page || 1,
+    pages: list?.pages || 1,
+    go: 'search',
+    params: withoutPage(params),
+  })}`;
 }
 
-/** The same filters, minus the cursor — page one of this exact search. */
-function firstPageParams(params) {
+/** The same filters with the page dropped — pager and tabs re-add their own. */
+function withoutPage(params) {
   const rest = { ...params };
+  delete rest.page;
   delete rest.cursor;
+  return rest;
+}
+
+/** Tab target: same filters, chosen kind, back to page one. */
+function kindParams(params, kind) {
+  const rest = withoutPage(params);
+  if (kind) rest.kind = kind;
+  else delete rest.kind;
   return new URLSearchParams(rest).toString();
 }
 

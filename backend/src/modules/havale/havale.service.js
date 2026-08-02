@@ -128,9 +128,40 @@ const havaleService = {
    */
   async list({ user, access, filters }) {
     const take = Math.min(filters.limit || LIST_PAGE_SIZE.DEFAULT, LIST_PAGE_SIZE.MAX);
-    const cursor = decodeCursor(filters.cursor);
+    const where = publicWhere(filters);
 
-    const rows = await havaleRepository.list({ where: publicWhere(filters), cursor, take: take + 1 });
+    // Two paginations, deliberately. The panel shows people numbered pages —
+    // "۳ از ۱۲" answers "how much is there?", which a bare next-cursor never
+    // can. Offset does re-scan skipped rows, but a human clicking page numbers
+    // stays shallow; the cursor path below remains for clients that walk the
+    // whole list, where depth is exactly the problem.
+    if (filters.page) {
+      const [rows, total] = await Promise.all([
+        havaleRepository.list({ where, skip: (filters.page - 1) * take, take }),
+        havaleRepository.count(where),
+      ]);
+
+      const revealed = access.active
+        ? await havaleRepository.findRevealedIds(
+            rows.filter((h) => h.ownerId !== user.id).map((h) => h.id),
+            user.id
+          )
+        : new Set();
+
+      return {
+        items: rows.map((h) =>
+          h.ownerId === user.id
+            ? toOwnHavale(h)
+            : toHavaleCard(h, { subscriptionActive: access.active, revealed: revealed.has(h.id) })
+        ),
+        total,
+        page: filters.page,
+        pages: Math.max(1, Math.ceil(total / take)),
+      };
+    }
+
+    const cursor = decodeCursor(filters.cursor);
+    const rows = await havaleRepository.list({ where, cursor, take: take + 1 });
 
     const hasNext = rows.length > take;
     const page = hasNext ? rows.slice(0, take) : rows;

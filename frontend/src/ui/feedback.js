@@ -1,5 +1,6 @@
 import { html, raw } from './html.js';
 import { getState, setState } from '../state/store.js';
+import { faDigits } from './format.js';
 
 /** Transient messages and the modal layer. */
 
@@ -71,4 +72,48 @@ export function detailRow(label, value) {
  */
 export function qtip(text) {
   return html`<span class="qtip" tabindex="0" role="note" aria-label="راهنما">؟<span class="tip">${text}</span></span>`;
+}
+
+/**
+ * Numbered pages: «قبلی ۱ … ۴ ۵ ۶ … ۱۲ بعدی».
+ *
+ * A windowed pager, because a thousand records must not become a thousand
+ * buttons any more than one endless list. First and last page are always
+ * reachable; the window slides with the current page.
+ *
+ * `params` are the filters to carry along — every button re-enters the same
+ * route with the same filters and only the page changed.
+ */
+export function pager({ page = 1, pages = 1, go: target, params = {} }) {
+  if (!pages || pages <= 1) return raw('');
+
+  const query = (p) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') q.set(key, value);
+    });
+    q.set('page', p);
+    return q.toString();
+  };
+  const link = (p, label) =>
+    html`<button class="pg" data-go="${target}" data-go-params="${query(p)}">${label}</button>`;
+
+  const numbers = [];
+  for (let p = 1; p <= pages; p += 1) {
+    if (p === 1 || p === pages || Math.abs(p - page) <= 2) numbers.push(p);
+  }
+
+  const parts = [];
+  let previous = 0;
+  for (const p of numbers) {
+    if (p - previous > 1) parts.push(html`<span class="pg-dots">…</span>`);
+    parts.push(p === page ? html`<span class="pg on">${faDigits(p)}</span>` : link(p, faDigits(p)));
+    previous = p;
+  }
+
+  return html`<nav class="pager">
+    ${page > 1 ? link(page - 1, 'قبلی') : ''}
+    ${parts}
+    ${page < pages ? link(page + 1, 'بعدی') : ''}
+  </nav>`;
 }

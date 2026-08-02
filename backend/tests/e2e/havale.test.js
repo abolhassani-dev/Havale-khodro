@@ -342,6 +342,37 @@ maybe('havale', () => {
     });
   });
 
+  describe('numbered pages', () => {
+    it('slices by page and reports the total, so a pager can be drawn', async () => {
+      const { cookie } = await agent();
+      const poster = await agent();
+      for (let i = 0; i < 3; i += 1) {
+        await request(app)
+          .post(api('/havales'))
+          .set('Cookie', poster.cookie)
+          .send(await offer())
+          .expect(201);
+      }
+
+      const page1 = await request(app)
+        .get(api('/havales?page=1&limit=2'))
+        .set('Cookie', cookie)
+        .expect(200);
+
+      expect(page1.body.data.items.length).toBeLessThanOrEqual(2);
+      expect(page1.body.data.total).toBeGreaterThanOrEqual(3);
+      expect(page1.body.data.pages).toBe(Math.ceil(page1.body.data.total / 2));
+
+      // The second page continues where the first stopped — no overlap, no gap.
+      const page2 = await request(app)
+        .get(api('/havales?page=2&limit=2'))
+        .set('Cookie', cookie)
+        .expect(200);
+      const ids1 = page1.body.data.items.map((h) => h.id);
+      page2.body.data.items.forEach((h) => expect(ids1).not.toContain(h.id));
+    });
+  });
+
   describe('listing rules', () => {
     it('requires colour and price on a sale but not on a request', async () => {
       const { cookie } = await agent();

@@ -419,3 +419,28 @@ tr.dim, .dim { opacity: 0.55; }
 }
 .val-chip.on  { background: var(--ok-08); border-color: #2c6b4140; color: var(--ok); }
 .val-chip.off { background: #f0ede5; border-color: var(--line); color: var(--ink-3); }
+
+/* ---- پیجر شماره‌دار ---- */
+
+.pager {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 14px; flex-wrap: wrap;
+}
+.pg {
+  min-width: 34px; height: 34px; padding: 0 10px;
+  display: inline-grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font-size: 13.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: background .12s, border-color .12s;
+}
+.pg:hover { background: #faf8f2; border-color: #bfb6a0; }
+.pg.on {
+  background: var(--primary); border-color: var(--primary);
+  color: #fff; cursor: default;
+}
+.pg-dots { color: var(--ink-3); padding: 0 3px; }
+
+/* تب‌های تفکیک نوع در استعلام — باید جلوی چشم باشند، نه ته فیلترها */
+.kind-tabs { display: flex; gap: 5px; }
+.kind-tabs .tab { font-size: 13.5px; padding: 6px 15px; font-weight: 700; }
