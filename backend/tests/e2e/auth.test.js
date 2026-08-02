@@ -75,6 +75,39 @@ maybe('authentication', () => {
     expect(cookie).toContain('SameSite=Strict');
   });
 
+  /**
+   * The Secure flag follows the connection, not the environment.
+   *
+   * Tied to NODE_ENV it was set the moment the server ran in production — and a
+   * browser refuses to *store* a Secure cookie delivered over plain HTTP. Signing
+   * in returned 200 and the next request came back 401 with no cookie attached,
+   * so the symptom pointed at the session logic while the cause was three layers
+   * away. Both directions are pinned here because getting either wrong is
+   * expensive: no Secure over HTTPS leaks the session, Secure over HTTP breaks
+   * sign-in entirely.
+   */
+  it('omits the Secure flag over plain HTTP so the browser will keep the cookie', async () => {
+    const res = await login(agent.username, PASSWORD);
+    const cookie = cookieFrom(res)[0];
+
+    expect(cookie).not.toMatch(/Secure/i);
+
+    const me = await request(app).get(api('/auth/me')).set('Cookie', cookieFrom(res));
+    expect(me.status).toBe(200);
+  });
+
+  it('sets the Secure flag when the proxy says the connection was HTTPS', async () => {
+    const res = await request(app)
+      .post(api('/auth/login'))
+      // What nginx sends once TLS is on. The app trusts the proxy, so this is
+      // what `req.secure` reads.
+      .set('X-Forwarded-Proto', 'https')
+      .send({ username: agent.username, password: PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(cookieFrom(res)[0]).toMatch(/Secure/i);
+  });
+
   it('never puts the session token or password hash in the response body', async () => {
     const res = await login(agent.username, PASSWORD);
     const body = JSON.stringify(res.body);

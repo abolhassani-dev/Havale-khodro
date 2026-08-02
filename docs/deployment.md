@@ -268,6 +268,7 @@ docker compose logs api --tail 40
 
 ```bash
 curl -s http://localhost/api/v1/health
+echo
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost/
 ```
 
