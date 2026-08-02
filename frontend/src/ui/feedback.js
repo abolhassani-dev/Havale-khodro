@@ -60,3 +60,15 @@ export function emptyBox(message) {
 export function detailRow(label, value) {
   return html`<div class="drow"><span>${label}</span><b>${value}</b></div>`;
 }
+
+/**
+ * The little «؟» beside a section title.
+ *
+ * The explanation lives in the interface so nobody has to be trained on it —
+ * a new agency reads what a section is for at the moment they are looking at
+ * it, not in a manual. Pure CSS on hover and keyboard focus; tabindex so it
+ * works without a mouse.
+ */
+export function qtip(text) {
+  return html`<span class="qtip" tabindex="0" role="note" aria-label="راهنما">؟<span class="tip">${text}</span></span>`;
+}

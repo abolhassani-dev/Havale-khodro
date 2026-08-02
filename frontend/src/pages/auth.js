@@ -17,7 +17,6 @@ export function loginPage() {
       <div class="head">
         <img class="logo" src="/assets/logo.svg" alt="نشان فرانوکار">
         <h1>${BRAND.nameFa}</h1>
-        <p>${BRAND.tagline}</p>
       </div>
       <div class="body">
         ${errorBox(error)}

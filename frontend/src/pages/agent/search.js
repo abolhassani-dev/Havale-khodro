@@ -2,7 +2,7 @@ import { html, raw } from '../../ui/html.js';
 import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import { num, money, faDigits, until, KIND_LABEL, SOLH_LABEL } from '../../ui/format.js';
-import { emptyBox, toast, openModal } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip } from '../../ui/feedback.js';
 import { usageChip } from '../../ui/shell.js';
 import { resolve } from '../../router.js';
 
@@ -46,7 +46,7 @@ export function searchPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>استعلام حواله‌ها</h2>
+      <h2>استعلام حواله‌ها ${qtip('همه‌ی حواله‌های فعال نمایندگی‌های دیگر. مشخصات تماس هر آگهی مخفی است؛ با زدن «نمایش مشخصات» شماره باز می‌شود و یکی از سقف روزانه‌ی شما کم می‌شود. باز کردن دوباره‌ی همان آگهی رایگان است.')}</h2>
       ${usageChip(usage)}
     </div>
 

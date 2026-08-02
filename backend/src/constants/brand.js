@@ -19,9 +19,6 @@ const BRAND = {
 
   domain: process.env.BRAND_DOMAIN || 'feranocar.com',
 
-  /** Shown in the panel header and on the sign-in page. */
-  tagline: process.env.BRAND_TAGLINE || 'سامانه حواله خودرو',
-
   supportEmail: process.env.BRAND_SUPPORT_EMAIL || 'support@feranocar.com',
 };
 

@@ -85,13 +85,20 @@ const settingsService = {
     const rows = await prisma.setting.findMany();
     const stored = new Map(rows.map((r) => [r.key, r.value]));
 
-    return Object.entries(SETTINGS).map(([key, definition]) => ({
-      key,
-      description: definition.description,
-      type: definition.type,
-      value: stored.has(key) ? parse(definition, stored.get(key)) : definition.default(),
-      isDefault: !stored.has(key),
-    }));
+    return Object.entries(SETTINGS).map(([key, definition]) => {
+      const value = stored.has(key) ? parse(definition, stored.get(key)) : definition.default();
+      return {
+        key,
+        description: definition.description,
+        type: definition.type,
+        // JSON.stringify throws on BigInt, so the whole response died with a
+        // 500 the moment this list included seat.priceToman. Money crosses the
+        // JSON boundary as a string everywhere in this API (havale.dto has the
+        // same rule); the digits are what the screen needs.
+        value: definition.type === 'bigint' ? String(value) : value,
+        isDefault: !stored.has(key),
+      };
+    });
   },
 };
 

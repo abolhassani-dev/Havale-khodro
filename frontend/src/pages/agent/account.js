@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   TICKET_STATUS_LABEL, REPORT_REASON_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, errorBox, qtip } from '../../ui/feedback.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
 
@@ -28,7 +28,7 @@ export function subscriptionPage() {
   return html`
   <div class="cols">
     <div class="card">
-      <div class="card-h"><h2>اشتراک من</h2>
+      <div class="card-h"><h2>اشتراک من ${qtip('وضعیت اشتراک ماهانه‌ی شما. با پایان اشتراک، آگهی‌ها را همچنان می‌بینید ولی مشخصات تماس مخفی می‌شود و ثبت حواله و درخواست بسته می‌شود — تا تمدید کنید.')}</h2>
         <span class="tag ${me?.active ? 'g' : 'r'}">${me?.active ? 'فعال' : 'منقضی'}</span>
       </div>
       <div style="padding:12px 14px">
@@ -64,7 +64,7 @@ export function subscriptionPage() {
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>صورتحساب دوره‌ی بعد</h2></div>
+      <div class="card-h"><h2>صورتحساب دوره‌ی بعد ${qtip('مبلغی که برای تمدید دوره‌ی بعد پرداخت می‌کنید: اشتراک ثابت نمایندگی به‌علاوه‌ی هزینه‌ی ظرفیت زیرنمایندگی‌های فعال.')}</h2></div>
       <table>
         <thead><tr><th>شرح</th><th>تعداد</th><th>مبلغ واحد</th><th>جمع</th></tr></thead>
         <tbody>
@@ -91,7 +91,7 @@ function seatsCard(seats, orders) {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>ظرفیت زیرنمایندگی</h2>
+      <h2>ظرفیت زیرنمایندگی ${qtip('هر زیرنمایندگی یک ظرفیت مصرف می‌کند. اول از این‌جا ظرفیت می‌خرید، بعد در بخش «زیرنمایندگی‌ها» برایش حساب می‌سازید.')}</h2>
       <button class="btn primary sm" data-order-seats>خرید ظرفیت</button>
     </div>
     <div class="stats" style="padding:12px 14px">
@@ -182,7 +182,7 @@ export function subAgentsPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>زیرنمایندگی‌ها</h2>
+      <h2>زیرنمایندگی‌ها ${qtip('حساب‌هایی که زیرمجموعه‌ی شما هستند: اشتراکشان از اشتراک شما خوانده می‌شود و با تمدید شما، دسترسی همه‌شان برمی‌گردد. هر زیرنمایندگی یک ظرفیت مصرف می‌کند.')}</h2>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="tag ${seats?.available ? 'g' : 'r'}">
           ظرفیت آزاد: ${faDigits(seats?.available ?? 0)}
@@ -315,7 +315,7 @@ export function ticketsPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>پشتیبانی</h2>
+      <h2>پشتیبانی ${qtip('سؤال، مشکل یا درخواست تمدید اشتراک را این‌جا تیکت بزنید. پاسخ تیم پشتیبانی در همین صفحه زیر همان تیکت می‌آید.')}</h2>
       <button class="btn primary sm" data-new-ticket="">تیکت جدید</button>
     </div>
     ${

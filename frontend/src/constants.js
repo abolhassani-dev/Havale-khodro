@@ -9,7 +9,6 @@
 export const BRAND = {
   name: 'FeranoCar',
   nameFa: 'فرانوکار',
-  tagline: 'سامانه حواله خودرو',
   domain: 'feranocar.com',
 };
 

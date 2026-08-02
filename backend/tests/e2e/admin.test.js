@@ -381,6 +381,29 @@ maybe('admin panel', () => {
     });
   });
 
+  describe('settings screen', () => {
+    it('returns every setting — including the BigInt-typed seat price', async () => {
+      // seat.priceToman is parsed as BigInt, and JSON.stringify throws on
+      // BigInt — so this endpoint answered 500 and the settings screen showed
+      // "Something went wrong" with nothing in the server's own message to
+      // point here. Money crosses the JSON boundary as a string.
+      const superAdmin = await staff('SUPER_ADMIN');
+      const res = await request(app)
+        .get(api('/settings'))
+        .set('Cookie', superAdmin.cookie)
+        .expect(200);
+
+      const keys = res.body.data.map((s) => s.key);
+      expect(keys).toEqual(
+        expect.arrayContaining(['seat.priceToman', 'sms.enabled', 'report.dailyLimit'])
+      );
+
+      const seatPrice = res.body.data.find((s) => s.key === 'seat.priceToman');
+      expect(typeof seatPrice.value).toBe('string');
+      expect(seatPrice.value).toMatch(/^\d+$/);
+    });
+  });
+
   describe('editing the car catalogue', () => {
     it('adds a model that agents can immediately use', async () => {
       const superAdmin = await staff('SUPER_ADMIN');

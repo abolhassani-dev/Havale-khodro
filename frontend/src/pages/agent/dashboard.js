@@ -2,7 +2,7 @@ import { html } from '../../ui/html.js';
 import { havale, subscription, reports, tickets } from '../../api/index.js';
 import { getState } from '../../state/store.js';
 import { num, faDigits, date, until, KIND_LABEL } from '../../ui/format.js';
-import { emptyBox } from '../../ui/feedback.js';
+import { emptyBox, qtip } from '../../ui/feedback.js';
 
 export async function loadDashboard() {
   // Fetched together rather than in sequence: the dashboard is the first screen
@@ -51,7 +51,7 @@ export function dashboardPage() {
     closingSoon.length
       ? html`<div class="card">
           <div class="card-h">
-            <h2>آگهی‌هایی که به‌زودی بسته می‌شوند</h2>
+            <h2>آگهی‌هایی که به‌زودی بسته می‌شوند ${qtip('آگهی‌های فعال شما که مهلتشان رو به پایان است. با دکمه‌ی «تمدید»، آگهی هفت روز دیگر فعال می‌ماند؛ اگر تمدید نکنید، بعد از پایان مهلت از استعلام دیگران حذف می‌شود.')}</h2>
             <span class="tag w">${faDigits(closingSoon.length)} مورد</span>
           </div>
           <table>
@@ -75,7 +75,7 @@ export function dashboardPage() {
 
   <div class="cols c3">
     <div class="card">
-      <div class="card-h"><h2>آخرین حواله‌های من</h2>
+      <div class="card-h"><h2>آخرین حواله‌های من ${qtip('آخرین آگهی‌های خودتان. ستون «بازدید» یعنی چند نمایندگی مشخصات تماس شما را روی آن آگهی دیده‌اند. با کلیک روی هر ردیف جزئیات باز می‌شود.')}</h2>
         <button class="btn sm" data-go="mine">همه</button></div>
       ${
         items.length
@@ -96,7 +96,7 @@ export function dashboardPage() {
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>وضعیت حساب</h2></div>
+      <div class="card-h"><h2>وضعیت حساب ${qtip('اخطارهای تأییدشده و مشخصات نمایندگی شما. اگر اخطارها به سقف برسد، حساب به‌طور خودکار تعلیق می‌شود؛ اگر به اخطاری اعتراض دارید از بخش پشتیبانی تیکت بزنید.')}</h2></div>
       <div style="padding:12px 14px">
         ${
           strikes?.strikes

@@ -4,7 +4,7 @@ import { getState, setState } from '../../state/store.js';
 import {
   money, faDigits, until, date, KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, errorBox, qtip } from '../../ui/feedback.js';
 import { enDigits } from '../../ui/format.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
@@ -38,7 +38,7 @@ export function havaleFormPage(kind) {
   return html`
   <form class="card form" data-form="havale" data-kind="${kind}">
     <div class="card-h">
-      <h2>${offer ? 'ثبت حواله فروش' : 'ثبت درخواست خرید حواله'}</h2>
+      <h2>${offer ? 'ثبت حواله فروش' : 'ثبت درخواست خرید حواله'} ${qtip(offer ? 'مشخصات حواله‌ای که می‌خواهید واگذار کنید. بعد از ثبت، آگهی برای همه‌ی نمایندگی‌ها نمایش داده می‌شود ولی شماره تماس شما فقط برای کسی باز می‌شود که روی آگهی «نمایش مشخصات» بزند.' : 'مشخصات خودرویی که دنبالش هستید. درخواست شما برای همه‌ی نمایندگی‌ها نمایش داده می‌شود تا هر کس چنین حواله‌ای دارد با شما تماس بگیرد.')}</h2>
     </div>
 
     <div style="padding:0 14px">${errorBox(error)}</div>
@@ -194,7 +194,7 @@ export function minePage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>حواله‌های من</h2>
+      <h2>حواله‌های من ${qtip('همه‌ی آگهی‌های خودتان. «فروخته شد» آگهی را می‌بندد، «تمدید» مهلت را هفت روز دیگر تمدید می‌کند و «حذف» آن را کامل برمی‌دارد. آگهی بعد از پایان مهلت خودبه‌خود از استعلام دیگران حذف می‌شود.')}</h2>
       <div class="tabs">
         ${tabs.map(
           ([value, label]) => html`<button

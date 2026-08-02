@@ -11,7 +11,7 @@ const spec = swaggerJsdoc({
     info: {
       title: `${BRAND.name} API`,
       version: '1.0.0',
-      description: `${BRAND.tagline} — ${BRAND.nameFa}`,
+      description: BRAND.nameFa,
     },
     servers: [{ url: config.apiPrefix }],
     components: {
