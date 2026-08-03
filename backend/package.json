@@ -20,7 +20,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "seed": "node scripts/seed.js",
-    "seed:demo": "node scripts/seed-demo.js"
+    "seed:demo": "node scripts/seed-demo.js",
+    "audit:security": "node ../security/audit.js"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",

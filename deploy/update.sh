@@ -71,10 +71,19 @@ else
   # .htpasswd is created on the server and exists nowhere in the repository —
   # without this exclude, every update would delete it and lock the database
   # panel with a 500 until someone recreated it.
+  # Local state that must survive an update, and why each one:
+  #   .env             the secrets, generated on this machine
+  #   .htpasswd        the database panel password (see below)
+  #   ssl.conf         written by enable-ssl.sh; deleting it takes HTTPS down
+  #   00-mode.conf     the HTTP→HTTPS switch, flipped by enable-ssl.sh
+  #   adminer.conf     rewritten with TLS by enable-ssl.sh
   rsync -a --delete \
     --exclude='.env' \
     --exclude='.git' \
     --exclude='deploy/nginx/.htpasswd' \
+    --exclude='deploy/nginx/ssl.conf' \
+    --exclude='deploy/nginx/00-mode.conf' \
+    --exclude='deploy/nginx/adminer.conf' \
     "$TMP/src/" "$ROOT/"
 fi
 

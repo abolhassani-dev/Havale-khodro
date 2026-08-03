@@ -11,3 +11,4 @@ tsconfig.tsbuildinfo
 __pycache__/
 *.pyc
 deploy/nginx/.htpasswd
+security/last-report.json

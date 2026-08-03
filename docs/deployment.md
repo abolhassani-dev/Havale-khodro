@@ -324,64 +324,27 @@ Let's Encrypt باید بتواند دامنه را به این سرور برس�
 
 ## گام ۷ — گواهی SSL
 
-```bash
-cd /opt/feranocar
-
-docker compose run --rm --entrypoint certbot certbot certonly \
-  --webroot -w /var/www/certbot \
-  -d feranocar.com -d www.feranocar.com \
-  --email YOUR_EMAIL@example.com \
-  --agree-tos --no-eff-email
-```
-
-`YOUR_EMAIL` را با ایمیل خودتان عوض کنید (برای هشدار انقضای گواهی).
-
-**بررسی:**
+یک دستور، با ایمیل خودتان (فقط برای هشدار انقضای گواهی استفاده می‌شود):
 
 ```bash
-docker compose run --rm --entrypoint certbot certbot certificates
+/opt/feranocar/deploy/enable-ssl.sh you@example.com
 ```
 
-انتظار: گواهی `feranocar.com` با تاریخ انقضای حدود ۹۰ روز بعد.
+اسکریپت به ترتیب: **اول DNS را چک می‌کند** (اگر دامنه هنوز به این سرور اشاره نمی‌کند
+متوقف می‌شود — چون هر صدور ناموفق یکی از پنج سهمیه‌ی هفتگی را می‌سوزاند)، گواهی را با
+روش `webroot` می‌گیرد (سایت لحظه‌ای هم پایین نمی‌آید)، کانفیگ HTTPS را می‌نویسد،
+ریدایرکت `http → https` را روشن می‌کند، **قبل از reload اعتبارسنجی می‌کند** و اگر
+ایرادی بود همه‌چیز را برمی‌گرداند، و آخر سر کرون تمدید خودکار را نصب می‌کند.
 
-سپس بلوک TLS را فعال کنید:
+انتظار در خروجی: `HTTP 200` برای HTTPS، `HTTP 301` برای HTTP، و JSON سلامت API.
+
+**بعدش پورت ۴۴۳ را در فایروال باز کنید اگر هنوز باز نیست:**
 
 ```bash
-nano deploy/nginx/app.conf
+ufw allow 443/tcp
 ```
 
-- بلوک انتهایی `server { listen 443 ssl; ... }` را از حالت کامنت دربیاورید
-  (در nano: علامت `#` ابتدای خطوط را پاک کنید)
-- در بلوک پورت ۸۰، خط آخر `location / { try_files ... }` را با این عوض کنید:
-  `location / { return 301 https://$host$request_uri; }`
-- بلوک `location ^~ /.well-known/acme-challenge/` را **دست نزنید** — تمدید خودکار به آن نیاز دارد
-
-بعد:
-
-```bash
-docker compose exec web nginx -t && docker compose exec web nginx -s reload
-```
-
-`nginx -t` اول تست می‌کند؛ اگر خطا داد، reload نکنید و خروجی را بفرستید.
-
-**بررسی:** از مرورگر `https://feranocar.com` — باید قفل سبز بیاید و
-`http://feranocar.com` خودکار به HTTPS برود.
-
----
-
-## گام ۸ — تمدید خودکار گواهی
-
-گواهی Let's Encrypt ۹۰ روزه است. اگر تمدید نشود، یک روز صبح سایت با خطای گواهی بالا می‌آید.
-
-```bash
-cat > /etc/cron.d/feranocar-certbot <<'CRON'
-# ساعت ۳:۱۷ بامداد، دوبار در هفته. certbot خودش می‌فهمد هنوز وقتش نرسیده و کاری نمی‌کند.
-17 3 * * 1,4 root cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew --quiet && docker compose exec -T web nginx -s reload
-CRON
-chmod 644 /etc/cron.d/feranocar-certbot
-```
-
-**بررسی — تمدید را شبیه‌سازی کنید تا روز واقعی غافلگیر نشوید:**
+**بررسی نهایی — تمدید را شبیه‌سازی کنید تا روز واقعی غافلگیر نشوید:**
 
 ```bash
 cd /opt/feranocar
@@ -389,6 +352,40 @@ docker compose run --rm --entrypoint certbot certbot renew --dry-run
 ```
 
 انتظار: `Congratulations, all simulated renewals succeeded`.
+
+### چه چیزی عوض می‌شود
+
+| قبل | بعد |
+|---|---|
+| `http://45.94.213.252` | `https://feranocar.com` (و `http` خودکار ریدایرکت می‌شود) |
+| پنل دیتابیس روی `http://…:8443` | `https://feranocar.com:8443` — دو رمزش دیگر رمزنگاری‌شده می‌روند |
+| بدون HSTS | HSTS دوساله: مرورگر دیگر حتی یک بار هم HTTP را امتحان نمی‌کند |
+
+> **HSTS برگشت‌ناپذیر است** تا دو سال. اگر روزی HTTPS را خاموش کنید، مرورگرهایی که یک بار
+> این هدر را دیده‌اند سایت را باز نمی‌کنند. برای همین این هدر تازه حالا اضافه می‌شود،
+> نه قبل از این‌که HTTPS ثابت کند کار می‌کند.
+
+> مسیر `/.well-known/acme-challenge/` عمداً از ریدایرکت مستثناست، وگرنه تمدید خودکار
+> برای همیشه شکست می‌خورد. مسیر `/api/v1/health` هم همین‌طور، چون healthcheck کانتینر و
+> `update.sh` از روی localhost با HTTP صدایش می‌زنند.
+
+---
+
+## گام ۸ — تمدید خودکار گواهی
+
+`enable-ssl.sh` خودش این کرون را نصب می‌کند:
+
+```
+17 3 * * 1,4 root cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew --quiet && docker compose exec -T web nginx -s reload
+```
+
+ساعت ۳:۱۷ بامداد، دوبار در هفته. certbot خودش می‌فهمد هنوز وقتش نرسیده و کاری نمی‌کند.
+
+**بررسی:**
+
+```bash
+cat /etc/cron.d/feranocar-certbot
+```
 
 ---
 
