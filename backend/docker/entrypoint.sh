@@ -20,6 +20,13 @@ set -e
 echo "→ applying migrations"
 npx prisma migrate deploy
 
+# Contact columns written before encryption existed. Idempotent and quick when
+# there is nothing to convert, so it lives here rather than in someone's
+# memory — a migration that has to be remembered is one that gets skipped on
+# the server that mattered.
+echo "→ encrypting any plaintext contact columns"
+node scripts/encrypt-existing.js
+
 if [ "$SEED_ON_START" = "true" ]; then
   # The first administrator and the car catalogue. Without these there is no way
   # to sign in and nothing to post a listing about, so a failure here is fatal.

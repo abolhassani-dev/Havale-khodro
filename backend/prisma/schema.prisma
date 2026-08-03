@@ -108,7 +108,13 @@ model User {
   id           String     @id @default(cuid())
   username     String     @unique
   passwordHash String
-  phone        String     @unique
+
+  /// رمزنگاری‌شده در پایگاه داده (AES-256-GCM). دامپ لو رفته بدون کلیدِ داخل
+  /// .env قابل خواندن نیست. جست‌وجو روی phoneIndex انجام می‌شود، نه این ستون —
+  /// چون هر بار نوشتن، متن رمز متفاوتی تولید می‌کند.
+  phone        String
+  /// HMAC کلیددار همان شماره: تنها راه یکتایی و جست‌وجو روی ستون رمزنگاری‌شده.
+  phoneIndex   String?    @unique
   fullName     String
   role         Role       @default(AGENT)
   status       UserStatus @default(ACTIVE)
@@ -121,6 +127,7 @@ model User {
   agencyName       String?
   city             String?
   coordinatorName  String?
+  /// رمزنگاری‌شده. هرگز جست‌وجو نمی‌شود، پس ایندکس کور لازم ندارد.
   coordinatorPhone String?
 
   // ---- امنیت ----
@@ -168,6 +175,7 @@ model User {
   seatOrders          SeatOrder[]       @relation("SeatOrderBuyer")
   seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
   activityLogs        ActivityLog[]
+  errors              ErrorLog[]    @relation("UserErrors")
   smsMessages         SmsMessage[]
 
   @@index([role, status])
@@ -452,6 +460,44 @@ model ActivityLog {
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@index([createdAt])
+}
+
+/// خطاهای سامانه، برای بخش «لاگ خطاها» در پنل مدیریت.
+///
+/// چرا در پایگاه داده و نه فقط در فایل: لاگ فایل روی سرور می‌ماند و برای دیدنش
+/// باید SSH بزنی. یک دولوپر باید بتواند از خود پنل ببیند چه شکسته، چند بار
+/// تکرار شده، و آخرین بار کِی بوده — بدون دسترسی به سرور.
+///
+/// خطاهای یکسان با هم جمع می‌شوند (fingerprint) تا یک باگِ پرتکرار، صفحه را
+/// پر نکند و بقیه را پنهان نگه ندارد.
+model ErrorLog {
+  id String @id @default(cuid())
+
+  /// اثر انگشت خطا: پیام + محل وقوع. تکرارهای بعدی همین ردیف را زیاد می‌کنند.
+  fingerprint String
+  level       String  @default("error")
+  message     String
+  stack       String?
+  path        String?
+  method      String?
+  statusCode  Int?
+  requestId   String?
+
+  /// چه کسی به آن خورده — برای بازتولید. حساب حذف شود، لاگ می‌ماند.
+  userId String?
+  user   User?   @relation("UserErrors", fields: [userId], references: [id], onDelete: SetNull)
+
+  count     Int      @default(1)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+
+  /// دولوپر بعد از رسیدگی علامت می‌زند تا از فهرست فعال برود.
+  resolvedAt DateTime?
+  note       String?
+
+  @@unique([fingerprint])
+  @@index([lastSeen])
+  @@index([resolvedAt, lastSeen])
 }
 
 /// تنظیمات قابل ویرایش سامانه (قیمت ظرفیت، سقف گزارش‌ها و ...)

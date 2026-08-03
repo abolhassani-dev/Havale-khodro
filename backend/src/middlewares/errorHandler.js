@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { AppError } = require('../errors/AppError');
 const { ERROR_CODES } = require('../constants/errorCodes');
 const { failure } = require('../responses/apiResponse');
+const errorLogService = require('../modules/alert/errorLog.service');
 
 /**
  * The only place errors become responses.
@@ -30,6 +31,11 @@ function errorHandler(err, req, res, next) {
     path: req.originalUrl,
     requestId: req.id,
   });
+
+  // Recorded where a developer can read it without SSH, and alerted on. Not
+  // awaited: the user is waiting for a response, and a slow database or an
+  // unreachable Telegram must not add seconds to an error page.
+  errorLogService.record(err, req).catch(() => {});
 
   return failure(res, {
     message: config.isProduction ? 'Something went wrong' : err.message,

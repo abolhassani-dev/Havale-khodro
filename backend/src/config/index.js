@@ -58,6 +58,16 @@ module.exports = {
     sender: process.env.SMS_SENDER || null,
   },
 
+  alerts: {
+    // Monitoring that reaches a phone. Absent token or chat id means alerting
+    // is simply off — the application must never depend on it, and from Iran
+    // Telegram is regularly unreachable.
+    telegram: {
+      token: process.env.TELEGRAM_BOT_TOKEN || null,
+      chatId: process.env.TELEGRAM_CHAT_ID || null,
+    },
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },

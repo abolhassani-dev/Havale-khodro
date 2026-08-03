@@ -34,6 +34,7 @@ const ADMIN_NAV = [
   { group: 'نظارت و مالی' },
   { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
   { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
+  { page: 'adm-errors', icon: 'flag', label: 'لاگ خطاها', permission: 'settings' },
   { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
 ];
 

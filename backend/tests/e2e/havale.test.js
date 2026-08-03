@@ -391,6 +391,58 @@ maybe('havale', () => {
     });
   });
 
+  describe('encryption at rest', () => {
+    it('stores no readable phone number in the database', async () => {
+      // The threat this addresses is a stolen dump — a backup that ended up
+      // somewhere it should not have, a hosting-panel snapshot, a leaked
+      // replica. None of those come with the server's .env, and without the
+      // key these columns are noise. Read with $queryRaw deliberately: the
+      // Prisma middleware decrypts, so any normal query would show plaintext
+      // and prove nothing.
+      const { user } = await agent();
+
+      const [row] = await prisma.$queryRaw`
+        SELECT phone, "coordinatorPhone", "phoneIndex" FROM "User" WHERE id = ${user.id}
+      `;
+
+      expect(row.phone).not.toContain(user.phone);
+      expect(row.phone.startsWith('v1.')).toBe(true);
+      expect(row.coordinatorPhone).not.toContain(user.coordinatorPhone);
+      expect(row.phoneIndex).toBeTruthy();
+      expect(row.phoneIndex).not.toContain(user.phone);
+
+      // And the application still reads it back — encryption that broke the
+      // product would be worse than none.
+      const readBack = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(readBack.phone).toBe(user.phone);
+      expect(readBack.coordinatorPhone).toBe(user.coordinatorPhone);
+    });
+
+    it('still finds an account by phone number', async () => {
+      // An encrypted column cannot be searched; the blind index is what keeps
+      // sign-in and duplicate detection working. If this breaks, registration
+      // starts accepting the same number twice.
+      const { user } = await agent();
+      const found = await prisma.user.findUnique({ where: { phone: user.phone } });
+      expect(found?.id).toBe(user.id);
+    });
+
+    it('records the revealed number encrypted too', async () => {
+      const { owner, viewer, havale } = await twoAgentsAndAListing();
+      await request(app)
+        .post(api(`/havales/${havale.id}/reveal`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      const [row] = await prisma.$queryRaw`
+        SELECT "phoneShown" FROM "ContactReveal"
+        WHERE "havaleId" = ${havale.id} AND "viewerId" = ${viewer.user.id}
+      `;
+      expect(row.phoneShown).not.toContain(owner.user.coordinatorPhone);
+      expect(row.phoneShown.startsWith('v1.')).toBe(true);
+    });
+  });
+
   describe('network filter', () => {
     it('lets a sub-agency see only its own network, and others cannot use it', async () => {
       const parent = await agent({ isReseller: true });

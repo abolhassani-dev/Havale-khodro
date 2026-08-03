@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox, qtip, pager } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, errorBox, qtip, pager, detailRow } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 
@@ -52,6 +52,14 @@ export function registerAdminRoutes(route) {
 
   route('adm-seats', async () => ({ pending: await subscription.pendingOrders() }));
 
+  route('adm-errors', async (params) => {
+    const page = Number(params.page) || 1;
+    return {
+      errors: await admin.errors({ take: 50, skip: (page - 1) * 50, resolved: params.resolved === '1' }),
+      errorsPage: page,
+    };
+  });
+
   route('adm-settings', async () => ({
     settings: await admin.settings(),
     sms: await admin.smsStatus(),
@@ -71,6 +79,7 @@ export function renderAdminPage(page) {
     case 'adm-tickets': return adminTicketsPage();
     case 'adm-monitor': return monitorPage();
     case 'adm-seats': return seatsPage();
+    case 'adm-errors': return errorsPage();
     case 'adm-settings': return settingsPage();
     case 'adm-catalog': return catalogPage();
     default: return emptyBox('صفحه پیدا نشد.');
@@ -458,6 +467,110 @@ function adminTicketsPage() {
   </div>`;
 }
 
+// ── error log ───────────────────────────────────────────────────────────────
+
+function errorsPage() {
+  const { data, params } = getState();
+  const rows = data.errors?.items || [];
+  const showingResolved = params.resolved === '1';
+
+  return html`
+  <div class="card">
+    <div class="card-h">
+      <h2>لاگ خطاها ${qtip('هر خطای پیش‌بینی‌نشده‌ی سامانه این‌جا ثبت می‌شود. خطاهای یکسان روی یک ردیف جمع می‌شوند تا یک باگ پرتکرار بقیه را پنهان نکند. روی هر ردیف کلیک کنید تا متن کامل و پیشنهاد رفع را ببینید.')}</h2>
+      <div class="kind-tabs">
+        <button class="tab ${showingResolved ? '' : 'on'}" data-go="adm-errors">باز</button>
+        <button class="tab ${showingResolved ? 'on' : ''}" data-go="adm-errors" data-go-params="resolved=1">رسیدگی‌شده</button>
+      </div>
+      <span class="tag ${rows.length ? 'r' : 'g'}">${faDigits(data.errors?.total ?? 0)} مورد</span>
+      <button class="btn sm" data-test-alert>ارسال پیام آزمایشی تلگرام</button>
+    </div>
+    ${
+      rows.length
+        ? html`<table>
+            <thead><tr><th>خطا</th><th>مسیر</th><th>تعداد</th><th>آخرین بار</th><th></th></tr></thead>
+            <tbody>
+              ${rows.map(
+                (e) => html`<tr data-error-detail="${e.id}" style="cursor:pointer">
+                  <td><b>${e.message}</b></td>
+                  <td class="num">${e.method || ''} ${e.path || '—'}</td>
+                  <td><span class="tag ${e.count > 10 ? 'r' : 'n'}">${faDigits(e.count)}</span></td>
+                  <td>${dateTime(e.lastSeen)}</td>
+                  <td style="text-align:left">
+                    ${
+                      e.resolvedAt
+                        ? html`<span class="tag g">رسیدگی شد</span>`
+                        : html`<button class="btn sm" data-resolve-error="${e.id}">رسیدگی شد</button>`
+                    }
+                  </td>
+                </tr>`
+              )}
+            </tbody>
+          </table>`
+        : emptyBox(showingResolved ? 'موردی رسیدگی‌شده نیست.' : 'هیچ خطای بازی نیست — سامانه سالم است.')
+    }
+    ${pager({
+      page: data.errorsPage || 1,
+      pages: Math.max(1, Math.ceil((data.errors?.total ?? 0) / 50)),
+      go: 'adm-errors',
+      params: showingResolved ? { resolved: '1' } : {},
+    })}
+  </div>`;
+}
+
+export async function showErrorDetail(id) {
+  const e = await admin.errorDetail(id);
+  if (!e) return;
+
+  openModal({
+    title: 'جزئیات خطا',
+    wide: true,
+    body: html`
+      <div class="banner warn">
+        <span class="b-ico">🔧</span>
+        <div class="b-txt"><b>از کجا شروع کنیم</b>${e.help}</div>
+      </div>
+      ${detailRow('پیام', e.message)}
+      ${detailRow('مسیر', `${e.method || ''} ${e.path || '—'}`)}
+      ${detailRow('کد وضعیت', faDigits(e.statusCode || 500))}
+      ${detailRow('تعداد تکرار', faDigits(e.count))}
+      ${detailRow('اولین بار', dateTime(e.firstSeen))}
+      ${detailRow('آخرین بار', dateTime(e.lastSeen))}
+      ${e.user ? detailRow('کاربر', `${e.user.username} — ${e.user.agencyName || ''}`) : ''}
+      ${e.requestId ? detailRow('شناسه‌ی درخواست', e.requestId) : ''}
+      ${
+        e.stack
+          ? html`<div style="margin-top:10px">
+              <div class="sub" style="margin-bottom:5px">Stack trace</div>
+              <pre class="stack">${e.stack}</pre>
+            </div>`
+          : ''
+      }`,
+    confirmLabel: e.resolvedAt ? null : 'رسیدگی شد',
+    onConfirm: e.resolvedAt
+      ? null
+      : async () => {
+          await admin.resolveError(e.id, null);
+          toast('به‌عنوان رسیدگی‌شده علامت خورد');
+          await resolve();
+        },
+  });
+}
+
+async function resolveError(id) {
+  await admin.resolveError(id, null);
+  toast('به‌عنوان رسیدگی‌شده علامت خورد');
+  await resolve();
+}
+
+async function sendTestAlert() {
+  const res = await admin.testAlert();
+  toast(
+    res.sent ? 'پیام آزمایشی به تلگرام ارسال شد' : res.reason || 'ارسال نشد',
+    res.sent ? 'ok' : 'danger'
+  );
+}
+
 // ── monitoring ──────────────────────────────────────────────────────────────
 
 function monitorPage() {
@@ -674,6 +787,9 @@ export function handleAdminClick(d, el) {
   if (d.editAgent) return editAgentModal(d.editAgent);
   if (d.grant) return grantModal(d.grant);
   if (d.editSetting) return editSettingModal(d.editSetting, d.type, d.value);
+  if (d.errorDetail) return showErrorDetail(d.errorDetail);
+  if (d.resolveError) return resolveError(d.resolveError);
+  if (d.testAlert !== undefined) return sendTestAlert();
   return handleCatalogClick(d, el);
 }
 

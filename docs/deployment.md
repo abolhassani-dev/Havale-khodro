@@ -221,10 +221,16 @@ cp .env.example .env
 sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -base64 24)|"   .env
 sed -i "s|^SESSION_SECRET=.*|SESSION_SECRET=$(openssl rand -hex 32)|"            .env
 sed -i "s|^SEED_ADMIN_PASSWORD=.*|SEED_ADMIN_PASSWORD=$(openssl rand -base64 18)|" .env
+sed -i "s|^DATA_ENCRYPTION_KEY=.*|DATA_ENCRYPTION_KEY=$(openssl rand -hex 32)|"      .env
 
 # فایل رمزها فقط برای root خواندنی باشد
 chmod 600 .env
 ```
+
+> ⚠️ **`DATA_ENCRYPTION_KEY` را از دست ندهید.** شماره‌های تماس با آن در پایگاه داده رمز
+> می‌شوند؛ دامپ لو رفته بدون این کلید فقط متن بی‌معنی است — و دقیقاً به همین دلیل، اگر
+> کلید را گم کنید یا عوض کنید، شماره‌های موجود برای همیشه ناخوانا می‌شوند. `deploy/backup.sh`
+> فایل `.env` را داخل آرشیو می‌گذارد تا این اتفاق نیفتد.
 
 **داده‌ی نمونه** برای اینکه عرفان و مهدی صفحه‌ی خالی نبینند — **هر دو کلید لازم است**:
 
@@ -427,86 +433,117 @@ docker compose run --rm --entrypoint sh certbot -c "getent hosts acme-v02.api.le
 
 ## گام ۹ — بکاپ
 
-بکاپی که روی همان سرور بماند، با از دست رفتن سرور از بین می‌رود — یعنی بکاپ نیست.
-اسکریپت زیر یک فایل فشرده می‌سازد و ۱۴ نسخه‌ی آخر را نگه می‌دارد. **بردن نسخه‌ها به بیرون
-از سرور کار شماست** و تا آن را نکرده‌اید، بکاپ کامل نیست.
+**دیتابیس تنها، یک نقطه‌ی بازگردانی نیست.** روی یک سرور تازه هنوز کلید رمزنگاری را کم
+دارید — که بدون آن تک‌تک شماره‌های داخل همان دامپ برای همیشه ناخواناست — به‌علاوه‌ی گواهی
+TLS، رمز پنل دیتابیس، و کانفیگی که تعیین می‌کند HTTPS روشن است یا نه. هر کدام کوچک‌اند،
+هیچ‌کدام داخل دامپ نیستند، و همه‌شان دقیقاً در بدترین لحظه کشف می‌شوند.
+
+`deploy/backup.sh` یک آرشیو می‌سازد که **همه‌ی این‌ها** را دارد، به‌علاوه‌ی فایل
+`RESTORE.md` که مرحله‌به‌مرحله می‌گوید روی سرور جدید چه کنید.
+
+### نصب
 
 ```bash
 mkdir -p /var/backups/feranocar
-cat > /usr/local/bin/feranocar-backup <<'SH'
-#!/bin/sh
-set -e
-cd /opt/feranocar
-STAMP=$(date +%Y%m%d-%H%M)
-OUT=/var/backups/feranocar/db-$STAMP.sql.gz
-# --clean --if-exists: the dump can be restored onto a database that already has
-# tables, which is the situation you are actually in when you need it.
-docker compose exec -T db pg_dump -U "${POSTGRES_USER:-havale}" --clean --if-exists "${POSTGRES_DB:-havale}" | gzip > "$OUT"
-chmod 600 "$OUT"
-# Keep fourteen. Unbounded backups fill the disk, and a full disk takes the
-# application down — a backup policy that causes an outage is not a policy.
-ls -1t /var/backups/feranocar/db-*.sql.gz | tail -n +15 | xargs -r rm --
-echo "$OUT"
-SH
-chmod 700 /usr/local/bin/feranocar-backup
 
 cat > /etc/cron.d/feranocar-backup <<'CRON'
-30 2 * * * root /usr/local/bin/feranocar-backup >> /var/log/feranocar-backup.log 2>&1
+# ساعتی (۴۸ نسخه نگه داشته می‌شود) — دقیقه‌ی ۷ هر ساعت
+7 * * * * root /opt/feranocar/deploy/backup.sh hourly >> /var/log/feranocar-backup.log 2>&1
+# روزانه (۳۰ نسخه) — ۲:۳۰ بامداد
+30 2 * * * root /opt/feranocar/deploy/backup.sh daily  >> /var/log/feranocar-backup.log 2>&1
+# هفتگی (۱۲ نسخه) — جمعه ۳:۳۰
+30 3 * * 5 root /opt/feranocar/deploy/backup.sh weekly >> /var/log/feranocar-backup.log 2>&1
 CRON
 chmod 644 /etc/cron.d/feranocar-backup
 ```
 
-**بررسی — یک بکاپ بگیرید و مطمئن شوید خالی نیست:**
+نگهداری هر ردیف جداست، پس چرخش ساعتی هرگز نمی‌تواند نسخه‌های روزانه را از بین ببرد.
+
+**بررسی — همین حالا یکی بگیرید:**
 
 ```bash
-/usr/local/bin/feranocar-backup
-ls -lh /var/backups/feranocar/
+/opt/feranocar/deploy/backup.sh daily
+ls -lh /var/backups/feranocar/daily/
 ```
 
-انتظار: فایلی با حجم قابل توجه (نه چند بایت).
+### انتقال به بیرون از سرور — بدون این، بکاپ نیست
 
-### تست بازگردانی — این را حتماً انجام دهید
+اسکریپت اگر مقصدی تنظیم شده باشد، خودش منتقل می‌کند. یکی از این دو را در `.env` بگذارید:
 
-**بکاپی که بازگردانی‌اش را امتحان نکرده‌اید، بکاپ نیست — یک فایل است.** حالت‌های خرابی
-همه بی‌صدا هستند: دامپی که از یک دیتابیس خالی گرفته شده، فایل gzip نصفه، خطای `pg_dump`
-که در فایلی نوشته شده و کسی نخوانده. هر سه دقیقاً شبیه یک بکاپ سالم‌اند — تا روزی که
-تنها نسخه‌ی باقی‌مانده باشند.
+```bash
+# الف) هر فضای ابری با rclone (آروان، لیارا، S3، گوگل درایو…)
+apt install -y rclone
+rclone config                      # یک remote بسازید، مثلاً به اسم backup
+echo 'BACKUP_RCLONE_REMOTE=backup:feranocar' >> /opt/feranocar/.env
+
+# ب) یا کپی روی یک سرور/کامپیوتر دیگر با کلید SSH
+echo 'BACKUP_SCP_TARGET=user@other-host:/backups/feranocar' >> /opt/feranocar/.env
+```
+
+اگر هیچ‌کدام تنظیم نشده باشد، اسکریپت در خروجی **صریحاً می‌گوید** که این نسخه فقط روی
+همین سرور است — چون سکوت همان جایی است که آدم فکر می‌کند نسخه‌ای دارد که ندارد.
+
+### تست بازگردانی — ماهی یک بار
 
 ```bash
 /opt/feranocar/deploy/verify-backup.sh
 ```
 
-آخرین بکاپ را در یک **دیتابیس موقت** بازمی‌گرداند، تعداد رکوردهای هر جدول را می‌شمارد، و
-دیتابیس موقت را پاک می‌کند. **به دیتابیس اصلی دست نمی‌زند** — حتی اگر وسط کار خطا بخورد.
+آخرین دامپ دیتابیس را در یک **دیتابیس موقت** بازمی‌گرداند، می‌شمارد و پاکش می‌کند. به
+دیتابیس اصلی دست نمی‌زند، حتی اگر وسط کار خطا بخورد.
 
-انتظار: تعداد رکوردها، و `✓ this backup restores`.
-
-اگر `User` یا `CarModel` صفر بود، اسکریپت با خطا تمام می‌شود: بدون مدیر کسی نمی‌تواند وارد
-شود و بدون کاتالوگ کسی نمی‌تواند حواله ثبت کند — دامپی با صفر در این دو، نقطه‌ی بازگردانی
-قابل استفاده نیست.
-
-> **ماهی یک بار اجرایش کنید.** بکاپ‌گیری خودکار است؛ سالم بودنش نه.
+> **بکاپی که بازگردانی‌اش را امتحان نکرده‌اید، بکاپ نیست — یک فایل است.**
 
 ### اگر روزی واقعاً لازم شد
 
+آرشیو کامل، فایل `RESTORE.md` را داخل خودش دارد. خلاصه‌اش:
+
+```bash
+tar xzf feranocar-full-*.tar.gz
+cat RESTORE.md
+```
+
+---
+
+## هشدار تلگرام و لاگ خطاها
+
+هر خطای پیش‌بینی‌نشده‌ی سامانه در پایگاه داده ثبت می‌شود و در پنل مدیریت، بخش
+**«لاگ خطاها»** دیده می‌شود — با متن کامل، محل وقوع، تعداد تکرار، و **یک پیشنهاد مشخص
+برای شروع دیباگ**. خطاهای یکسان روی یک ردیف جمع می‌شوند تا یک باگ پرتکرار بقیه را
+پنهان نکند.
+
+اگر بات تلگرام تنظیم شود، همان خطا **همان لحظه** به گوشی شما هم می‌رسد.
+
+### ساخت بات (پنج دقیقه، یک بار)
+
+**۱.** در تلگرام به [@BotFather](https://t.me/BotFather) پیام بدهید: `/newbot` — یک نام و
+یک username بدهید. توکن را می‌دهد.
+
+**۲.** به بات تازه‌ساخته‌تان یک پیام بفرستید (هر چیزی، مثلاً `سلام`). بدون این، بات اجازه
+ندارد به شما پیام بدهد.
+
+**۳.** `chat id` را بگیرید — روی سرور:
+
+```bash
+curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" | grep -o '"id":[0-9-]*' | head -1
+```
+
+**۴.** هر دو را در `.env` بگذارید و بالا بیاورید:
+
 ```bash
 cd /opt/feranocar
-docker compose stop api
-gunzip -c /var/backups/feranocar/db-XXXXXX.sql.gz | docker compose exec -T db psql -U havale havale
-docker compose start api
+echo 'TELEGRAM_BOT_TOKEN=توکن-شما' >> .env
+echo 'TELEGRAM_CHAT_ID=عدد-شما'     >> .env
+docker compose up -d api
 ```
 
-دامپ با `--clean` گرفته شده، پس آنچه هست را جایگزین می‌کند. `stop api` برای این است که
-وسط بازگردانی کسی ننویسد.
+**۵. بررسی:** در پنل مدیریت → **لاگ خطاها** → دکمه‌ی **«ارسال پیام آزمایشی تلگرام»**.
+اگر پیام آمد، تمام است.
 
-### بردن بکاپ به بیرون از سرور — کار شماست
+> کانالی که کسی امتحانش نکرده، کانال هشدار نیست. این دکمه دقیقاً برای همین است.
 
-تا وقتی نسخه‌ها فقط روی همین سرورند، از دست رفتن سرور یعنی از دست رفتن بکاپ هم. ساده‌ترین
-راه، از کامپیوتر خودتان:
-
-```bash
-scp root@45.94.213.252:/var/backups/feranocar/db-*.sql.gz ~/feranocar-backups/
-```
+> اگر تلگرام از سرور در دسترس نباشد، هشدار ارسال نمی‌شود و **هیچ اتفاقی برای برنامه
+> نمی‌افتد** — سیستم مانیتورینگی که بتواند برنامه را بخواباند، خودش یک خرابی دوم است.
 
 ---
 
@@ -643,6 +680,8 @@ cd /opt/feranocar && docker compose up -d --force-recreate --no-deps web
 | ری‌استارت | `docker compose restart api` |
 | بکاپ دستی | `/usr/local/bin/feranocar-backup` |
 | تست بازگردانی بکاپ (ماهانه) | `/opt/feranocar/deploy/verify-backup.sh` |
+| بکاپ کامل دستی | `/opt/feranocar/deploy/backup.sh daily` |
+| لاگ خطاها | پنل مدیریت ← لاگ خطاها |
 | گزارش امنیتی | `docker run --rm --entrypoint node -v /opt/feranocar:/audit -w /audit feranocar-api security/audit.js --live https://feranocar.com --user … --pass … --report /tmp/audit.json` |
 | ورود به دیتابیس (ترمینال) | `docker compose exec db psql -U havale havale` |
 | ورود به دیتابیس (گرافیکی) | `http://45.94.213.252:8443` — بخش «مدیریت دیتابیس» |
