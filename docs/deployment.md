@@ -391,7 +391,39 @@ docker compose run --rm --entrypoint certbot certbot renew --dry-run
 
 ```bash
 cat /etc/cron.d/feranocar-certbot
+cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew --dry-run
 ```
+
+انتظار: `Congratulations, all simulated renewals succeeded`.
+
+### اگر `--dry-run` با «Failed to resolve» شکست خورد
+
+تمدید خودکار به DNS داخل کانتینر وابسته است. داکر به کانتینرها resolver خودش را
+می‌دهد که به `systemd-resolved` میزبان فوروارد می‌کند، و آن مسیر روی شبکه‌های ایران
+ناپایدار است — گاهی جواب می‌دهد، گاهی `Try again`. برای صدور یک‌باره‌ی گواهی می‌شود
+دوباره تلاش کرد؛ برای تمدید خودکاری که سه ماه دیگر بی‌حضور شما اجرا می‌شود، نمی‌شود.
+
+resolverهای ثابت به داکر بدهید:
+
+```bash
+cat > /etc/docker/daemon.json <<'JSON'
+{ "dns": ["178.22.122.100", "185.51.200.2"] }
+JSON
+systemctl restart docker
+cd /opt/feranocar && docker compose up -d
+```
+
+بعد دوباره `--dry-run` را بزنید تا سبز شود.
+
+> این دو آدرس **شکن** است که از داخل ایران پایدار جواب می‌دهد. `1.1.1.1` و `8.8.8.8` روی
+> بعضی شبکه‌ها کار می‌کنند و روی بعضی نه.
+>
+> `systemctl restart docker` همه‌ی کانتینرها را چند ثانیه می‌خواباند؛ دیتابیس در volume
+> است و چیزی از دست نمی‌رود.
+
+> **این را جدی بگیرید.** تمدید ناموفق تا روزی که گواهی منقضی شود هیچ نشانه‌ای ندارد.
+> برای همین `security/audit.js --live` هر بار تاریخ انقضای گواهی را می‌خواند و اگر زیر
+> ۲۵ روز بود هشدار می‌دهد — ماه‌ها قبل از اینکه کاربران چیزی ببینند.
 
 ---
 

@@ -599,6 +599,51 @@ async function checkLive(base) {
         check: 'live:tls',
         title: hsts ? 'HSTS is being sent' : 'HSTS is not being sent',
       });
+
+      // How long the certificate has left.
+      //
+      // Renewal is a cron job talking to the internet twice a week, and it can
+      // fail quietly for a month — a DNS hiccup, an expired ACME account, a
+      // firewall rule someone added. Nothing else in the system notices until
+      // the morning every browser refuses the site. Reading the expiry date on
+      // every audit turns that into something you find out weeks early.
+      try {
+        const host = new URL(base).hostname;
+        const tls = require('tls');
+        const days = await new Promise((resolve, reject) => {
+          const socket = tls.connect(
+            { host, port: 443, servername: host, timeout: 8000 },
+            () => {
+              const cert = socket.getPeerCertificate();
+              socket.end();
+              if (!cert || !cert.valid_to) return reject(new Error('no certificate'));
+              resolve(Math.round((new Date(cert.valid_to) - Date.now()) / 86_400_000));
+            }
+          );
+          socket.on('error', reject);
+          socket.on('timeout', () => { socket.destroy(); reject(new Error('timeout')); });
+        });
+
+        add({
+          severity: days < 10 ? 'critical' : days < 25 ? 'high' : 'info',
+          check: 'live:tls',
+          title: `the certificate expires in ${days} days`,
+          detail:
+            days < 25
+              ? 'Automatic renewal starts at 30 days left. Below that, it has already failed at least twice.'
+              : null,
+          fix:
+            days < 25
+              ? 'cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew --dry-run'
+              : null,
+        });
+      } catch (err) {
+        add({
+          severity: 'low',
+          check: 'live:tls',
+          title: `could not read the certificate expiry: ${err.message}`,
+        });
+      }
     } else {
       add({
         severity: 'high',
