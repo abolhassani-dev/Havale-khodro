@@ -7,7 +7,7 @@
 # wrong the old configuration stays live rather than the site going down in
 # the middle of the one step where you most want it up.
 #
-#   /opt/feranocar/deploy/enable-ssl.sh you@example.com
+#   /opt/feranocar/deploy/enable-ssl.sh name@gmail.com
 #
 set -euo pipefail
 
@@ -23,6 +23,23 @@ if [ -z "$EMAIL" ]; then
   echo "  (Let's Encrypt uses it only to warn you before the certificate expires.)" >&2
   exit 1
 fi
+
+# The guide's example address is you@example.com, and a placeholder copied
+# verbatim out of documentation is the most ordinary thing in the world. Let's
+# Encrypt rejects it at account registration with a message about an "invalid
+# email address", which reads as a problem with the domain rather than with the
+# one word nobody meant to leave in. Caught here instead.
+case "$EMAIL" in
+  *@example.com|*@example.org|*@example.net|your@*|you@*|email@*)
+    echo "✗ '$EMAIL' is the placeholder from the instructions, not an address." >&2
+    echo "  Re-run with your own: $0 name@gmail.com" >&2
+    exit 1
+    ;;
+esac
+case "$EMAIL" in
+  *@*.*) ;;
+  *) echo "✗ '$EMAIL' does not look like an email address." >&2; exit 1 ;;
+esac
 
 # ---- 1. the domain must actually point here ----
 #
