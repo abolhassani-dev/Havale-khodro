@@ -750,6 +750,31 @@ async function checkLive(base) {
       : 'the sign-in response body carries no token',
   });
 
+  // Which kind of account is doing the testing.
+  //
+  // The authorisation checks below assume an agency: they assert that admin
+  // routes are refused. Run with administrator credentials, "refused" would be
+  // wrong and the audit would report three criticals that are the system
+  // working correctly. Rather than trust the caller to remember, ask.
+  const { text: meText } = await call('/api/v1/auth/me');
+  let role = null;
+  try {
+    role = JSON.parse(meText)?.data?.role || null;
+  } catch { /* leave it null and say so below */ }
+  const isAgency = role === 'AGENT';
+
+  add({
+    severity: isAgency ? 'info' : 'low',
+    check: 'live:auth',
+    title: isAgency
+      ? 'testing as an agency account, which is what the authorisation checks assume'
+      : `testing as ${role || 'an unknown role'} — the authorisation checks below are skipped`,
+    detail: isAgency
+      ? null
+      : 'Those checks assert that admin routes are refused. An administrator is meant to reach them, so running as one would report the system working as three critical findings.',
+    fix: isAgency ? null : 'Re-run with an agency account to cover authorisation.',
+  });
+
   // --- THE masking test: a phone number nobody paid for ---
   const { text: listText } = await call('/api/v1/havales?limit=50');
   let list = {};
@@ -834,17 +859,19 @@ async function checkLive(base) {
     return (again.headers.get('set-cookie') || '').split(';')[0];
   })());
 
-  for (const p of ['/api/v1/admin/agents', '/api/v1/admin/activity', '/api/v1/settings']) {
-    const { res } = await call(p);
-    const ok = res.status === 403 || res.status === 401;
-    add({
-      severity: ok ? 'info' : 'critical',
-      check: 'live:authorisation',
-      title: ok
-        ? `an agency account is refused ${p}`
-        : `an agency account reached ${p} (${res.status})`,
-      fix: ok ? null : 'Add requirePermission to this route.',
-    });
+  if (isAgency) {
+    for (const p of ['/api/v1/admin/agents', '/api/v1/admin/activity', '/api/v1/settings']) {
+      const { res } = await call(p);
+      const ok = res.status === 403 || res.status === 401;
+      add({
+        severity: ok ? 'info' : 'critical',
+        check: 'live:authorisation',
+        title: ok
+          ? `an agency account is refused ${p}`
+          : `an agency account reached ${p} (${res.status})`,
+        fix: ok ? null : 'Add requirePermission to this route.',
+      });
+    }
   }
 
   // --- rate limiting is real ---
