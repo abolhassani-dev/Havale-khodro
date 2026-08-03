@@ -68,9 +68,13 @@ else
     echo "→ installing rsync"
     apt-get update -qq && apt-get install -y -qq rsync
   fi
+  # .htpasswd is created on the server and exists nowhere in the repository —
+  # without this exclude, every update would delete it and lock the database
+  # panel with a 500 until someone recreated it.
   rsync -a --delete \
     --exclude='.env' \
     --exclude='.git' \
+    --exclude='deploy/nginx/.htpasswd' \
     "$TMP/src/" "$ROOT/"
 fi
 

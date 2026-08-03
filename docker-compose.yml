@@ -13,6 +13,8 @@ services:
     ports:
       - '80:80'
       - '443:443'
+      # The database panel, behind its own password (see adminer.conf).
+      - '8443:8443'
     volumes:
       # Read-only: nginx has no reason to write to the application it serves,
       # and a container that cannot write cannot be used to plant a file.
@@ -70,16 +72,16 @@ services:
 
   # Database administration — Adminer, the phpMyAdmin equivalent for Postgres.
   #
-  # Bound to 127.0.0.1 on purpose: a database panel reachable from the
-  # internet is the single fastest way to lose everything in this system, and
-  # no password on the panel changes that. It is reachable only through an
-  # SSH tunnel (docs/deployment.md, «مدیریت دیتابیس») — so the thing that
-  # protects the data is the same SSH key that protects the server.
+  # No published port of its own: everything goes through nginx on :8443,
+  # which demands its own username and password (deploy/nginx/adminer.conf)
+  # before Adminer even loads, and rate-limits the attempts. A database
+  # panel exposed directly is what automated scanners hunt for all day —
+  # this way the panel itself is never the first line of defence.
   adminer:
     image: adminer:4
     restart: unless-stopped
-    ports:
-      - '127.0.0.1:8081:8080'
+    expose:
+      - '8080'
     environment:
       ADMINER_DEFAULT_SERVER: db
     depends_on:
