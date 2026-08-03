@@ -444,3 +444,126 @@ tr.dim, .dim { opacity: 0.55; }
 /* تب‌های تفکیک نوع در استعلام — باید جلوی چشم باشند، نه ته فیلترها */
 .kind-tabs { display: flex; gap: 5px; }
 .kind-tabs .tab { font-size: 13.5px; padding: 6px 15px; font-weight: 700; }
+
+/* ================================================================
+   دسترس‌پذیری و حرکت
+   ================================================================ */
+
+.btn:focus-visible, .tab:focus-visible, .pg:focus-visible,
+.nav a:focus-visible, .qtip:focus-visible, tr[data-activity]:focus-visible {
+  outline: 2px solid var(--primary-3);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* تب‌های تفکیک: یک کنترل سگمنتی واقعی — قاب مشخص، انتخاب پُر */
+
+.kind-tabs {
+  display: inline-flex; gap: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 10px; overflow: hidden;
+  background: #f4f1e8;
+  padding: 3px;
+}
+.kind-tabs .tab {
+  border: none; border-radius: 7px;
+  padding: 6.5px 16px; font-size: 13.5px; font-weight: 700;
+  color: var(--ink-2); background: transparent;
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.kind-tabs .tab:hover { color: var(--ink); }
+.kind-tabs .tab.on {
+  background: var(--primary); color: #fff;
+  box-shadow: 0 1px 3px #0e5a5140, inset 0 1px 0 #ffffff26;
+}
+
+/* ================================================================
+   موبایل — قالب خودش را با دستگاه تطبیق می‌دهد
+   قاعده: در گوشی هیچ‌چیز نباید اسکرول افقی بخواهد. جدول‌ها زیر ۷۰۰px
+   به کارت‌های پشته‌ای تبدیل می‌شوند (برچسب هر ستون از data-label می‌آید
+   که main.js بعد از هر رندر می‌نویسد).
+   ================================================================ */
+
+@media (max-width: 700px) {
+  .content { padding: 10px; }
+
+  /* نوار بالا: جمع‌وجور، بدون سرریز */
+  .topbar { height: auto; min-height: 54px; flex-wrap: wrap; padding: 8px 12px; gap: 8px 10px; }
+  .topbar h1 { font-size: 16px; }
+  .topbar .crumb { display: none; }
+  .who .nm, .who .rl { display: none; }
+  .who .av { width: 32px; height: 32px; }
+
+  .card-h { flex-wrap: wrap; padding: 12px 14px; gap: 9px; }
+  .card .body { padding: 13px 14px; }
+
+  .stats { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .stat { padding: 12px 13px; }
+  .stat .s-v { font-size: 23px; }
+
+  .kind-tabs { width: 100%; }
+  .kind-tabs .tab { flex: 1; text-align: center; padding-inline: 8px; }
+
+  .grid { grid-template-columns: 1fr; }
+
+  .form .fields { grid-template-columns: 1fr; }
+  .filters { padding: 10px 12px; }
+  .filters .field { min-width: calc(50% - 6px); }
+
+  /* ---- جدول ← کارت‌های پشته‌ای ---- */
+  .card table { display: block; width: auto; margin: 10px 12px 12px; }
+  .card table thead { display: none; }
+  .card table tbody { display: grid; gap: 9px; }
+  .card table tbody tr {
+    display: grid; gap: 3px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: #fdfcf8; padding: 10px 12px;
+  }
+  .card table tbody tr:hover td { background: none; }
+  .card table tbody td,
+  .card table tbody td:first-child,
+  .card table tbody td:last-child {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    border: none; border-radius: 0; background: none; padding: 2.5px 0;
+  }
+  .card table tbody td[data-label]::before {
+    content: attr(data-label);
+    color: var(--ink-3); font-size: 12px; font-weight: 700;
+    flex: none;
+  }
+  /* سلول اکشن‌ها (بدون سرستون): دکمه‌ها تمام‌عرض و لمس‌پذیر */
+  .card table tbody td:not([data-label]) { justify-content: flex-start; flex-wrap: wrap; }
+  .card table tbody td .btn { min-height: 38px; }
+
+  .card table tfoot { display: block; margin-top: 9px; }
+  .card table tfoot tr {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: var(--primary-08); border: 1px solid var(--primary-15);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .card table tfoot th,
+  .card table tfoot th:first-child,
+  .card table tfoot th:last-child {
+    border: none; border-radius: 0; background: none; padding: 0;
+  }
+
+  /* هدف لمسی: هیچ کنترلی زیر ۴۰px نباشد */
+  .pg { min-width: 40px; height: 40px; }
+  .nav a { padding: 11px 12px; }
+  .btn { min-height: 38px; }
+  .btn.sm { min-height: 34px; }
+
+  .modal { width: 100%; }
+  .demobar { flex-wrap: wrap; }
+}
+
+/* برای گوشی‌های خیلی باریک، آمارها هم تک‌ستونه */
+@media (max-width: 380px) {
+  .stats { grid-template-columns: 1fr; }
+}
+
+.svgi { display: block; flex: none; }
+.nav a .ico { display: inline-grid; place-items: center; }

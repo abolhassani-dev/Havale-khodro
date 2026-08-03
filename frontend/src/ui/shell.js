@@ -1,4 +1,5 @@
 import { html, raw } from './html.js';
+import { icon } from './icons.js';
 import { getState, isAdmin, can } from '../state/store.js';
 import { date, faDigits } from './format.js';
 import { BRAND } from '../constants.js';
@@ -10,37 +11,37 @@ import { BRAND } from '../constants.js';
 
 const AGENT_NAV = [
   { group: 'حواله' },
-  { page: 'dash', icon: '▦', label: 'داشبورد' },
-  { page: 'search', icon: '⌕', label: 'استعلام حواله‌ها' },
-  { page: 'new-offer', icon: '＋', label: 'ثبت حواله جدید' },
-  { page: 'new-request', icon: '⇩', label: 'ثبت درخواست خرید' },
-  { page: 'mine', icon: '☰', label: 'حواله‌های من' },
+  { page: 'dash', icon: 'dashboard', label: 'داشبورد' },
+  { page: 'search', icon: 'search', label: 'استعلام حواله‌ها' },
+  { page: 'new-offer', icon: 'plus', label: 'ثبت حواله جدید' },
+  { page: 'new-request', icon: 'inbox', label: 'ثبت درخواست خرید' },
+  { page: 'mine', icon: 'list', label: 'حواله‌های من' },
   { group: 'حساب' },
-  { page: 'subscription', icon: '◷', label: 'اشتراک من' },
-  { page: 'sub-agents', icon: '⛁', label: 'زیرنمایندگی‌ها', needsReseller: true },
-  { page: 'tickets', icon: '✉', label: 'پشتیبانی' },
+  { page: 'subscription', icon: 'clock', label: 'اشتراک من' },
+  { page: 'sub-agents', icon: 'users', label: 'زیرنمایندگی‌ها', needsReseller: true },
+  { page: 'tickets', icon: 'mail', label: 'پشتیبانی' },
 ];
 
 const ADMIN_NAV = [
   { group: 'مدیریت' },
-  { page: 'adm-dash', icon: '▦', label: 'داشبورد', permission: 'monitoring' },
-  { page: 'adm-agents', icon: '⌸', label: 'نمایندگی‌ها', permission: 'agents' },
-  { page: 'adm-new-agent', icon: '＋', label: 'ساخت نمایندگی', permission: 'agents' },
+  { page: 'adm-dash', icon: 'dashboard', label: 'داشبورد', permission: 'monitoring' },
+  { page: 'adm-agents', icon: 'shield', label: 'نمایندگی‌ها', permission: 'agents' },
+  { page: 'adm-new-agent', icon: 'plus', label: 'ساخت نمایندگی', permission: 'agents' },
   { group: 'محتوا' },
-  { page: 'adm-reports', icon: '⚑', label: 'گزارش تخلف', permission: 'reports' },
-  { page: 'adm-tickets', icon: '✉', label: 'تیکت‌ها', permission: 'tickets' },
-  { page: 'adm-catalog', icon: '⚘', label: 'کاتالوگ خودرو', permission: 'catalog' },
+  { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
+  { page: 'adm-tickets', icon: 'ticket', label: 'تیکت‌ها', permission: 'tickets' },
+  { page: 'adm-catalog', icon: 'car', label: 'کاتالوگ خودرو', permission: 'catalog' },
   { group: 'نظارت و مالی' },
-  { page: 'adm-monitor', icon: '◎', label: 'مانیتورینگ', permission: 'monitoring' },
-  { page: 'adm-seats', icon: '⛁', label: 'درخواست ظرفیت', permission: 'seats' },
-  { page: 'adm-settings', icon: '⚙', label: 'تنظیمات', permission: 'settings' },
+  { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
+  { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
+  { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
 ];
 
 function navItem(item, current) {
   if (item.group) return html`<div class="group">${item.group}</div>`;
 
   return html`<a class="${item.page === current ? 'on' : ''}" data-go="${item.page}">
-    <span class="ico">${item.icon}</span>${item.label}
+    <span class="ico">${icon(item.icon)}</span>${item.label}
   </a>`;
 }
 

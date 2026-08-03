@@ -93,6 +93,28 @@ function render() {
   }
 
   document.getElementById('layer').innerHTML = String(html`${renderModal()}${renderToast()}`);
+  labelTables();
+}
+
+/**
+ * Copies each table's column headings onto its cells as `data-label`.
+ *
+ * This is what lets a phone drop the table layout entirely: below 700px the
+ * stylesheet stacks every row into a small card and prints the heading beside
+ * each value from this attribute. Done here, once, after every render — so
+ * every table in the product is phone-ready automatically, instead of each
+ * screen having to remember a second mobile markup.
+ */
+function labelTables() {
+  document.querySelectorAll('.card table').forEach((table) => {
+    const heads = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    if (!heads.length) return;
+    table.querySelectorAll('tbody tr').forEach((tr) => {
+      [...tr.children].forEach((td, i) => {
+        if (heads[i]) td.setAttribute('data-label', heads[i]);
+      });
+    });
+  });
 }
 
 function adminTitle(page) {
