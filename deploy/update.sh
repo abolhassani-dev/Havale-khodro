@@ -130,11 +130,32 @@ curl -fsS http://localhost/api/v1/health || echo "✗ the API did not answer"
 echo
 echo "--- frontend ---"
 code="$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)"
-echo "HTTP $code"
+echo "HTTP $code (plain)"
 case "$code" in
-  200) echo "✓ up" ;;
-  403) echo "✗ 403 — the document root has no index.html. The web container is"
-       echo "  probably mounted on a directory that was moved or deleted."
-       echo "  Fix: docker compose up -d --force-recreate --no-deps web" ;;
-  *)   echo "✗ unexpected — docker compose logs web --tail 30" ;;
+  200)
+    # No certificate yet: plain HTTP is the site.
+    if [ -f deploy/nginx/ssl.conf ]; then
+      echo "✗ HTTPS is configured but plain HTTP is not redirecting."
+      echo "  Check deploy/nginx/00-mode.conf — it should say default 1."
+    else
+      echo "✓ up"
+    fi
+    ;;
+  301|308)
+    # Once TLS is on, a redirect here is the correct answer and 200 would be
+    # the bug. The first version of this check called 301 "unexpected", which
+    # reported a healthy system as broken on the very run that made it healthy.
+    echo -n "  redirect is correct — following it over HTTPS: "
+    https="$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/)"
+    echo "HTTP $https"
+    if [ "$https" = "200" ]; then echo "✓ up over HTTPS"; else
+      echo "✗ HTTP redirects but HTTPS did not answer 200 — docker compose logs web --tail 30"
+    fi
+    ;;
+  403)
+    echo "✗ 403 — the document root has no index.html. The web container is"
+    echo "  probably mounted on a directory that was moved or deleted."
+    echo "  Fix: docker compose up -d --force-recreate --no-deps web"
+    ;;
+  *) echo "✗ unexpected — docker compose logs web --tail 30" ;;
 esac
