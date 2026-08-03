@@ -397,6 +397,11 @@ function checkMasking() {
       // not rewrite what an agency actually saw.
       if (/payload\.|req\.body|body\.|phoneShown/.test(src)) continue;
 
+      // Reading a number in order to encrypt it is the one legitimate read
+      // outside the serialiser — the backfill has to see plaintext to replace
+      // it. Narrow on purpose: only lines that are doing the encrypting.
+      if (/\b(encrypt|decrypt|isEncrypted|blindIndex)\b/.test(src)) continue;
+
       add({
         severity: 'medium',
         check: 'contact-masking',
