@@ -27,6 +27,7 @@ export async function loadSearch(params) {
       maxDeliveryDays: params.maxDeliveryDays,
       minAmount: params.minAmount,
       maxAmount: params.maxAmount,
+      network: params.network,
       // Numbered pages, twelve cards each — enough to fill the grid, few
       // enough that the pager and the filters stay within reach.
       page: Number(params.page) || 1,
@@ -39,7 +40,7 @@ export async function loadSearch(params) {
 }
 
 export function searchPage() {
-  const { data, params, access } = getState();
+  const { data, params, access, user } = getState();
   const { tree, list, usage } = data;
   const items = list?.items || [];
 
@@ -49,7 +50,7 @@ export function searchPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>استعلام حواله‌ها ${qtip('همه‌ی حواله‌های فعال نمایندگی‌های دیگر. مشخصات تماس هر آگهی مخفی است؛ با زدن «نمایش مشخصات» شماره باز می‌شود و یکی از سقف روزانه‌ی شما کم می‌شود. باز کردن دوباره‌ی همان آگهی رایگان است.')}</h2>
+      <h2>استعلام حواله‌ها ${qtip('همه‌ی حواله‌های فعال نمایندگی‌های دیگر. هویت نمایندگی و مشخصات تماس هر آگهی مخفی است؛ با زدن «نمایش مشخصات» هر دو باز می‌شود و یکی از سقف روزانه‌ی شما کم می‌شود. باز کردن دوباره‌ی همان آگهی رایگان است.')}</h2>
       <div class="kind-tabs">
         ${[['', 'همه'], ['OFFER', 'حواله فروش'], ['REQUEST', 'درخواست خرید']].map(
           ([value, label]) => html`<button class="tab ${(params.kind || '') === value ? 'on' : ''}"
@@ -76,6 +77,15 @@ export function searchPage() {
         <input class="in num" id="maxAmount" name="maxAmount" inputmode="numeric"
                value="${params.maxAmount || ''}">
       </div>
+      ${
+        user?.parentId || user?.isReseller
+          ? html`<label class="check field" style="align-self:end">
+              <input type="checkbox" name="network" value="mine"
+                     ${raw(params.network === 'mine' ? 'checked' : '')}>
+              فقط حواله‌های مجموعه‌ی خودمان
+            </label>`
+          : ''
+      }
       <div class="field" style="align-self:end;display:flex;gap:8px">
         <button class="btn primary" type="submit">اعمال</button>
         <button class="btn" type="button" data-go="search">پاک کردن</button>
@@ -160,9 +170,13 @@ function card(h) {
 
     <footer>
       <div class="meta">
-        <span>${h.agency?.name || '—'}</span>
-        ${h.agency?.code ? html`<span class="num">${h.agency.code}</span>` : ''}
-        ${h.agency?.city ? html`<span>${h.agency.city}</span>` : ''}
+        ${
+          h.agency
+            ? html`<span>${h.agency.name || '—'}</span>
+                ${h.agency.code ? html`<span class="num">${h.agency.code}</span>` : ''}
+                ${h.agency.city ? html`<span>${h.agency.city}</span>` : ''}`
+            : html`<span class="masked-id">نمایندگی محرمانه — با «نمایش مشخصات» باز می‌شود</span>`
+        }
         <span class="tag">${until(h.closesAt)}</span>
       </div>
       ${contactArea(h)}

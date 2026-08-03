@@ -120,6 +120,7 @@ const listQuery = Joi.object({
   maxDeliveryDays: days,
   cursor: Joi.string().max(200),
   page: Joi.number().integer().min(1).max(10000),
+  network: Joi.string().valid('mine'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
 });
 

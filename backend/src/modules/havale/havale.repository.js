@@ -79,6 +79,15 @@ const havaleRepository = {
     return prisma.havale.count({ where });
   },
 
+  /** The accounts of one network: the main agency and every sub-agency under it. */
+  async networkMemberIds(rootId) {
+    const rows = await prisma.user.findMany({
+      where: { OR: [{ id: rootId }, { parentId: rootId }] },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  },
+
   findReveal(havaleId, viewerId) {
     return prisma.contactReveal.findUnique({
       where: { havaleId_viewerId: { havaleId, viewerId } },

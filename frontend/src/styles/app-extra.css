@@ -567,3 +567,13 @@ tr.dim, .dim { opacity: 0.55; }
 
 .svgi { display: block; flex: none; }
 .nav a .ico { display: inline-grid; place-items: center; }
+
+/* چک‌باکس فیلتر — هم‌قدِ بقیه‌ی کنترل‌ها */
+.check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13.5px; font-weight: 700; color: var(--ink-2);
+  cursor: pointer; user-select: none; min-height: 40px;
+}
+.check input { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
+
+.masked-id { color: var(--ink-3); font-size: 12.5px; }

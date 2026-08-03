@@ -65,22 +65,27 @@ function toHavaleCard(havale, { subscriptionActive, revealed = false } = {}) {
     // 6.9). Knowing which agencies called would let them arrange the deal
     // outside the system.
     revealCount: havale.revealCount,
-    agency: { name: havale.owner ? havale.owner.agencyName : null },
+    agency: null,
     contact: null,
     contactRevealed: false,
   };
 
-  // Expired subscription: the agency code and city go too, not just the phone.
-  // This is also why a reveal bought last month stops working once the
-  // subscription lapses — the check is on the state now, not on the past
-  // purchase.
+  // The poster's identity is confidential exactly like their phone number —
+  // name, code and city included. An agency's name is enough to find its
+  // switchboard in one web search, which turns "call the coordinator" into a
+  // free action that consumes no allowance and leaves no audit row. So
+  // identity and contact open together, on the recorded reveal, and never
+  // separately. An expired subscription sees neither, whatever it revealed
+  // while it was live — the check is on the state now, not the past purchase.
   if (!subscriptionActive) return card;
-
-  card.agency.code = havale.owner ? havale.owner.agencyCode : null;
-  card.agency.city = havale.owner ? havale.owner.city : null;
 
   if (revealed && havale.owner) {
     card.contactRevealed = true;
+    card.agency = {
+      name: havale.owner.agencyName,
+      code: havale.owner.agencyCode,
+      city: havale.owner.city,
+    };
     card.contact = {
       coordinatorName: havale.owner.coordinatorName,
       coordinatorPhone: havale.owner.coordinatorPhone,

@@ -130,6 +130,16 @@ const havaleService = {
     const take = Math.min(filters.limit || LIST_PAGE_SIZE.DEFAULT, LIST_PAGE_SIZE.MAX);
     const where = publicWhere(filters);
 
+    // "Only my network": listings posted by the same main agency's accounts —
+    // the parent and its sub-agencies. Only members of a network have one to
+    // filter by; for anyone else the option resolves to nothing and the filter
+    // is ignored rather than failing, mirroring the interface, which does not
+    // offer it to them.
+    if (filters.network === 'mine') {
+      const rootId = user.parentId || (user.isReseller ? user.id : null);
+      if (rootId) where.ownerId = { in: await havaleRepository.networkMemberIds(rootId) };
+    }
+
     // Two paginations, deliberately. The panel shows people numbered pages —
     // "۳ از ۱۲" answers "how much is there?", which a bare next-cursor never
     // can. Offset does re-scan skipped rows, but a human clicking page numbers

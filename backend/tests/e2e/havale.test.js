@@ -91,31 +91,49 @@ maybe('havale', () => {
       expect(detail.body.data.contactRevealed).toBe(false);
     });
 
-    it('shows the agency code and city to a live subscription, and nothing more', async () => {
+    it('hides the poster identity — name, code, city — until the reveal is paid', async () => {
+      // The agency's name is enough to find its switchboard in one web search,
+      // which would turn "call them" into a free action outside the metering
+      // and the audit log. So identity is confidential exactly like the phone.
       const { owner, viewer, havale } = await twoAgentsAndAListing();
 
-      const res = await request(app)
+      const before = await request(app)
         .get(api(`/havales/${havale.id}`))
         .set('Cookie', viewer.cookie)
         .expect(200);
 
-      expect(res.body.data.agency.code).toBe(owner.user.agencyCode);
-      expect(res.body.data.agency.city).toBe(owner.user.city);
-      expect(res.body.data.contact).toBeNull();
+      expect(before.body.data.agency).toBeNull();
+      expect(before.body.data.contact).toBeNull();
+      expect(JSON.stringify(before.body)).not.toContain(owner.user.agencyName);
+      expect(JSON.stringify(before.body)).not.toContain(owner.user.agencyCode);
+
+      await request(app)
+        .post(api(`/havales/${havale.id}/reveal`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      const after = await request(app)
+        .get(api(`/havales/${havale.id}`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      expect(after.body.data.agency.code).toBe(owner.user.agencyCode);
+      expect(after.body.data.agency.city).toBe(owner.user.city);
+      expect(after.body.data.contact.coordinatorPhone).toBe(owner.user.coordinatorPhone);
     });
 
-    it('hides the agency code too once the subscription lapses', async () => {
+    it('shows an expired subscription the market but no identity at all', async () => {
       const { owner } = await twoAgentsAndAListing();
       const broke = track(await createAgent());
       const cookie = await signIn(broke); // no subscription at all
 
       const res = await request(app).get(api('/havales')).set('Cookie', cookie).expect(200);
-      const card = res.body.data.items.find((i) => i.agency.name);
+      const card = res.body.data.items.find((i) => !i.isOwn);
 
       expect(card).toBeDefined();
-      expect(card.agency.code).toBeUndefined();
-      expect(card.agency.city).toBeUndefined();
+      expect(card.agency).toBeNull();
       expect(JSON.stringify(res.body)).not.toContain(owner.user.coordinatorPhone);
+      expect(JSON.stringify(res.body)).not.toContain(owner.user.agencyName);
       // The listing itself is still there — an expired agency sees the market,
       // it just cannot reach anyone in it.
       expect(card.carType).toBeTruthy();
@@ -370,6 +388,46 @@ maybe('havale', () => {
         .expect(200);
       const ids1 = page1.body.data.items.map((h) => h.id);
       page2.body.data.items.forEach((h) => expect(ids1).not.toContain(h.id));
+    });
+  });
+
+  describe('network filter', () => {
+    it('lets a sub-agency see only its own network, and others cannot use it', async () => {
+      const parent = await agent({ isReseller: true });
+      const sub1 = await agent({ parentId: parent.user.id });
+      const sub2 = await agent({ parentId: parent.user.id });
+      const outsider = await agent();
+
+      const post = async (who) => {
+        const res = await request(app)
+          .post(api('/havales'))
+          .set('Cookie', who.cookie)
+          .send(await offer())
+          .expect(201);
+        return res.body.data.id;
+      };
+      const insideId = await post(sub1);
+      const outsideId = await post(outsider);
+
+      // sub2 filters to its network: the colleague's listing is there, the
+      // outsider's is not.
+      const mine = await request(app)
+        .get(api('/havales?network=mine&limit=50'))
+        .set('Cookie', sub2.cookie)
+        .expect(200);
+      const ids = mine.body.data.items.map((h) => h.id);
+      expect(ids).toContain(insideId);
+      expect(ids).not.toContain(outsideId);
+
+      // An account outside any network sends the same query and simply gets
+      // the unfiltered list — the option belongs to networks only.
+      const plain = await request(app)
+        .get(api('/havales?network=mine&limit=50'))
+        .set('Cookie', outsider.cookie)
+        .expect(200);
+      const plainIds = plain.body.data.items.map((h) => h.id);
+      expect(plainIds).toContain(insideId);
+      expect(plainIds).toContain(outsideId);
     });
   });
 
