@@ -465,8 +465,48 @@ ls -lh /var/backups/feranocar/
 
 انتظار: فایلی با حجم قابل توجه (نه چند بایت).
 
-> **بکاپی که بازگردانی‌اش را امتحان نکرده‌اید، بکاپ نیست — یک فایل است.** یک بار روی یک
-> سرور دیگر یا یک دیتابیس موقت بازگردانی‌اش کنید. اگر خواستید، دستورش را می‌دهم.
+### تست بازگردانی — این را حتماً انجام دهید
+
+**بکاپی که بازگردانی‌اش را امتحان نکرده‌اید، بکاپ نیست — یک فایل است.** حالت‌های خرابی
+همه بی‌صدا هستند: دامپی که از یک دیتابیس خالی گرفته شده، فایل gzip نصفه، خطای `pg_dump`
+که در فایلی نوشته شده و کسی نخوانده. هر سه دقیقاً شبیه یک بکاپ سالم‌اند — تا روزی که
+تنها نسخه‌ی باقی‌مانده باشند.
+
+```bash
+/opt/feranocar/deploy/verify-backup.sh
+```
+
+آخرین بکاپ را در یک **دیتابیس موقت** بازمی‌گرداند، تعداد رکوردهای هر جدول را می‌شمارد، و
+دیتابیس موقت را پاک می‌کند. **به دیتابیس اصلی دست نمی‌زند** — حتی اگر وسط کار خطا بخورد.
+
+انتظار: تعداد رکوردها، و `✓ this backup restores`.
+
+اگر `User` یا `CarModel` صفر بود، اسکریپت با خطا تمام می‌شود: بدون مدیر کسی نمی‌تواند وارد
+شود و بدون کاتالوگ کسی نمی‌تواند حواله ثبت کند — دامپی با صفر در این دو، نقطه‌ی بازگردانی
+قابل استفاده نیست.
+
+> **ماهی یک بار اجرایش کنید.** بکاپ‌گیری خودکار است؛ سالم بودنش نه.
+
+### اگر روزی واقعاً لازم شد
+
+```bash
+cd /opt/feranocar
+docker compose stop api
+gunzip -c /var/backups/feranocar/db-XXXXXX.sql.gz | docker compose exec -T db psql -U havale havale
+docker compose start api
+```
+
+دامپ با `--clean` گرفته شده، پس آنچه هست را جایگزین می‌کند. `stop api` برای این است که
+وسط بازگردانی کسی ننویسد.
+
+### بردن بکاپ به بیرون از سرور — کار شماست
+
+تا وقتی نسخه‌ها فقط روی همین سرورند، از دست رفتن سرور یعنی از دست رفتن بکاپ هم. ساده‌ترین
+راه، از کامپیوتر خودتان:
+
+```bash
+scp root@45.94.213.252:/var/backups/feranocar/db-*.sql.gz ~/feranocar-backups/
+```
 
 ---
 
@@ -602,6 +642,8 @@ cd /opt/feranocar && docker compose up -d --force-recreate --no-deps web
 | لاگ زنده | `docker compose logs -f api` |
 | ری‌استارت | `docker compose restart api` |
 | بکاپ دستی | `/usr/local/bin/feranocar-backup` |
+| تست بازگردانی بکاپ (ماهانه) | `/opt/feranocar/deploy/verify-backup.sh` |
+| گزارش امنیتی | `docker run --rm --entrypoint node -v /opt/feranocar:/audit -w /audit feranocar-api security/audit.js --live https://feranocar.com --user … --pass … --report /tmp/audit.json` |
 | ورود به دیتابیس (ترمینال) | `docker compose exec db psql -U havale havale` |
 | ورود به دیتابیس (گرافیکی) | `http://45.94.213.252:8443` — بخش «مدیریت دیتابیس» |
 | مصرف منابع | `docker stats --no-stream` |
