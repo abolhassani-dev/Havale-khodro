@@ -85,6 +85,17 @@ fi
 [ -f frontend/index.html ] || { echo "✗ frontend/index.html is missing — stopping." >&2; exit 1; }
 [ -f .env ]                || { echo "✗ .env is missing — stopping." >&2; exit 1; }
 
+# The database panel's password file must be readable by nginx's worker, which
+# runs as `nginx` inside the container and not as root. At 600 the password
+# prompt still appears and the *correct* password then returns 500 — a failure
+# that looks like a broken panel and is a file mode. Fixed here rather than
+# reported, because there is exactly one right answer: the file holds a hash,
+# and its directory is root-only.
+if [ -f deploy/nginx/.htpasswd ] && [ "$(stat -c '%a' deploy/nginx/.htpasswd)" != "644" ]; then
+  echo "→ fixing deploy/nginx/.htpasswd permissions (must be readable by nginx)"
+  chmod 644 deploy/nginx/.htpasswd
+fi
+
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
 docker compose up -d --build

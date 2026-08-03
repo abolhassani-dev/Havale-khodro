@@ -455,8 +455,16 @@ ls -lh /var/backups/feranocar/
 ```bash
 read -r -s -p 'یک رمز قوی برای پنل دیتابیس: ' P; echo
 printf 'dbadmin:%s\n' "$(openssl passwd -apr1 "$P")" > /opt/feranocar/deploy/nginx/.htpasswd
-chmod 600 /opt/feranocar/deploy/nginx/.htpasswd; unset P
+chmod 644 /opt/feranocar/deploy/nginx/.htpasswd; unset P
 ```
+
+> **چرا ۶۴۴ و نه ۶۰۰؟** نسخه‌ی اول این سند `600` می‌گفت و اشتباه بود: پروسه‌ی کارگر nginx
+> داخل کانتینر با کاربر `nginx` اجرا می‌شود، نه `root` — پس فایلی که فقط برای root
+> خواندنی باشد را نمی‌تواند باز کند. نتیجه‌اش این بود که پنجره‌ی رمز درست می‌آمد ولی
+> **بعد از زدن رمزِ درست، خطای ۵۰۰** می‌داد. محتوای این فایل رمز نیست، هشِ رمز است، و
+> پوشه‌اش هم فقط با root نوشتنی است — پس ۶۴۴ امن است.
+>
+> اگر قبلاً ۶۰۰ زده‌اید: `chmod 644 /opt/feranocar/deploy/nginx/.htpasswd`
 
 **۲. پورت را در فایروال باز کنید:**
 
