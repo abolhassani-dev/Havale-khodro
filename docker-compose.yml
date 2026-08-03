@@ -94,6 +94,17 @@ services:
   certbot:
     image: certbot/certbot:latest
     profiles: ['certs']
+    # The host's network, not Docker's.
+    #
+    # Docker gives containers an embedded resolver that forwards to whatever
+    # the daemon was told to use, and on this server that path could not
+    # resolve Let's Encrypt at all while the host resolved it every time. The
+    # difference is not worth debugging twice a year: certbot needs exactly
+    # one thing from the network — to reach the ACME API — and the host can
+    # already do that. It binds no port, so sharing the host network costs
+    # nothing and removes a whole class of failure from certificate renewal,
+    # which runs unattended and whose failure is silent until the site breaks.
+    network_mode: host
     volumes:
       - certbot-webroot:/var/www/certbot
       - certbot-certs:/etc/letsencrypt

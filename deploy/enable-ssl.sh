@@ -242,7 +242,10 @@ if [ ! -f /etc/cron.d/feranocar-certbot ]; then
   echo "→ installing the renewal cron job"
   cat > /etc/cron.d/feranocar-certbot <<CRON
 # 03:17, twice a week. certbot decides for itself whether renewal is due.
-17 3 * * 1,4 root cd $ROOT && docker compose run --rm --entrypoint certbot certbot renew --quiet && docker compose exec -T web nginx -s reload
+#
+# Output goes to a log rather than to /dev/null: a renewal that fails is
+# otherwise completely silent for ninety days, and then the site breaks.
+17 3 * * 1,4 root cd $ROOT && (docker compose run --rm --entrypoint certbot certbot renew && docker compose exec -T web nginx -s reload) >> /var/log/feranocar-certbot.log 2>&1
 CRON
   chmod 644 /etc/cron.d/feranocar-certbot
 fi

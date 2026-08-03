@@ -396,30 +396,28 @@ cd /opt/feranocar && docker compose run --rm --entrypoint certbot certbot renew 
 
 انتظار: `Congratulations, all simulated renewals succeeded`.
 
-### اگر `--dry-run` با «Failed to resolve» شکست خورد
+### اگر «Failed to resolve» دیدید
 
-تمدید خودکار به DNS داخل کانتینر وابسته است. داکر به کانتینرها resolver خودش را
-می‌دهد که به `systemd-resolved` میزبان فوروارد می‌کند، و آن مسیر روی شبکه‌های ایران
-ناپایدار است — گاهی جواب می‌دهد، گاهی `Try again`. برای صدور یک‌باره‌ی گواهی می‌شود
-دوباره تلاش کرد؛ برای تمدید خودکاری که سه ماه دیگر بی‌حضور شما اجرا می‌شود، نمی‌شود.
+سرویس `certbot` عمداً روی **شبکه‌ی خود میزبان** اجرا می‌شود (`network_mode: host` در
+`docker-compose.yml`)، چون شبکه‌ی داخلی داکر روی این سرور نتوانست آدرس Let's Encrypt را
+حل کند در حالی که خود میزبان هر بار حل می‌کرد.
 
-resolverهای ثابت به داکر بدهید:
+اگر باز هم این خطا را دیدید، اول ببینید مشکل کجاست:
 
 ```bash
-cat > /etc/docker/daemon.json <<'JSON'
-{ "dns": ["178.22.122.100", "185.51.200.2"] }
-JSON
-systemctl restart docker
-cd /opt/feranocar && docker compose up -d
+echo '--- host:'
+getent hosts acme-v02.api.letsencrypt.org || echo FAIL
+echo '--- container:'
+cd /opt/feranocar
+docker compose run --rm --entrypoint sh certbot -c "getent hosts acme-v02.api.letsencrypt.org || echo FAIL"
 ```
 
-بعد دوباره `--dry-run` را بزنید تا سبز شود.
+- **میزبان ✓ و کانتینر ✗** → `network_mode: host` اعمال نشده؛ `docker compose up -d` بزنید.
+- **هر دو ✗** → DNS خودِ سرور. `/etc/resolv.conf` را نگاه کنید و resolver دیگری بدهید.
 
-> این دو آدرس **شکن** است که از داخل ایران پایدار جواب می‌دهد. `1.1.1.1` و `8.8.8.8` روی
-> بعضی شبکه‌ها کار می‌کنند و روی بعضی نه.
->
-> `systemctl restart docker` همه‌ی کانتینرها را چند ثانیه می‌خواباند؛ دیتابیس در volume
-> است و چیزی از دست نمی‌رود.
+> اگر قبلاً `/etc/docker/daemon.json` ساخته‌اید و کار نکرد، حذفش کنید — resolverهایی که
+> از میزبان در دسترس‌اند لزوماً از داخل کانتینر در دسترس نیستند، و آن فایل می‌تواند وضع
+> را بدتر کند: `rm /etc/docker/daemon.json && systemctl restart docker`
 
 > **این را جدی بگیرید.** تمدید ناموفق تا روزی که گواهی منقضی شود هیچ نشانه‌ای ندارد.
 > برای همین `security/audit.js --live` هر بار تاریخ انقضای گواهی را می‌خواند و اگر زیر
