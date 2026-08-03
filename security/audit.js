@@ -786,22 +786,43 @@ async function checkLive(base) {
   const leaked = strangers.filter((h) => /09\d{9}/.test(JSON.stringify(h)));
   const identity = strangers.filter((h) => h.agency && (h.agency.name || h.agency.code));
 
-  add({
-    severity: leaked.length ? 'critical' : 'info',
-    check: 'live:masking',
-    title: leaked.length
-      ? `${leaked.length} listings carry a phone number without a recorded reveal`
-      : `no phone number in ${strangers.length} unrevealed listings`,
-    detail: leaked.length ? 'Every number in the database is readable with a login and the network tab.' : null,
-  });
-  add({
-    severity: identity.length ? 'high' : 'info',
-    check: 'live:masking',
-    title: identity.length
-      ? `${identity.length} unrevealed listings expose the posting agency's identity`
-      : 'poster identity is hidden until the reveal is recorded',
-    detail: identity.length ? 'The name alone finds the phone number in one web search.' : null,
-  });
+  // An empty sample is not a pass.
+  //
+  // This is the rule the business rests on, and "no phone number in 0
+  // listings" is a sentence that reads like success and means nothing was
+  // examined. The browser smoke test already refuses to pass on an empty set;
+  // this check shipped without the same guard and reported a green result on
+  // a server whose listings had all expired.
+  if (!strangers.length) {
+    add({
+      severity: 'medium',
+      check: 'live:masking',
+      title: 'the masking test had nothing to test — no listings from other agencies were visible',
+      detail:
+        `The list returned ${items.length} rows, none of them another agency's unrevealed listing. ` +
+        'This is the rule everything else protects; it must be exercised against real data.',
+      fix: 'Post a listing from a second agency, then re-run. Until then, treat masking as unverified on this server.',
+    });
+  } else {
+    add({
+      severity: leaked.length ? 'critical' : 'info',
+      check: 'live:masking',
+      title: leaked.length
+        ? `${leaked.length} listings carry a phone number without a recorded reveal`
+        : `no phone number in ${strangers.length} unrevealed listings`,
+      detail: leaked.length
+        ? 'Every number in the database is readable with a login and the network tab.'
+        : null,
+    });
+    add({
+      severity: identity.length ? 'high' : 'info',
+      check: 'live:masking',
+      title: identity.length
+        ? `${identity.length} unrevealed listings expose the posting agency's identity`
+        : `poster identity hidden across ${strangers.length} listings`,
+      detail: identity.length ? 'The name alone finds the phone number in one web search.' : null,
+    });
+  }
 
   // --- SQL injection, actually sent ---
   const payloads = [
