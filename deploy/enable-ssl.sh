@@ -60,6 +60,34 @@ if [ -n "$SERVER_IP" ] && [ "$DOMAIN_IP" != "$SERVER_IP" ]; then
 fi
 echo "  $DOMAIN → $DOMAIN_IP ✓"
 
+# ---- 1.5 the container must be able to reach Let's Encrypt ----
+#
+# The host resolving your own domain proves nothing about what a container can
+# resolve: Docker gives containers its own resolver, and when the host uses
+# systemd-resolved (a loopback address a container cannot reach) Docker falls
+# back to public resolvers — which are filtered on many Iranian networks. The
+# result is certbot dying on "Failed to resolve acme-v02.api.letsencrypt.org",
+# which reads like a Let's Encrypt outage and is a local DNS setting.
+echo "→ checking that a container can reach Let's Encrypt"
+if ! docker compose run --rm --entrypoint sh certbot \
+     -c "getent hosts acme-v02.api.letsencrypt.org >/dev/null" 2>/dev/null; then
+  echo "✗ containers on this machine cannot resolve acme-v02.api.letsencrypt.org." >&2
+  echo >&2
+  echo "  The host can resolve names, so this is Docker's resolver, not your DNS." >&2
+  echo "  Give the Docker daemon resolvers that work from here:" >&2
+  echo >&2
+  echo "    cat > /etc/docker/daemon.json <<'JSON'" >&2
+  echo "    { \"dns\": [\"178.22.122.100\", \"185.51.200.2\"] }" >&2
+  echo "    JSON" >&2
+  echo "    systemctl restart docker && cd $ROOT && docker compose up -d" >&2
+  echo >&2
+  echo "  (Those two are Shecan, which resolves from inside Iran. 1.1.1.1 and" >&2
+  echo "   8.8.8.8 work on some networks and are filtered on others — try them" >&2
+  echo "   first if you prefer.) Then run this script again." >&2
+  exit 1
+fi
+echo "  reachable ✓"
+
 # ---- 2. the certificate ----
 have_cert() {
   docker compose run --rm --entrypoint sh certbot \
