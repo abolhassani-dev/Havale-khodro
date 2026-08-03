@@ -697,6 +697,16 @@ async function checkLive(base) {
   const setCookie = login.headers.get('set-cookie') || '';
   cookie = setCookie.split(';')[0];
 
+  // The server says exactly why in Persian — "the password is wrong", "the
+  // account is locked", "this account is suspended". Reporting the bare status
+  // code throws that away and leaves someone guessing at their own password.
+  let reason = null;
+  if (login.status !== 200) {
+    try {
+      reason = JSON.parse(await login.clone().text())?.error?.message || null;
+    } catch { /* not JSON; the status alone will have to do */ }
+  }
+
   add({
     severity: login.status === 200 ? 'info' : login.status === 429 ? 'low' : 'high',
     check: 'live:auth',
@@ -705,14 +715,16 @@ async function checkLive(base) {
         ? 'sign-in works'
         : login.status === 429
           ? 'sign-in is rate-limited right now — the signed-in checks were skipped'
-          : `sign-in returned ${login.status}`,
+          : `sign-in returned ${login.status}${reason ? ` — ${reason}` : ''}`,
     // The burst test at the end of a previous run trips the limiter for the
     // rest of its window. Saying so beats leaving someone to conclude their
     // password is wrong.
     detail:
       login.status === 429
         ? 'Expected if this audit ran within the last 15 minutes — its own brute-force test spent the allowance. Wait, or restart the API.'
-        : null,
+        : login.status === 401
+          ? 'Wrong password, or the account is locked after five failed attempts. The signed-in checks were skipped.'
+          : null,
   });
   if (login.status !== 200) return;
 
@@ -927,9 +939,18 @@ function report() {
     console.log("  node security/audit.js --live https://feranocar.com --user alborz --pass '…'\n");
   }
 
-  const out = path.join(ROOT, 'security', 'last-report.json');
-  fs.writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), findings }, null, 2));
-  console.log(`گزارش کامل: ${rel(out)}\n`);
+  // The report is a convenience; the audit above is the result. Losing the
+  // file must not lose the run — this crashed after printing a clean report
+  // because the container runs as an unprivileged user and the mounted
+  // directory belongs to root.
+  const out = flag('report') || path.join(ROOT, 'security', 'last-report.json');
+  try {
+    fs.writeFileSync(String(out), JSON.stringify({ at: new Date().toISOString(), findings }, null, 2));
+    console.log(`گزارش کامل: ${out}\n`);
+  } catch (err) {
+    console.log(`(گزارش JSON ذخیره نشد: ${err.code || err.message} — خروجی بالا کامل است)`);
+    console.log(`  برای ذخیره: --report /tmp/audit.json\n`);
+  }
 
   // Non-zero exit on anything that matters, so CI can gate on it.
   const blocking = findings.filter((f) => f.severity === 'critical' || f.severity === 'high');
