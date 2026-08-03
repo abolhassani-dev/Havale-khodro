@@ -68,6 +68,25 @@ services:
       retries: 5
     networks: [appnet]
 
+  # Database administration — Adminer, the phpMyAdmin equivalent for Postgres.
+  #
+  # Bound to 127.0.0.1 on purpose: a database panel reachable from the
+  # internet is the single fastest way to lose everything in this system, and
+  # no password on the panel changes that. It is reachable only through an
+  # SSH tunnel (docs/deployment.md, «مدیریت دیتابیس») — so the thing that
+  # protects the data is the same SSH key that protects the server.
+  adminer:
+    image: adminer:4
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8081:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [appnet]
+
   # Renewal runs from cron on the host (see docs/deployment.md). This service
   # exists so the first certificate can be issued with one command.
   certbot:
