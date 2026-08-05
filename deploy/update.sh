@@ -105,6 +105,20 @@ if [ -f deploy/nginx/.htpasswd ] && [ "$(stat -c '%a' deploy/nginx/.htpasswd)" !
   chmod 644 deploy/nginx/.htpasswd
 fi
 
+# A stale rate limit locks real people out.
+#
+# The value this project shipped with first was 100 requests per fifteen
+# minutes, which cannot serve a working panel: one dashboard view is five to
+# seven API calls, so an administrator hit the wall in about fifteen clicks and
+# was told to go away mid-task. The code now enforces a floor of 600 regardless
+# of .env, but an .env that still says 100 is confusing to read, so it is
+# corrected here too.
+CURRENT_LIMIT="$(grep -E '^RATE_LIMIT_MAX=' .env 2>/dev/null | cut -d= -f2 || true)"
+if [ -n "$CURRENT_LIMIT" ] && [ "$CURRENT_LIMIT" -lt 600 ] 2>/dev/null; then
+  echo "→ raising RATE_LIMIT_MAX from $CURRENT_LIMIT to 1200 (the old value locks out normal use)"
+  sed -i 's|^RATE_LIMIT_MAX=.*|RATE_LIMIT_MAX=1200|' .env
+fi
+
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
 docker compose up -d --build

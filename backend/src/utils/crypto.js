@@ -25,6 +25,21 @@ const crypto = require('crypto');
  * tell the two apart instead of guessing.
  */
 
+/**
+ * Off unless a key is configured.
+ *
+ * Encryption at rest was added and then switched off again at the owner's
+ * request: it is a real protection against a stolen dump, and it is also one
+ * more thing that can go wrong at a moment when the priority is a system that
+ * simply works. Nothing about it is lost — set DATA_ENCRYPTION_KEY, run
+ * `node scripts/encrypt-existing.js`, and every column converts in place.
+ *
+ * With no key, values pass through untouched and the blind index is the value
+ * itself, so the unique constraint on a phone number behaves exactly as it did
+ * before any of this existed.
+ */
+const ENABLED = Boolean(process.env.DATA_ENCRYPTION_KEY);
+
 const VERSION = 'v1';
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12; // 96 bits, the size GCM is defined for
@@ -47,13 +62,8 @@ function key() {
   const raw = process.env.DATA_ENCRYPTION_KEY;
 
   if (!raw) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'DATA_ENCRYPTION_KEY is required in production. Generate one with: openssl rand -hex 32'
-      );
-    }
-    // Development and tests: a fixed key, so a restart can still read what the
-    // previous run wrote. Never reachable in production, per the check above.
+    // Only reached for reading values written while a key *was* set. A fixed
+    // development key keeps tests reproducible across restarts.
     cachedKey = crypto.scryptSync('development-only-key', 'feranocar', 32);
     return cachedKey;
   }
@@ -67,6 +77,7 @@ function key() {
 
 /** Encrypts a value. `null` and `''` pass through — an absent number is not a secret. */
 function encrypt(plain) {
+  if (!ENABLED) return plain ?? null;
   if (plain === null || plain === undefined || plain === '') return plain ?? null;
 
   const iv = crypto.randomBytes(IV_BYTES);
@@ -124,7 +135,10 @@ function isEncrypted(value) {
  */
 function blindIndex(value) {
   if (value === null || value === undefined || value === '') return null;
+  // With encryption off the index is the plain value, so the unique constraint
+  // and lookups by phone behave exactly as they did before encryption existed.
+  if (!ENABLED) return String(value);
   return crypto.createHmac('sha256', key()).update(String(value)).digest('hex');
 }
 
-module.exports = { encrypt, decrypt, isEncrypted, blindIndex };
+module.exports = { encrypt, decrypt, isEncrypted, blindIndex, ENABLED };

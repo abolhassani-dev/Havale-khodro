@@ -10,6 +10,10 @@ const { encrypt, decrypt, isEncrypted, blindIndex } = require('../../src/utils/c
 describe('column encryption', () => {
   const PHONE = '09121234567';
 
+  // The module reads DATA_ENCRYPTION_KEY once at load, so the mode is fixed
+  // for the process. Tests run with a key set (see tests/setup.js); the
+  // disabled path is covered by loading a fresh copy without one.
+
   it('round-trips a value', () => {
     expect(decrypt(encrypt(PHONE))).toBe(PHONE);
   });
@@ -51,6 +55,27 @@ describe('column encryption', () => {
     expect(decrypt(PHONE)).toBe(PHONE);
     expect(isEncrypted(PHONE)).toBe(false);
     expect(isEncrypted(encrypt(PHONE))).toBe(true);
+  });
+
+  describe('with no key configured', () => {
+    it('stores and indexes the value unchanged, so nothing breaks', () => {
+      // Encryption is opt-in. With it off the system must behave exactly as it
+      // did before the feature existed — including the unique constraint on a
+      // phone number, which is what the blind index carries.
+      jest.resetModules();
+      const saved = process.env.DATA_ENCRYPTION_KEY;
+      delete process.env.DATA_ENCRYPTION_KEY;
+      const plain = require('../../src/utils/crypto');
+
+      expect(plain.ENABLED).toBe(false);
+      expect(plain.encrypt(PHONE)).toBe(PHONE);
+      expect(plain.decrypt(PHONE)).toBe(PHONE);
+      expect(plain.blindIndex(PHONE)).toBe(PHONE);
+      expect(plain.blindIndex(PHONE)).not.toBe(plain.blindIndex('09121234568'));
+
+      if (saved) process.env.DATA_ENCRYPTION_KEY = saved;
+      jest.resetModules();
+    });
   });
 
   describe('blind index', () => {

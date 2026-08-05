@@ -12,4 +12,10 @@ process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret-not-used
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL || 'postgresql://havale:havale@127.0.0.1:5432/havale_test';
 
+// Encryption is opt-in in production and on in tests, so both the middleware
+// and the masking rules are exercised in their stricter configuration.
+process.env.DATA_ENCRYPTION_KEY =
+  process.env.DATA_ENCRYPTION_KEY ||
+  '0000000000000000000000000000000000000000000000000000000000000001';
+
 jest.setTimeout(15000);

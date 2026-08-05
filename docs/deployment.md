@@ -559,6 +559,61 @@ docker compose up -d api
 
 ---
 
+## دیده‌بان — قبل از کاربر بفهمیم
+
+هر خرابی این پروژه خودش را به‌صورت یک صفحه‌ی سفید یا خطای گیج‌کننده نشان داد، ساعت‌ها
+بعد از علت واقعی. و علت تمام مدت روی سرور قابل دیدن بود: کانتینری که بالا نبود، دیسکی که
+پر شده بود، دیتابیسی که اتصال قبول نمی‌کرد.
+
+`deploy/watchdog.sh` هر پنج دقیقه این هفت مورد را می‌بیند و اگر خراب بود، **با دستور
+رفعش** به تلگرام می‌فرستد:
+
+| بررسی | چه چیزی را می‌گیرد |
+|---|---|
+| کانتینرها (`db`, `api`, `web`) | سرویسی که خوابیده یا ری‌استارت لوپ خورده |
+| اتصال دیتابیس | کانتینر بالا ولی Postgres جواب نمی‌دهد — سالم‌ترین‌شکلِ یک خرابی |
+| سلامت API | مهاجرت گیرکرده، خطای بالا آمدن |
+| دیسک | بالای ۸۵٪ — دیسک پر، Postgres را می‌خواباند |
+| حافظه | زیر ۸٪ آزاد — کرنل معمولاً Postgres را می‌کشد |
+| گواهی SSL | کمتر از ۲۰ روز مانده |
+| تازگی بکاپ | بیش از ۳۰ ساعت بکاپی گرفته نشده |
+
+**نصب:**
+
+```bash
+mkdir -p /var/lib/feranocar-watchdog
+cat > /etc/cron.d/feranocar-watchdog <<'CRON'
+*/5 * * * * root /opt/feranocar/deploy/watchdog.sh >> /var/log/feranocar-watchdog.log 2>&1
+CRON
+chmod 644 /etc/cron.d/feranocar-watchdog
+
+# آزمایش دستی
+/opt/feranocar/deploy/watchdog.sh
+```
+
+انتظار: `all checks passed`.
+
+> هر مشکل **یک بار** هشدار می‌دهد، نه هر پنج دقیقه — و وقتی برطرف شد یک پیام سبز
+> می‌فرستد. دیده‌بانی که خودش را تکرار کند، خاموش می‌شود؛ و دیده‌بانِ خاموش دیده‌بان نیست.
+
+### چرا کانتینرها خودشان بالا می‌مانند
+
+سه لایه، و هر سه باید باشند:
+
+```bash
+# ۱. داکر بعد از ریبوت سرور خودکار بالا می‌آید؟
+systemctl is-enabled docker          # انتظار: enabled
+
+# ۲. کانتینرها سیاست ری‌استارت دارند؟
+docker inspect -f '{{.Name}} {{.HostConfig.RestartPolicy.Name}}' $(docker compose ps -q)
+# انتظار: همه unless-stopped
+```
+
+لایه‌ی سوم همین دیده‌بان است — برای وقتی که سرویس بالاست ولی کار نمی‌کند، که سیاست
+ری‌استارت اصلاً متوجهش نمی‌شود.
+
+---
+
 ## مدیریت دیتابیس — Adminer
 
 معادل phpMyAdmin برای PostgreSQL، روی پورت اختصاصی **۸۴۴۳** و از بیرون سرور قابل
@@ -692,6 +747,7 @@ cd /opt/feranocar && docker compose up -d --force-recreate --no-deps web
 | ری‌استارت | `docker compose restart api` |
 | بکاپ دستی | `/usr/local/bin/feranocar-backup` |
 | تست بازگردانی بکاپ (ماهانه) | `/opt/feranocar/deploy/verify-backup.sh` |
+| بررسی سلامت کل سیستم | `/opt/feranocar/deploy/watchdog.sh` |
 | بکاپ کامل دستی | `/opt/feranocar/deploy/backup.sh daily` |
 | لاگ خطاها | پنل مدیریت ← لاگ خطاها |
 | گزارش امنیتی | `docker run --rm --entrypoint node -v /opt/feranocar:/audit -w /audit feranocar-api security/audit.js --live https://feranocar.com --user … --pass … --report /tmp/audit.json` |

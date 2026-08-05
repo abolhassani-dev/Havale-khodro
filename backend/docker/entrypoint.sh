@@ -20,12 +20,11 @@ set -e
 echo "→ applying migrations"
 npx prisma migrate deploy
 
-# Contact columns written before encryption existed. Idempotent and quick when
-# there is nothing to convert, so it lives here rather than in someone's
-# memory — a migration that has to be remembered is one that gets skipped on
-# the server that mattered.
-echo "→ encrypting any plaintext contact columns"
-node scripts/encrypt-existing.js
+# Contact encryption is opt-in and off by default. To turn it on: set
+# DATA_ENCRYPTION_KEY in .env and run `node scripts/encrypt-existing.js` once,
+# deliberately, when nothing else is going on. Deliberately not automatic —
+# a conversion that rewrites every contact column should be something someone
+# chose, on a day they are watching.
 
 if [ "$SEED_ON_START" = "true" ]; then
   # The first administrator and the car catalogue. Without these there is no way
