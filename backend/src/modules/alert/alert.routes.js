@@ -17,9 +17,17 @@ const router = Router();
 /**
  * The developer's view of what is breaking.
  *
- * Behind the `settings` permission — the same gate as the seat price and the
- * SMS switch — because a stack trace names internal paths and a message can
- * quote user input. Support staff have no business reading either.
+ * Nothing in the agency or admin panels calls this: error logs are an
+ * engineering concern, not an operations one, and putting a stack trace in
+ * front of whoever is approving seat orders serves nobody. It is here for the
+ * owner panel that will be built separately, and it is complete and tested so
+ * that panel is a page rather than a project.
+ *
+ * Recording and Telegram alerting run regardless — those are the parts that
+ * matter at 3am, and they need no interface at all.
+ *
+ * Behind the `settings` permission because a stack trace names internal paths
+ * and a message can quote user input.
  */
 router.use(authenticate, requirePasswordChanged, requirePermission('settings'));
 

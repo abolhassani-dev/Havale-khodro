@@ -128,7 +128,6 @@ function adminTitle(page) {
     'adm-catalog': 'کاتالوگ خودرو',
     'adm-monitor': 'مانیتورینگ',
     'adm-seats': 'درخواست‌های ظرفیت',
-    'adm-errors': 'لاگ خطاها',
     'adm-settings': 'تنظیمات',
   }[page] || '';
 }
@@ -159,7 +158,7 @@ const CLICK_KEYS = new Set([
   'newTicket', 'closeTicket',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'editAgent',
-  'grant', 'editSetting', 'errorDetail', 'resolveError', 'testAlert',
+  'grant', 'editSetting',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
