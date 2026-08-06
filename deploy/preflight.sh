@@ -220,10 +220,20 @@ else
     ok "داده‌ی نمونه خاموش است"
   fi
 
-  if have git && git -C "$ROOT" check-ignore -q .env 2>/dev/null; then
-    ok ".env در گیت نادیده گرفته می‌شود"
+  # `check-ignore` answers "is this ignored", and it exits non-zero for two
+  # completely different reasons: the file is not ignored, or there is no
+  # repository here at all. A tarball install has no .git, so the first
+  # version of this check reported "‎.env is tracked by git" on a server where
+  # git had never touched the directory — an alarming finding, entirely false.
+  #
+  # `ls-files --error-unmatch` asks the question we actually mean: is this file
+  # tracked? Outside a repository the answer is simply no.
+  if ! have git || [ ! -d "$ROOT/.git" ]; then
+    skip "پروژه مخزن گیت نیست — ‎.env نمی‌تواند به مخزن برود"
+  elif git -C "$ROOT" ls-files --error-unmatch .env >/dev/null 2>&1; then
+    bad ".env توسط گیت ردیابی می‌شود — رمزها به مخزن می‌روند" "git rm --cached .env && echo .env >> .gitignore"
   else
-    have git && bad ".env توسط گیت ردیابی می‌شود — رمزها به مخزن می‌روند" "git rm --cached .env && echo .env >> .gitignore"
+    ok ".env در گیت ردیابی نمی‌شود"
   fi
 fi
 
@@ -470,8 +480,14 @@ if docker compose exec -T db true 2>/dev/null; then
   if [ -n "$total" ] && [ "$total" -gt 0 ] 2>/dev/null; then
     if [ "${encd:-0}" = "$total" ]; then
       ok "همه‌ی $total شماره‌ی تماس در دیتابیس رمز شده‌اند"
+    elif [ "${encd:-0}" = "0" ] && [ -z "$(env_get DATA_ENCRYPTION_KEY)" ]; then
+      # Without a key nothing *can* be encrypted, so this is not a second
+      # problem — it is the consequence of the one already reported in §۳.
+      # Counting it twice makes the list of things to fix look longer than it
+      # is, and splits one action into two.
+      skip "شماره‌ها رمز نشده‌اند چون کلید تنظیم نشده — همان مورد بخش ۳ ($total شماره)"
     elif [ "${encd:-0}" = "0" ]; then
-      bad "هیچ‌کدام از $total شماره رمز نشده‌اند — در دامپ به‌صورت متن ساده‌اند" \
+      bad "کلید هست ولی هیچ‌کدام از $total شماره رمز نشده‌اند" \
           "docker compose exec -T api node scripts/encrypt-existing.js  (اول بکاپ)"
     else
       warn "$encd از $total شماره رمز شده — رمزنگاری نیمه‌کاره مانده" \
@@ -504,18 +520,35 @@ BR="${BACKUP_ROOT:-/var/backups/feranocar}"
   || warn "میان‌بر /usr/local/bin/feranocar-backup نصب نیست" "ln -s $ROOT/deploy/backup.sh /usr/local/bin/feranocar-backup"
 
 if [ -f /etc/cron.d/feranocar-backup ]; then
-  ok "کرون بکاپ نصب است"
+  # Which tiers are *actually* scheduled, read out of the file rather than
+  # assumed. The first version grepped for the literal string "backup.sh
+  # <tier>", which misses a cron line that calls the /usr/local/bin shortcut
+  # instead — so a working schedule was reported as three missing tiers.
+  cron_body="$(grep -vE '^[[:space:]]*#' /etc/cron.d/feranocar-backup 2>/dev/null)"
+  scheduled=""
   for tier in hourly daily weekly; do
-    grep -q "backup.sh $tier" /etc/cron.d/feranocar-backup \
-      || warn "لایه‌ی $tier در کرون بکاپ نیست" "docs/deployment.md گام ۹"
+    echo "$cron_body" | grep -qE "(backup\.sh|feranocar-backup)[[:space:]]+$tier([[:space:]]|$|>)" \
+      && scheduled="$scheduled $tier"
   done
+  scheduled="${scheduled# }"
+
+  if [ "$scheduled" = "hourly daily weekly" ]; then
+    ok "کرون بکاپ نصب است و هر سه لایه زمان‌بندی شده‌اند"
+  elif [ -n "$scheduled" ]; then
+    warn "کرون بکاپ فقط این لایه‌ها را دارد: $scheduled" "docs/deployment.md گام ۹ (خط ۴۴۹) — هر سه خط"
+  else
+    # A cron file that runs something else entirely. Show what, rather than
+    # asserting three separate missing tiers and leaving the reader to guess.
+    warn "کرون بکاپ نصب است ولی هیچ‌کدام از لایه‌های hourly/daily/weekly را اجرا نمی‌کند" \
+         "خط فعلی: $(echo "$cron_body" | grep -v '^[[:space:]]*$' | head -1)"
+  fi
 else
   bad "کرون بکاپ نصب نیست — هیچ بکاپ خودکاری گرفته نمی‌شود" "docs/deployment.md گام ۹ (خط ۴۴۹)"
 fi
 
 # A cron entry that exists but never produced a file is the failure mode that
 # looks exactly like success until the day you need to restore.
-newest="$(ls -1t "$BR"/*/*.tar.gz "$BR"/*/*.sql.gz "$BR"/*.sql.gz 2>/dev/null | head -1)"
+newest="$(ls -1t "$BR"/*/*.tar.gz "$BR"/*/*.sql.gz "$BR"/*.tar.gz "$BR"/*.sql.gz 2>/dev/null | head -1)"
 if [ -n "$newest" ]; then
   age_h=$(( ($(date +%s) - $(date -r "$newest" +%s)) / 3600 ))
   size="$(du -h "$newest" 2>/dev/null | cut -f1)"
@@ -524,10 +557,31 @@ if [ -n "$newest" ]; then
   else
     bad "آخرین بکاپ $age_h ساعت پیش است — کرون هست ولی کار نمی‌کند" "tail -30 /var/log/feranocar-backup.log"
   fi
+
+  # Reporting "hourly is empty / daily is empty / weekly is empty" right after
+  # "a backup was taken an hour ago" is three warnings that contradict the line
+  # above them, and it tells the reader nothing about where the file actually
+  # went. So: say where the backups are, then say what is missing.
+  tiers_found=""; tiers_missing=""
   for tier in hourly daily weekly; do
     n="$(ls -1 "$BR/$tier"/* 2>/dev/null | wc -l)"
-    [ "$n" -gt 0 ] && ok "لایه‌ی $tier: $n نسخه" || warn "لایه‌ی $tier خالی است" "هنوز نوبتش نرسیده یا کرون اجرا نشده"
+    if [ "$n" -gt 0 ]; then tiers_found="$tiers_found $tier($n)"; else tiers_missing="$tiers_missing $tier"; fi
   done
+  flat="$(ls -1 "$BR"/*.tar.gz "$BR"/*.sql.gz 2>/dev/null | wc -l)"
+
+  if [ -z "$tiers_missing" ]; then
+    ok "هر سه لایه پر است:$tiers_found"
+  elif [ -n "$tiers_found" ]; then
+    warn "لایه‌های پر:$tiers_found — هنوز خالی:$tiers_missing" "اگر تازه نصب شده، طبیعی است؛ فردا دوباره ببینید"
+  elif [ "$flat" -gt 0 ]; then
+    # This is the real shape of the problem when it happens: an older
+    # single-file backup is running fine, and the tiered one was never wired
+    # up. "Three empty tiers" describes it badly; this describes it.
+    warn "بکاپ‌ها تک‌لایه در $BR ذخیره می‌شوند ($flat فایل)، نه سه‌لایه" \
+         "کرون سه‌لایه‌ی گام ۹ را نصب کنید تا نسخه‌ی ساعتی/روزانه/هفتگی جدا نگه داشته شود"
+  else
+    warn "هیچ لایه‌ای پر نیست" "$ROOT/deploy/backup.sh daily"
+  fi
 else
   bad "هیچ فایل بکاپی در $BR نیست" "$ROOT/deploy/backup.sh daily"
 fi
