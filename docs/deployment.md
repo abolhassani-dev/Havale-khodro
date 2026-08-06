@@ -153,12 +153,28 @@ ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+
+# فایل swap — روی سروری با چند گیگ رم، مهم‌ترین تک‌کاری است که می‌شود کرد.
+#
+# بدون swap، کرنل موقع کمبود حافظه هیچ راهی جز کشتن یک پروسه ندارد، و
+# بزرگ‌ترین را می‌کشد: Postgres. همان «دیتابیس بی‌دلیل رفت». با swap،
+# می‌تواند حافظه‌ی سرد را موقتاً روی دیسک بگذارد، اوج مصرف را رد کند و
+# برش گرداند. دو گیگ از ۹۶ گیگ دیسک، تفاوت «ده ثانیه کندی» و
+# «دیتابیس رفت» را می‌خرد.
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+# فقط وقتی واقعاً لازم شد سراغ swap برود، نه به‌عنوان عادت.
+sysctl -w vm.swappiness=10
+echo 'vm.swappiness=10' >> /etc/sysctl.conf
 ```
 
 **بررسی:**
 
 ```bash
-ufw status && timedatectl | grep "Time zone"
+ufw status && timedatectl | grep "Time zone" && free -h
 ```
 
 انتظار: `Status: active` و `Asia/Tehran`.

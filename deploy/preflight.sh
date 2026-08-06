@@ -729,6 +729,41 @@ elif [ "${usage:-0}" -ge 85 ]; then warn "دیسک ${usage}% پر است" "docke
 else                                ok   "دیسک ${usage}% پر است"
 fi
 
+# Swap, on a server with a few gigabytes of RAM, is not about running from
+# disk — it is about what happens during a spike. With none, the kernel's only
+# way to reclaim memory is to kill something, and it kills the largest process,
+# which is Postgres. With even a small swap file it can page out cold memory
+# instead, ride out the spike, and page it back. A gigabyte of a 96GB disk buys
+# the difference between "slow for ten seconds" and "the database is gone".
+swap_kb="$(free -k | awk '/^Swap:/{print $2}')"
+if [ "${swap_kb:-0}" -eq 0 ] 2>/dev/null; then
+  warn "سرور اصلاً swap ندارد — موقع اوج مصرف، کرنل چاره‌ای جز کشتن یک پروسه ندارد (و بزرگ‌ترین را می‌کشد: دیتابیس)" \
+       "fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab && sysctl -w vm.swappiness=10 && echo 'vm.swappiness=10' >> /etc/sysctl.conf"
+else
+  ok "swap فعال است ($(free -h | awk '/^Swap:/{print $2}'))"
+fi
+
+# The limits are ceilings, not reservations — but their sum still has to leave
+# the host room to breathe, or the first time they are all approached at once
+# the machine is out of memory anyway and the limits bought nothing.
+if [ "${n_containers:-0}" -gt 0 ]; then
+  total_mb="$(free -m | awk '/^Mem:/{print $2}')"
+  limits_mb=0
+  for cid in $(docker compose ps -q 2>/dev/null); do
+    m="$(docker inspect -f '{{.HostConfig.Memory}}' "$cid" 2>/dev/null)"
+    [ "${m:-0}" -gt 0 ] 2>/dev/null && limits_mb=$((limits_mb + m / 1048576))
+  done
+  if [ "$limits_mb" -gt 0 ]; then
+    pct=$((limits_mb * 100 / total_mb))
+    if [ "$pct" -ge 85 ]; then
+      warn "مجموع سقف‌ها ${limits_mb}MB از ${total_mb}MB رم است (${pct}%) — جایی برای سیستم‌عامل نمی‌ماند" \
+           "در .env مقدارهای *_MEM_LIMIT را کم کنید، سپس ./deploy/update.sh"
+    else
+      ok "مجموع سقف‌ها ${limits_mb}MB از ${total_mb}MB رم (${pct}%) — جای کافی برای سیستم می‌ماند"
+    fi
+  fi
+fi
+
 mem_free="$(free | awk '/^Mem:/{printf "%d", $7*100/$2}')"
 if   [ "${mem_free:-100}" -le 8 ];  then bad  "فقط ${mem_free}% حافظه آزاد است — کرنل معمولاً Postgres را می‌کشد" "docker stats --no-stream"
 elif [ "${mem_free:-100}" -le 15 ]; then warn "${mem_free}% حافظه آزاد است" "docker stats --no-stream"

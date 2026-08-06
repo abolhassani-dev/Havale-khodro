@@ -69,7 +69,23 @@ services:
       # Built from the same credentials the database container uses, so the two
       # cannot drift apart. A connection string in one place and a password in
       # another is how a stack comes up unable to reach its own database.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-havale}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-havale}?schema=public
+      # The pool settings are explicit rather than left to Prisma's default of
+      # cores*2+1, because that default is derived from the machine it happens
+      # to boot on — three cores here, a different number after any resize, and
+      # the database's behaviour under load quietly changes with it.
+      #
+      #   connection_limit  ten is far more than this workload uses and far
+      #                     below Postgres's default max_connections of 100,
+      #                     so the API can never be the reason the database
+      #                     refuses new connections.
+      #   pool_timeout      a request that cannot get a connection in twenty
+      #                     seconds should fail and free its socket, not wait
+      #                     indefinitely behind whatever is stuck.
+      #   connect_timeout   without it, opening a connection to a database that
+      #                     is restarting can hang for the OS TCP timeout —
+      #                     minutes — which turns a five-second restart into a
+      #                     long outage for anyone unlucky enough to click.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-havale}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-havale}?schema=public&connection_limit=10&pool_timeout=20&connect_timeout=10
       # Kept below mem_limit on purpose. V8 only runs a full garbage collection
       # when it approaches its heap limit, so without this it happily grows
       # past the container's ceiling and gets killed by the kernel with no
