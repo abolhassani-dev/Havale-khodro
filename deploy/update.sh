@@ -44,11 +44,53 @@ else
 fi
 
 # ---- 2. bring in the new code, without replacing this directory ----
+# Files the server owns, which an update must never take back. Each one is
+# written on this machine and exists nowhere upstream in its server form:
+#   .env             the secrets, generated here
+#   .htpasswd        the database panel password
+#   ssl.conf         written by enable-ssl.sh; deleting it takes HTTPS down
+#   00-mode.conf     the HTTP→HTTPS switch, flipped to 1 by enable-ssl.sh
+#   adminer.conf     rewritten with TLS by enable-ssl.sh
+LOCAL_FILES=(
+  .env
+  deploy/nginx/.htpasswd
+  deploy/nginx/ssl.conf
+  deploy/nginx/00-mode.conf
+  deploy/nginx/adminer.conf
+)
+
 if [ -d .git ]; then
   echo "→ git pull ($BRANCH)"
   git fetch origin "$BRANCH"
-  git checkout "$BRANCH"
+
+  # `git reset --hard` restores every *tracked* file to what upstream says —
+  # and two of the files above are tracked: 00-mode.conf and adminer.conf ship
+  # in their pre-TLS form, because that is what a fresh install needs. On a
+  # server where enable-ssl.sh has already run, a plain reset therefore turns
+  # the HTTPS redirect back off and drops Adminer back to clear text, silently,
+  # as a *side effect of updating*. The tarball path below already excluded
+  # them; this path did not. So: hold them aside, reset, put them back.
+  KEEP="$(mktemp -d)"
+  trap 'rm -rf "$KEEP"' EXIT
+  for f in "${LOCAL_FILES[@]}"; do
+    [ -f "$f" ] || continue
+    mkdir -p "$KEEP/$(dirname "$f")"
+    cp -p "$f" "$KEEP/$f"
+  done
+
+  git checkout -B "$BRANCH" "origin/$BRANCH"
   git reset --hard "origin/$BRANCH"
+
+  for f in "${LOCAL_FILES[@]}"; do
+    [ -f "$KEEP/$f" ] || continue
+    if ! cmp -s "$KEEP/$f" "$f" 2>/dev/null; then
+      echo "  ↩ keeping this server's $f"
+    fi
+    cp -p "$KEEP/$f" "$f"
+  done
+  # Note: this means improvements to adminer.conf do not reach a TLS-enabled
+  # server through an update. They arrive by re-running deploy/enable-ssl.sh,
+  # which regenerates that file from its own template.
 else
   # Installed from a tarball. Extract to a temporary directory and copy the
   # contents over the top; `--strip-components=1` drops the wrapper directory
@@ -68,23 +110,14 @@ else
     echo "→ installing rsync"
     apt-get update -qq && apt-get install -y -qq rsync
   fi
-  # .htpasswd is created on the server and exists nowhere in the repository —
-  # without this exclude, every update would delete it and lock the database
-  # panel with a 500 until someone recreated it.
-  # Local state that must survive an update, and why each one:
-  #   .env             the secrets, generated on this machine
-  #   .htpasswd        the database panel password (see below)
-  #   ssl.conf         written by enable-ssl.sh; deleting it takes HTTPS down
-  #   00-mode.conf     the HTTP→HTTPS switch, flipped by enable-ssl.sh
-  #   adminer.conf     rewritten with TLS by enable-ssl.sh
-  rsync -a --delete \
-    --exclude='.env' \
-    --exclude='.git' \
-    --exclude='deploy/nginx/.htpasswd' \
-    --exclude='deploy/nginx/ssl.conf' \
-    --exclude='deploy/nginx/00-mode.conf' \
-    --exclude='deploy/nginx/adminer.conf' \
-    "$TMP/src/" "$ROOT/"
+  # Built from the one LOCAL_FILES list above rather than repeated here. The
+  # two lists used to be written out separately, and they drifted: this path
+  # protected 00-mode.conf and adminer.conf while the git path above quietly
+  # reverted them. One list, both paths.
+  EXCLUDES=(--exclude='.git')
+  for f in "${LOCAL_FILES[@]}"; do EXCLUDES+=("--exclude=$f"); done
+
+  rsync -a --delete "${EXCLUDES[@]}" "$TMP/src/" "$ROOT/"
 fi
 
 # ---- 3. refuse to restart into a broken state ----
