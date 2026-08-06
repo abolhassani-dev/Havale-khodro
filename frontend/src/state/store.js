@@ -81,6 +81,18 @@ export function isAdmin() {
  * this code runs on the viewer's machine.
  */
 const PERMISSIONS = {
+  // Everything a super admin has, plus the three the owner keeps: creating the
+  // accounts that run the system, the system alert devices, and the error log.
+  OWNER: {
+    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
+    subscriptions: true, seats: true, agents: true, monitoring: true,
+    bulkContacts: true, settings: true, catalog: true,
+    staff: true, systemAlerts: true, errorLog: true,
+  },
+  // Deliberately empty, and the same on the server. What a developer should be
+  // able to see is a decision to make when there is a real person to make it
+  // about; until then the account can sign in and do nothing.
+  DEVELOPER: {},
   SUPER_ADMIN: {
     tickets: true, reports: true, contactEdit: true, thirdStrike: true,
     subscriptions: true, seats: true, agents: true, monitoring: true,
