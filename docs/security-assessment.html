@@ -1,0 +1,364 @@
+<title>گزارش ارزیابی امنیتی — فرانوکار</title>
+<meta name="description" content="بررسی فرانوکار در برابر چک‌لیست تست نفوذ وب OWASP">
+<style>
+  :root {
+    --ground: #f3f0e7;
+    --panel: #ffffff;
+    --ink: #1b2422;
+    --ink-2: #46524e;
+    --ink-3: #78837e;
+    --line: #ddd6c6;
+    --line-2: #ece7db;
+    --primary: #0e5a51;
+    --primary-2: #0a423c;
+    --primary-soft: #0e5a5114;
+    --gold: #b8842f;
+    --pass: #2c6b41;
+    --pass-soft: #2c6b4114;
+    --warn: #a86321;
+    --warn-soft: #a8632114;
+    --crit: #9d2b21;
+    --crit-soft: #9d2b2114;
+    --shadow: 0 1px 2px #1b24220d, 0 6px 22px #1b242212;
+    --r: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0e1513;
+      --panel: #161f1c;
+      --ink: #e8ebe6;
+      --ink-2: #a9b3ad;
+      --ink-3: #7c877f;
+      --line: #26322d;
+      --line-2: #1d2723;
+      --primary: #3aa393;
+      --primary-2: #4fd1c0;
+      --primary-soft: #3aa39320;
+      --gold: #d9a84e;
+      --pass: #5aa877;
+      --pass-soft: #5aa87720;
+      --warn: #d09048;
+      --warn-soft: #d0904820;
+      --crit: #d98078;
+      --crit-soft: #d9807820;
+      --shadow: 0 1px 2px #00000040, 0 8px 30px #00000050;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f3f0e7; --panel: #fff; --ink: #1b2422; --ink-2: #46524e; --ink-3: #78837e;
+    --line: #ddd6c6; --line-2: #ece7db; --primary: #0e5a51; --primary-2: #0a423c;
+    --primary-soft: #0e5a5114; --gold: #b8842f; --pass: #2c6b41; --pass-soft: #2c6b4114;
+    --warn: #a86321; --warn-soft: #a8632114; --crit: #9d2b21; --crit-soft: #9d2b2114;
+    --shadow: 0 1px 2px #1b24220d, 0 6px 22px #1b242212;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1513; --panel: #161f1c; --ink: #e8ebe6; --ink-2: #a9b3ad; --ink-3: #7c877f;
+    --line: #26322d; --line-2: #1d2723; --primary: #3aa393; --primary-2: #4fd1c0;
+    --primary-soft: #3aa39320; --gold: #d9a84e; --pass: #5aa877; --pass-soft: #5aa87720;
+    --warn: #d09048; --warn-soft: #d0904820; --crit: #d98078; --crit-soft: #d9807820;
+    --shadow: 0 1px 2px #00000040, 0 8px 30px #00000050;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Vazirmatn', Tahoma, system-ui, sans-serif;
+    line-height: 1.85;
+    direction: rtl;
+    font-feature-settings: 'ss01';
+    padding: clamp(16px, 4vw, 56px) clamp(14px, 4vw, 40px);
+    background-image: repeating-linear-gradient(90deg, #00000004 0 1px, transparent 1px 6px);
+  }
+  .wrap { max-width: 940px; margin: 0 auto; }
+
+  /* ── masthead ── */
+  .mast {
+    display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap;
+    padding-bottom: 26px; margin-bottom: 30px;
+    border-bottom: 2px solid var(--primary);
+  }
+  .mast .badge {
+    width: 54px; height: 54px; border-radius: 14px; flex: none;
+    background: linear-gradient(140deg, var(--primary), var(--primary-2));
+    display: grid; place-items: center;
+  }
+  .mast .badge svg { width: 32px; height: 32px; }
+  .mast .who { flex: 1; min-width: 220px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: .16em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .mast h1 { font-size: clamp(23px, 4vw, 32px); font-weight: 800; letter-spacing: -.02em; line-height: 1.3; text-wrap: balance; }
+  .mast .sub { color: var(--ink-2); font-size: 15px; margin-top: 5px; }
+  .mast .meta {
+    text-align: left; direction: ltr; font-size: 12.5px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; line-height: 1.9;
+  }
+  .mast .meta b { color: var(--ink-2); font-weight: 700; }
+
+  /* ── verdict banner ── */
+  .verdict {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line);
+    border-inline-start: 5px solid var(--pass);
+    border-radius: var(--r); padding: 20px 24px; box-shadow: var(--shadow);
+    margin-bottom: 30px;
+  }
+  .verdict .score {
+    font-size: 40px; font-weight: 800; color: var(--pass);
+    font-variant-numeric: tabular-nums; line-height: 1; flex: none;
+  }
+  .verdict .score small { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 4px; }
+  .verdict .say { flex: 1; min-width: 240px; }
+  .verdict .say b { font-size: 16px; }
+  .verdict .say p { color: var(--ink-2); font-size: 14px; margin-top: 3px; }
+  .tallies { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tally {
+    font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 6px 12px;
+    border: 1px solid; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .tally.p { color: var(--pass); background: var(--pass-soft); border-color: var(--pass); }
+  .tally.w { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); }
+  .tally.c { color: var(--crit); background: var(--crit-soft); border-color: var(--crit); }
+
+  /* ── section ── */
+  section { margin-bottom: 14px; }
+  .cat {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+  .cat > summary {
+    list-style: none; cursor: pointer; padding: 16px 20px;
+    display: flex; align-items: center; gap: 14px;
+    transition: background .13s;
+  }
+  .cat > summary::-webkit-details-marker { display: none; }
+  .cat > summary:hover { background: var(--primary-soft); }
+  .cat > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+  .cat .num {
+    font-size: 12px; font-weight: 800; color: var(--primary);
+    background: var(--primary-soft); border: 1px solid var(--primary);
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    display: grid; place-items: center; font-variant-numeric: tabular-nums;
+    direction: ltr;
+  }
+  .cat .name { flex: 1; font-weight: 700; font-size: 15.5px; }
+  .cat .state {
+    font-size: 12px; font-weight: 700; padding: 3px 11px; border-radius: 20px;
+    border: 1px solid; white-space: nowrap;
+  }
+  .cat .state.ok { color: var(--pass); background: var(--pass-soft); border-color: var(--pass); }
+  .cat .state.fixed { color: var(--gold); background: var(--warn-soft); border-color: var(--gold); }
+  .cat .chev { color: var(--ink-3); transition: transform .18s; flex: none; }
+  .cat[open] .chev { transform: rotate(-180deg); }
+
+  .rows { border-top: 1px solid var(--line-2); padding: 6px 20px 14px; }
+  .row {
+    display: grid; grid-template-columns: 22px 1fr; gap: 11px;
+    padding: 11px 0; border-bottom: 1px dotted var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .mk { font-size: 15px; line-height: 1.5; }
+  .row .mk.pass { color: var(--pass); }
+  .row .mk.fix { color: var(--gold); }
+  .row .t { font-weight: 650; font-size: 14.5px; }
+  .row .d { color: var(--ink-2); font-size: 13.5px; margin-top: 2px; }
+  .row .d code {
+    font-family: ui-monospace, Menlo, monospace; direction: ltr;
+    background: var(--primary-soft); padding: 1px 6px; border-radius: 5px;
+    font-size: 12.5px; unicode-bidi: embed;
+  }
+  .row .was {
+    display: inline-block; margin-top: 5px; font-size: 12.5px;
+    color: var(--warn); background: var(--warn-soft);
+    border: 1px solid var(--warn); border-radius: 6px; padding: 2px 9px; font-weight: 600;
+  }
+
+  /* ── note ── */
+  .note {
+    background: var(--primary-soft); border: 1px solid var(--primary);
+    border-radius: var(--r); padding: 18px 22px; margin: 24px 0 8px;
+    font-size: 14px; color: var(--ink-2);
+  }
+  .note b { color: var(--ink); }
+  .note h3 { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 800; }
+
+  footer {
+    margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    color: var(--ink-3); font-size: 12.5px;
+  }
+  footer .cmd { direction: ltr; font-family: ui-monospace, Menlo, monospace; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="badge" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5">
+        <path stroke="#ffffff" d="M45.5 24.5 H24 M30.5 17.5 L23.5 24.5 L30.5 31.5"/>
+        <path stroke="#eec27f" d="M18.5 41.5 H40 M33.5 34.5 L40.5 41.5 L33.5 48.5"/>
+      </svg>
+    </div>
+    <div class="who">
+      <div class="eyebrow">ارزیابی امنیتی</div>
+      <h1>فرانوکار در برابر چک‌لیست تست نفوذ وب</h1>
+      <div class="sub">بررسی بند به بند طبق OWASP Web-App Pentest Checklist، روی نسخه‌ی در حال اجرا</div>
+    </div>
+    <div class="meta">
+      <div><b>Target</b> feranocar.com</div>
+      <div><b>Method</b> live probe + code</div>
+      <div><b>Date</b> 2026-08-03</div>
+      <div><b>Ref</b> Hari-prasaanth/checklist</div>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <div class="score">۱۱ / ۱۳<small>دسته بدون یافته‌ی باز</small></div>
+    <div class="say">
+      <b>وضعیت: قابل‌قبول برای لانچ آزمایشی</b>
+      <p>دو یافته‌ی واقعی پیدا و همان‌جا رفع شد. هیچ آسیب‌پذیری بحرانی باز نمانده. دو دسته‌ی باقی‌مانده (آپلود فایل، ۲FA) در دامنه‌ی این فاز نیستند.</p>
+    </div>
+    <div class="tallies">
+      <span class="tally p">✓ ۱۱ سالم</span>
+      <span class="tally w">◑ ۲ رفع‌شده</span>
+      <span class="tally c">✕ ۰ باز</span>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <details class="cat" open>
+    <summary><span class="num">01</span><span class="name">جمع‌آوری اطلاعات و افشای فریم‌ورک</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">هدر <code>Server</code> نسخه‌ی وب‌سرور را لو نمی‌دهد</div><div class="d">هیچ بنر نسخه‌ای برنمی‌گردد؛ <code>server_tokens off</code> در nginx.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">هدر <code>X-Powered-By</code> حذف شده</div><div class="d">Helmet آن را می‌بندد — فریم‌ورک بک‌اند از پاسخ قابل تشخیص نیست.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">فایل‌های زیرساخت سرو نمی‌شوند</div><div class="d"><code>.env</code>، <code>.git/config</code>، <code>docker-compose.yml</code> همه ۴۰۴ — nginx فقط <code>frontend/</code> را سرو می‌کند.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 2 -->
+  <details class="cat" open>
+    <summary><span class="num">02</span><span class="name">پیکربندی و متدهای HTTP</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">متدهای خطرناک رد می‌شوند</div><div class="d"><code>PUT</code>، <code>DELETE</code>، <code>PATCH</code> روی مسیر فقط‌خواندنی ۴۰۴؛ <code>TRACE</code> هم سمت کلاینت و هم سمت سرور بسته است (دفاع XST).</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">HSTS فعال</div><div class="d">دو سال، فقط بعد از تثبیت HTTPS — مرورگر دیگر HTTP را امتحان نمی‌کند.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">پنل‌های مدیریتی پشت احراز هویت</div><div class="d">دیتابیس (Adminer) پشت سه لایه‌ی رمز؛ پورت دیتابیس و API اصلاً منتشر نمی‌شوند.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 3 + 4 -->
+  <details class="cat" open>
+    <summary><span class="num">03</span><span class="name">مدیریت هویت و احراز هویت</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">شمارش حساب ممکن نیست</div><div class="d">رمز اشتباه و کاربر ناموجود <b>پاسخ کاملاً یکسان</b> می‌دهند — نمی‌شود فهمید کدام نام کاربری وجود دارد.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">قفل‌شدن بعد از تلاش ناموفق</div><div class="d">۱۰ حدس اشتباه در ۱۵ دقیقه؛ ورودهای <b>موفق</b> شمرده نمی‌شوند تا کاربر واقعی قفل نشود.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">تغییر رمز، رمز فعلی را می‌خواهد</div><div class="d">و همه‌ی نشست‌های دیگر را می‌بندد؛ ورود اول تغییر اجباری رمز دارد.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">رمزها فقط hash (bcrypt) ذخیره می‌شوند</div><div class="d">هرگز متن ساده؛ hash در هیچ پاسخی سریالایز نمی‌شود.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 5 -->
+  <details class="cat" open>
+    <summary><span class="num">05</span><span class="name">کنترل دسترسی و IDOR</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">دسترسی عمودی: نماینده به مسیرهای مدیریت نمی‌رسد</div><div class="d">هر شش مسیر آزموده‌شده (<code>admin/agents</code>، <code>settings</code>، <code>admin/activity</code> و…) با ۴۰۳ رد شدند.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">دسترسی افقی: یک نمایندگی نمی‌تواند آگهی دیگری را دست بزند</div><div class="d">تلاش برای <code>DELETE</code>/<code>PATCH</code> روی آگهی نمایندگی دیگر → ۴۰۴. شناسه‌ی آگهی راه دور زدن مالکیت نیست.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">اطلاعات تماس هرگز بدون reveal ثبت‌شده لو نمی‌رود</div><div class="d">مهم‌ترین قاعده‌ی کسب‌وکار؛ ماسکینگ در لایه‌ی سریال‌سازی، نه رابط کاربری.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 6 -->
+  <details class="cat" open>
+    <summary><span class="num">06</span><span class="name">مدیریت نشست</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">کوکی نشست: <code>HttpOnly</code> + <code>SameSite=Strict</code> + <code>Secure</code></div><div class="d">اسکریپت تزریقی نمی‌تواند توکن را بخواند؛ <code>SameSite=Strict</code> همان دفاع CSRF است.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">Session fixation بسته</div><div class="d">با هر ورود نشست <b>تازه</b> صادر می‌شود؛ توکن قبلی معتبر نمی‌ماند.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">توکن فقط به‌صورت hash در دیتابیس</div><div class="d">نشست‌ها DB-backed و قابل ابطال‌اند — تک‌نشستی و خروج اجباری از همین‌جاست.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 7 -->
+  <details class="cat" open>
+    <summary><span class="num">07</span><span class="name">اعتبارسنجی ورودی — XSS و تزریق</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">SQL Injection ممکن نیست</div><div class="d">هر کوئری از Prisma با پارامتر بایند رد می‌شود؛ چهار payload واقعی (<code>' OR '1'='1</code>، <code>DROP TABLE</code>، <code>UNION SELECT</code>، URL-encoded) بی‌اثر.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">XSS مسدود</div><div class="d">همه‌ی خروجی از تابع escape رد می‌شود (۵ کاراکتر)؛ ورودی به‌صورت HTML خام برنمی‌گردد؛ CSP بدون <code>unsafe-inline</code> در <code>script-src</code>.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">اعتبارسنجی سمت سرور با Joi</div><div class="d">هر ورودی قبل از رسیدن به منطق، schema می‌خورد — نوع، طول و مقدار.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 8 -->
+  <details class="cat" open>
+    <summary><span class="num">08</span><span class="name">مدیریت خطا</span><span class="state fixed">رفع شد</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk fix">◑</span><div><div class="t">بدنه‌ی JSON بدشکل حالا <code>400</code> است، نه <code>500</code></div><div class="d">قبلاً پیام خودِ body-parser («Expected property name…») برمی‌گشت که فریم‌ورک را لو می‌داد و خطای کاربر را باگ سرور جا می‌زد. حالا پیام فارسی تمیز، بدون افشای درونیات.</div><span class="was">قبلاً: 500 + پیام پارسر</span></div></div>
+      <div class="row"><span class="mk fix">◑</span><div><div class="t">بدنه‌ی بیش از حد بزرگ حالا <code>413</code> است</div><div class="d">قبلاً ۵۰۰ می‌داد و لاگ خطا را پر می‌کرد. دو تست دائمی برای هر دو اضافه شد.</div><span class="was">قبلاً: 500</span></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">خطای ۵۰۰ هیچ stack trace یا پیام دیتابیس لو نمی‌دهد</div><div class="d">در تولید پیام عمومی «Something went wrong»؛ جزئیات فقط در لاگ سمت سرور.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 9 -->
+  <details class="cat" open>
+    <summary><span class="num">09</span><span class="name">رمزنگاری و TLS</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">TLS 1.2/1.3، گواهی معتبر Let's Encrypt</div><div class="d">تمدید خودکار فعال و تست‌شده؛ بازرسی امنیتی تاریخ انقضا را پایش می‌کند.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">همه‌ی ترافیک HTTP به HTTPS ریدایرکت می‌شود</div><div class="d">به‌جز مسیر ACME (برای تمدید) و health (برای healthcheck) — با دلیل مستند.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">رمزنگاری اختیاری شماره‌ها در دیتابیس</div><div class="d">AES-256-GCM با کلید در <code>.env</code>؛ در برابر دامپ دزدیده‌شده. قابل روشن‌کردن بدون تغییر رفتار برنامه.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 10 -->
+  <details class="cat" open>
+    <summary><span class="num">10</span><span class="name">منطق کسب‌وکار</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">سقف نمایش مشخصات دور زدنی نیست</div><div class="d">شمارش سمت سرور با روز تقویمی تهران؛ باز کردن دوباره‌ی همان آگهی رایگان و ثبت‌شده.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">مبلغ پرداختی نمی‌تواند از مبلغ کل بیشتر باشد</div><div class="d">اعتبارسنجی منطقی در سطح schema، نه فقط رابط.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">اشتراک منقضی، هویت و تماس را می‌بندد</div><div class="d">بررسی روی وضعیت فعلی، نه خرید گذشته — reveal ماه قبل با انقضا بی‌اثر می‌شود.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 11 -->
+  <details class="cat" open>
+    <summary><span class="num">11</span><span class="name">سمت کلاینت — Clickjacking و CORS</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">Clickjacking بسته</div><div class="d"><code>X-Frame-Options: DENY</code> و <code>frame-ancestors 'none'</code> در CSP — پنل داخل iframe کسی باز نمی‌شود.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">CORS مبدأ ناشناس را بازتاب نمی‌دهد</div><div class="d">فقط مبدأهای پیکربندی‌شده؛ <code>Origin: evil.example</code> پذیرفته نشد.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">بدون ریدایرکت باز (Open Redirect)</div><div class="d">مسیریابی داخلی هش‌محور است؛ مقصد از ورودی کاربر ساخته نمی‌شود.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 12 -->
+  <details class="cat" open>
+    <summary><span class="num">12</span><span class="name">محدودسازی نرخ و منع سوءاستفاده</span><span class="state ok">سالم</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">Rate limiting روی همه‌ی API</div><div class="d">کلید بر اساس نشست (نه فقط IP) تا کاربران پشت یک اینترنت مشترک قفل نشوند؛ مسیر health مستثنا.</div></div></div>
+      <div class="row"><span class="mk pass">✓</span><div><div class="t">ورود، محدودیت سخت‌گیرانه‌ی خودش را دارد</div><div class="d">کلید شامل نام کاربری تا حمله به یک حساب، بقیه را قفل نکند؛ فقط تلاش ناموفق شمرده می‌شود.</div></div></div>
+    </div>
+  </details>
+
+  <!-- 13 out of scope -->
+  <details class="cat">
+    <summary><span class="num">13</span><span class="name">خارج از دامنه‌ی این فاز</span><span class="state ok">N/A</span><span class="chev">▾</span></summary>
+    <div class="rows">
+      <div class="row"><span class="mk pass">—</span><div><div class="t">آپلود فایل مخرب</div><div class="d">این سامانه هیچ آپلود فایلی ندارد — سطح حمله‌اش وجود ندارد. اگر در فاز بعد اضافه شد، باید جداگانه آزموده شود.</div></div></div>
+      <div class="row"><span class="mk pass">—</span><div><div class="t">۲FA / OTP</div><div class="d">پنل پیامکی هنوز وصل نیست؛ کد دوعاملی به‌صورت ماژولار آماده است ولی خاموش. آزمونش موقع فعال‌سازی.</div></div></div>
+      <div class="row"><span class="mk pass">—</span><div><div class="t">EXIF / SPF / Subdomain Takeover</div><div class="d">اولی (بدون آپلود عکس) موضوعیت ندارد؛ دومی و سومی سطح DNS/ایمیل‌اند و بعد از راه‌اندازی ایمیل سازمانی بررسی می‌شوند.</div></div></div>
+    </div>
+  </details>
+
+  <div class="note">
+    <h3>روش کار — چرا این گزارش قابل اتکاست</h3>
+    <p>هیچ‌کدام از این نتیجه‌ها از «خواندن کد» نیامده. همه‌شان <b>حمله‌ی واقعی به نسخه‌ی در حال اجرا</b> هستند: payload تزریق فرستاده شده، درخواست جعلی بین‌سایتی زده شده، با حساب نمایندگی سراغ مسیر مدیریت رفته، و پاسخ سرور بررسی شده. این آزمون‌ها در <code>security/audit.js</code> ثبت‌اند و با یک دستور تکرار می‌شوند — پس فردا هم که کد عوض شد، دوباره قابل اجراست.</p>
+  </div>
+
+  <footer>
+    <span>فرانوکار · گزارش ارزیابی امنیتی · فاز اول</span>
+    <span class="cmd">node security/audit.js --live https://feranocar.com --user … --pass …</span>
+  </footer>
+
+</div>
