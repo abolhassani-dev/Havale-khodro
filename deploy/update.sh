@@ -36,11 +36,23 @@ if [ ! -f docker-compose.yml ]; then
 fi
 
 # ---- 1. back up before changing anything ----
-if [ -x /usr/local/bin/feranocar-backup ]; then
+#
+# The repository's own script, not /usr/local/bin/feranocar-backup.
+#
+# That shortcut is installed once by hand and then never revisited, so on this
+# server it was still a 333-byte script from an early version: a database dump
+# and nothing else. Which made the single most important backup — the one taken
+# immediately before changing the system, the one you reach for when an update
+# breaks something — the least complete one on the disk. No .env, so no
+# encryption key; no certificate; no source.
+#
+# deploy/backup.sh is updated by this very script, so it is always current by
+# definition. The shortcut stays for people typing it by hand.
+if [ -x ./deploy/backup.sh ]; then
   echo "→ backup"
-  /usr/local/bin/feranocar-backup
+  ./deploy/backup.sh daily
 else
-  echo "→ no backup script installed — skipping (see docs/deployment.md step 9)"
+  echo "→ deploy/backup.sh is missing — skipping the pre-update backup" >&2
 fi
 
 # ---- 2. bring in the new code, without replacing this directory ----

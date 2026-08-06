@@ -8,10 +8,21 @@ section "۷۰ — بکاپ"
 BR="$BACKUP_ROOT"
 CRON="/etc/cron.d/${PROJECT_SLUG}-backup"
 
-[ -x "/usr/local/bin/${PROJECT_SLUG}-backup" ] \
-  && ok "دستور ${PROJECT_SLUG}-backup نصب است" \
-  || warn "میان‌بر /usr/local/bin/${PROJECT_SLUG}-backup نصب نیست" \
-          "ln -s $ROOT/deploy/backup.sh /usr/local/bin/${PROJECT_SLUG}-backup"
+SHORTCUT="/usr/local/bin/${PROJECT_SLUG}-backup"
+if [ ! -x "$SHORTCUT" ]; then
+  warn "میان‌بر $SHORTCUT نصب نیست" "ln -sf $ROOT/deploy/backup.sh $SHORTCUT"
+elif [ "$(readlink -f "$SHORTCUT")" = "$(readlink -f "$ROOT/deploy/backup.sh")" ]; then
+  ok "دستور ${PROJECT_SLUG}-backup به اسکریپت فعلی اشاره می‌کند"
+elif cmp -s "$SHORTCUT" "$ROOT/deploy/backup.sh"; then
+  ok "دستور ${PROJECT_SLUG}-backup با اسکریپت فعلی یکی است"
+else
+  # A copy taken once and never revisited. It keeps working, which is why
+  # nobody looks at it — and it quietly keeps taking the *old* kind of backup
+  # long after the script it was copied from has learned to include the
+  # encryption key, the certificate and the source.
+  warn "میان‌بر $SHORTCUT یک کپی قدیمی است ($(stat -c %s "$SHORTCUT") بایت در برابر $(stat -c %s "$ROOT/deploy/backup.sh")) — بکاپی که می‌گیرد ناقص است" \
+       "ln -sf $ROOT/deploy/backup.sh $SHORTCUT"
+fi
 
 # ── schedule ─────────────────────────────────────────────────────────────────
 if [ -f "$CRON" ]; then
@@ -73,16 +84,32 @@ else
     bad "آخرین آرشیو خراب است — قابل بازگردانی نیست" "$ROOT/deploy/backup.sh daily && rm '$newest'"
   fi
 
-  # A backup that is suspiciously smaller than the one before it usually means
-  # a dump that failed halfway and still wrote a file.
-  prev="$(ls -1t "$BR"/*/*.tar.gz "$BR"/*.tar.gz 2>/dev/null | sed -n 2p)"
-  if [ -n "$prev" ]; then
+  # A backup suspiciously smaller than the one before it usually means a dump
+  # that failed halfway and still wrote a file.
+  #
+  # Compared against the previous backup *of the same kind, in the same tier*.
+  # The first version took the newest file of any kind and the previous
+  # `.tar.gz` — so on a server holding both a 13MB full archive and a 21KB
+  # database-only dump from an older script, it compared one against the other
+  # and announced that the backup had collapsed. Both files were perfectly
+  # good; they were simply not the same thing.
+  case "$newest" in
+    *.tar.gz) same_kind="$(dirname "$newest")/*.tar.gz" ;;
+    *.sql.gz) same_kind="$(dirname "$newest")/*.sql.gz" ;;
+    *)        same_kind="" ;;
+  esac
+
+  # shellcheck disable=SC2086
+  prev="$([ -n "$same_kind" ] && ls -1t $same_kind 2>/dev/null | sed -n 2p)"
+  if [ -z "$prev" ]; then
+    skip "بکاپ قبلیِ هم‌نوع وجود ندارد — روند اندازه بررسی نشد"
+  else
     a="$(stat -c %s "$newest")"; b="$(stat -c %s "$prev")"
     if [ "$b" -gt 0 ] && [ $((a * 100 / b)) -lt 50 ]; then
-      bad "آخرین بکاپ کمتر از نصف بکاپ قبلی است ($(numfmt --to=iec "$a" 2>/dev/null || echo "$a") در برابر $(numfmt --to=iec "$b" 2>/dev/null || echo "$b"))" \
+      bad "آخرین بکاپ کمتر از نصف بکاپ هم‌نوع قبلی است ($(numfmt --to=iec "$a" 2>/dev/null || echo "$a") در برابر $(numfmt --to=iec "$b" 2>/dev/null || echo "$b"))" \
           "tail -30 $BACKUP_LOG — احتمالاً دامپ نیمه‌کاره مانده"
     else
-      ok "اندازه‌ی بکاپ نسبت به قبلی طبیعی است"
+      ok "اندازه‌ی بکاپ نسبت به هم‌نوع قبلی طبیعی است"
     fi
   fi
 
