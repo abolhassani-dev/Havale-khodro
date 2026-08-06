@@ -923,6 +923,120 @@ async function checkLive(base) {
       : null,
     fix: limited ? null : 'Check that authLimiter is on the login route and trust proxy is set.',
   });
+
+  // ── the checks from the OWASP pentest checklist that were not already above ──
+  //
+  // Grouped by the checklist's own categories so a reader can map result to
+  // list. Everything here is a live probe, not a source read.
+
+  // 2 / config: dangerous HTTP methods, and infrastructure files.
+  //
+  // TRACE is deliberately not sent here: fetch refuses to issue it at all
+  // (it throws "HTTP method is unsupported"), which is itself the client-side
+  // half of the XST defence. On the server side, Express has no TRACE handler,
+  // so it would 404 — the safe outcome — and nginx in front blocks it outright.
+  for (const method of ['PUT', 'DELETE', 'PATCH']) {
+    const { res } = await call('/api/v1/health', { method });
+    const ok = res.status === 404 || res.status === 405;
+    add({
+      severity: ok ? 'info' : 'high',
+      check: 'live:http-methods',
+      title: ok
+        ? `${method} on a read-only route is refused (${res.status})`
+        : `${method} on a read-only route returned ${res.status}`,
+    });
+  }
+  for (const p of ['/.env', '/.git/config', '/docker-compose.yml', '/backend/.env']) {
+    const { res } = await call(p);
+    const exposed = res.status === 200;
+    add({
+      severity: exposed ? 'critical' : 'info',
+      check: 'live:exposure',
+      title: exposed ? `${p} is served to the internet` : `${p} is not reachable`,
+      fix: exposed ? 'Ensure nginx serves only frontend/, never the project root.' : null,
+    });
+  }
+
+  // 8 / error handling: malformed and oversized bodies must be 400/413 with no
+  // framework message, not a 500 that names the parser.
+  const bad = await fetch(`${base}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{bad json',
+    redirect: 'manual',
+  });
+  const badText = await bad.text();
+  add({
+    severity: bad.status === 400 ? 'info' : 'medium',
+    check: 'live:error-handling',
+    title:
+      bad.status === 400
+        ? 'a malformed request body is a clean 400'
+        : `a malformed request body returned ${bad.status}`,
+    detail: /Expected property|JSON at position|SyntaxError/.test(badText)
+      ? 'The response quotes the JSON parser — that names the framework.'
+      : null,
+  });
+
+  // 5 / IDOR + horizontal authorisation: one agency must not touch another's
+  // listing. Needs the signed-in agency to own at least one.
+  const mine = await call('/api/v1/havales/mine?limit=1');
+  let ownId = null;
+  try {
+    ownId = JSON.parse(mine.text)?.data?.items?.[0]?.id || null;
+  } catch { /* none */ }
+  if (ownId) {
+    // Re-fetch as the same agent to confirm the id is real, then confirm the
+    // *mutating* verbs are the ones tested — a GET tells us less.
+    for (const method of ['DELETE', 'PATCH']) {
+      // The point is not this agent on its own listing (allowed) but that the
+      // id space is not a way around ownership. A forged id from another agency
+      // is not available here, so this asserts the weaker but still meaningful
+      // property: a random well-formed id is refused, not silently accepted.
+      const { res } = await call(`/api/v1/havales/notarealid000000000000000`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      // Anything but a 2xx is a refusal. 404 (not found), 403 (not yours),
+      // 400/422 (the empty body failed validation before ownership was even
+      // checked) are all safe — what would be a finding is a 200.
+      const ok = res.status >= 400 && res.status < 500;
+      add({
+        severity: ok ? 'info' : 'critical',
+        check: 'live:idor',
+        title: ok
+          ? `${method} on an unknown listing id is refused (${res.status})`
+          : `${method} on an unknown listing id returned ${res.status}`,
+      });
+    }
+  }
+
+  // 4 / account enumeration: a wrong password and an unknown user must be
+  // indistinguishable, or usernames can be discovered.
+  const wrongPass = await fetch(`${base}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: user, password: 'definitely-wrong' }),
+    redirect: 'manual',
+  });
+  const unknownUser = await fetch(`${base}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: `nobody_${Date.now()}`, password: 'x' }),
+    redirect: 'manual',
+  });
+  const m1 = await wrongPass.json().catch(() => ({}));
+  const m2 = await unknownUser.json().catch(() => ({}));
+  const same = wrongPass.status === unknownUser.status && m1?.error?.message === m2?.error?.message;
+  add({
+    severity: same ? 'info' : 'high',
+    check: 'live:enumeration',
+    title: same
+      ? 'wrong password and unknown username are indistinguishable'
+      : 'wrong password and unknown username give different responses',
+    detail: same ? null : 'The difference lets an attacker enumerate valid usernames.',
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

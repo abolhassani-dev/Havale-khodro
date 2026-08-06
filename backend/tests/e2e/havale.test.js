@@ -483,6 +483,31 @@ maybe('havale', () => {
     });
   });
 
+  describe('malformed and oversized requests', () => {
+    it('answers a broken JSON body with 400, not 500, and does not name the parser', async () => {
+      // From the OWASP pentest checklist, error handling: the body parser's own
+      // message ("Expected property name…") names the framework, and a 500
+      // treats a client mistake as a server bug — inflating the error log.
+      const res = await request(app)
+        .post(api('/auth/login'))
+        .set('Content-Type', 'application/json')
+        .send('{not valid json');
+
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).not.toMatch(/Expected property|JSON at position|SyntaxError/);
+    });
+
+    it('answers an oversized body with 413', async () => {
+      const huge = 'a'.repeat(3 * 1024 * 1024); // over the 2mb limit
+      const res = await request(app)
+        .post(api('/auth/login'))
+        .set('Content-Type', 'application/json')
+        .send(JSON.stringify({ username: huge, password: 'x' }));
+
+      expect(res.status).toBe(413);
+    });
+  });
+
   describe('listing rules', () => {
     it('requires colour and price on a sale but not on a request', async () => {
       const { cookie } = await agent();

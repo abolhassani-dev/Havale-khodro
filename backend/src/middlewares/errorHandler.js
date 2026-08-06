@@ -25,6 +25,28 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // Errors the body parser raises before any of our code runs. They are the
+  // client's fault, not a bug, and must not be logged as internal failures or
+  // returned as 500 — a malformed request is a 400, an oversized one a 413.
+  // Left as 500 they inflate the error log and, worse, the parser's own message
+  // ("Expected property name…") leaks the framework in non-production.
+  if (err.type === 'entity.too.large') {
+    return failure(res, {
+      message: 'حجم درخواست بیش از حد مجاز است.',
+      code: ERROR_CODES.VALIDATION,
+      statusCode: 413,
+      requestId: req.id,
+    });
+  }
+  if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return failure(res, {
+      message: 'ساختار درخواست معتبر نیست.',
+      code: ERROR_CODES.VALIDATION,
+      statusCode: 400,
+      requestId: req.id,
+    });
+  }
+
   logger.error('Unhandled error', {
     message: err.message,
     stack: err.stack,
