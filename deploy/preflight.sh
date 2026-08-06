@@ -212,10 +212,16 @@ else
 
   # The gate before the first real agency. These accounts have their password
   # written in a public repository.
+  # These two only gate the manual `npm run seed:demo`; nothing on startup
+  # reads them, and the seeder skips accounts that already exist. So a `true`
+  # here does not by itself put anything at risk — what matters is whether the
+  # demo accounts are live, which §۸ checks against the database. Reported as
+  # a reminder, not a failure, because calling a harmless flag a breach is how
+  # a report loses the reader's attention for the findings that are real.
   sd="$(env_get SEED_DEMO)"; ad="$(env_get ALLOW_DEMO_SEED)"
   if [ "$sd" = "true" ] || [ "$ad" = "true" ]; then
-    bad "داده‌ی نمونه هنوز روشن است (SEED_DEMO=$sd، ALLOW_DEMO_SEED=$ad) — رمز این حساب‌ها در مخزن عمومی نوشته شده" \
-        "sed -i 's|^SEED_DEMO=.*|SEED_DEMO=false|; s|^ALLOW_DEMO_SEED=.*|ALLOW_DEMO_SEED=false|' .env && docker compose up -d api"
+    warn "کلید داده‌ی نمونه روشن است (SEED_DEMO=$sd، ALLOW_DEMO_SEED=$ad)" \
+         "خودکار اجرا نمی‌شود — فقط با npm run seed:demo. قبل از لایو: sed -i 's|^SEED_DEMO=.*|SEED_DEMO=false|; s|^ALLOW_DEMO_SEED=.*|ALLOW_DEMO_SEED=false|' .env"
   else
     ok "داده‌ی نمونه خاموش است"
   fi
@@ -498,12 +504,25 @@ if docker compose exec -T db true 2>/dev/null; then
   fi
 
   # The demo accounts, whose password is in a public repository.
-  live_demo="$("${PSQL[@]}" $'SELECT count(*) FROM "User" WHERE "agencyCode" IN (\'alborz\',\'pars\',\'zagros\',\'khalij\') AND status = \'ACTIVE\';' 2>/dev/null | tr -d '[:space:]')"
-  if [ "${live_demo:-0}" -gt 0 ] 2>/dev/null; then
-    bad "$live_demo حساب نمایشی هنوز فعال است — رمزشان در مخزن عمومی نوشته شده" \
-        "از پنل مدیریت، حساب‌های alborz/pars/zagros/khalij را تعلیق کنید"
+  #
+  # Matched on username. The first version of this query matched agencyCode
+  # against 'alborz','pars',… — but those are the *usernames*; the agency codes
+  # are G-1001…G-1004 (backend/scripts/seed-demo.js). So it matched nothing and
+  # printed a green tick on a server where all four accounts were live. A check
+  # that cannot fail is worse than no check, because it is believed.
+  demo_total="$("${PSQL[@]}" $'SELECT count(*) FROM "User" WHERE username IN (\'alborz\',\'pars\',\'zagros\',\'khalij\');' 2>/dev/null | tr -d '[:space:]')"
+  live_demo="$("${PSQL[@]}" $'SELECT count(*) FROM "User" WHERE username IN (\'alborz\',\'pars\',\'zagros\',\'khalij\') AND status = \'ACTIVE\';' 2>/dev/null | tr -d '[:space:]')"
+
+  if [ "${demo_total:-0}" = "0" ]; then
+    ok "حساب نمایشی روی این سرور ساخته نشده"
+  elif [ "${live_demo:-0}" -gt 0 ] 2>/dev/null; then
+    # Whether this is a problem depends on whether the password is still the
+    # one in the repository, which no query can tell us. So it says what is
+    # true and names the condition, instead of asserting a breach.
+    warn "$live_demo حساب نمایشی از $demo_total فعال است — اگر رمزشان هنوز Demo@12345 است، سامانه برای همه باز است" \
+         "رمز را عوض کرده‌اید؟ ایرادی ندارد. وگرنه از پنل مدیریت تعلیقشان کنید — قبل از ورود اولین نمایندگی واقعی، هر چهار حساب باید بروند"
   else
-    ok "حساب‌های نمایشی فعال نیستند"
+    ok "هر $demo_total حساب نمایشی تعلیق شده"
   fi
 else
   skip "دیتابیس در دسترس نبود — بررسی داده‌ها انجام نشد"
@@ -681,6 +700,28 @@ fi
 # ═════════════════════════════════════════════════════════════════════════════
 section "۱۲ — منابع سرور"
 # ═════════════════════════════════════════════════════════════════════════════
+
+# Read off the running containers, not off the compose file. The point is to
+# know whether the limits are in effect — a compose change that was never
+# applied because nobody recreated the containers looks identical on disk.
+if [ "${n_containers:-0}" -gt 0 ]; then
+  unlimited=""; unrotated=""
+  for cid in $(docker compose ps -q 2>/dev/null); do
+    name="$(docker inspect -f '{{.Name}}' "$cid" 2>/dev/null | tr -d '/')"
+    [ "$(docker inspect -f '{{.HostConfig.Memory}}' "$cid" 2>/dev/null)" = "0" ] && unlimited="$unlimited $name"
+    docker inspect -f '{{.HostConfig.LogConfig.Config}}' "$cid" 2>/dev/null | grep -q 'max-size' || unrotated="$unrotated $name"
+  done
+  [ -z "$unlimited" ] \
+    && ok "همه‌ی کانتینرها سقف حافظه دارند" \
+    || warn "بدون سقف حافظه:$unlimited — کرنل موقع کمبود، بزرگ‌ترین را می‌کشد (معمولاً دیتابیس)" \
+            "./deploy/update.sh (کانتینرها باید دوباره ساخته شوند تا سقف اعمال شود)"
+  # The quietest way a small server dies: logs grow until the disk is full,
+  # Postgres cannot write, everything stops, and nothing in the application
+  # log says why — because there was no room to write that either.
+  [ -z "$unrotated" ] \
+    && ok "چرخش لاگ کانتینرها فعال است" \
+    || warn "بدون چرخش لاگ:$unrotated — لاگ‌ها تا پر شدن دیسک رشد می‌کنند" "./deploy/update.sh"
+fi
 
 usage="$(df -P "$ROOT" | awk 'NR==2{print $5}' | tr -d '%')"
 if   [ "${usage:-0}" -ge 90 ]; then bad  "دیسک ${usage}% پر است — Postgres با پر شدن دیسک می‌ایستد" "docker image prune -f && ls -lt $BR/*/"

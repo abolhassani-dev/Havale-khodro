@@ -51,6 +51,65 @@ alert() {
 $help" || true
 }
 
+# Try to fix it once, then report what happened.
+#
+# Most outages this stack can have are a container that stopped or a service
+# that stopped answering, and both are cured by the same restart a human would
+# type after being woken up. Waiting for that human is the expensive part: it
+# is the difference between forty seconds of downtime and forty minutes.
+#
+# Bounded on purpose, because an unbounded self-heal is worse than none:
+#
+#   - One attempt per problem per hour. A service that crashes on startup would
+#     otherwise be restarted every five minutes forever, which turns a visible
+#     outage into a quiet flapping one and buries the alert.
+#   - Only restarts. Nothing here deletes, migrates, or reconfigures anything —
+#     a repair that can lose data must be a person's decision.
+#   - Silence is not success. A heal that works still sends a message, because
+#     "it fixed itself twice today" is exactly the signal that something is
+#     wrong underneath and needs a real fix.
+#
+# Returns 0 when the service is healthy afterwards.
+heal() {
+  local key="$1" what="$2" recheck="$3"; shift 3
+  local stamp="$STATE/heal-$key"
+  local now; now="$(date +%s)"
+
+  if [ -f "$stamp" ]; then
+    local last; last="$(cat "$stamp" 2>/dev/null || echo 0)"
+    if [ $((now - last)) -lt 3600 ]; then
+      echo "[$(date '+%F %T')] $what: already attempted a repair within the hour — not retrying"
+      return 1
+    fi
+  fi
+  echo "$now" > "$stamp"
+
+  echo "[$(date '+%F %T')] $what: attempting repair — $*"
+  "$@" >/dev/null 2>&1
+
+  # Give it a moment to actually come up before judging it.
+  local i
+  for i in 1 2 3 4 5 6; do
+    sleep 5
+    if eval "$recheck" >/dev/null 2>&1; then
+      echo "[$(date '+%F %T')] $what: recovered after repair"
+      [ -n "$TOKEN" ] && [ -n "$CHAT" ] && curl -sS --max-time 10 -o /dev/null \
+        -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
+        -d "chat_id=$CHAT" -d "parse_mode=HTML" \
+        --data-urlencode "text=🟡 <b>خودکار برطرف شد: $what</b>
+<i>فرانوکار · $(date '+%Y-%m-%d %H:%M')</i>
+
+سرویس از کار افتاده بود و دیده‌بان خودش راه‌اندازی مجددش کرد.
+اگر این پیام تکرار شد، یعنی علت اصلی هنوز سر جایش است — لاگ را ببینید:
+<pre>docker compose logs $key --tail 100</pre>" || true
+      return 0
+    fi
+  done
+
+  echo "[$(date '+%F %T')] $what: repair did not help"
+  return 1
+}
+
 clear_alert() {
   local key="$1" title="$2"
   local flag="$STATE/$key"
@@ -70,11 +129,19 @@ clear_alert() {
 for service in db api web; do
   state="$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s{print $2}')"
   if [ "$state" != "running" ]; then
-    alert "container-$service" \
-      "سرویس $service بالا نیست" \
-      "وضعیت: ${state:-وجود ندارد}" \
-      "cd /opt/feranocar && docker compose up -d $service
-سپس علت را ببینید: docker compose logs $service --tail 50"
+    # Start it before waking anyone. If that works, the outage is over in under
+    # a minute and the message that arrives says so.
+    if heal "$service" "سرویس $service" \
+         "docker compose ps --format '{{.Service}} {{.State}}' | grep -q '^$service running'" \
+         docker compose up -d "$service"; then
+      clear_alert "container-$service" "سرویس $service"
+    else
+      alert "container-$service" \
+        "سرویس $service بالا نیست و راه‌اندازی خودکار هم جواب نداد" \
+        "وضعیت: ${state:-وجود ندارد}" \
+        "cd /opt/feranocar && docker compose logs $service --tail 50
+علت را همان‌جا ببینید — چون یک بار خودکار start شد و نماند، احتمالاً موقع بالا آمدن می‌میرد."
+    fi
   else
     clear_alert "container-$service" "سرویس $service"
   fi
@@ -86,9 +153,13 @@ done
 # failure that looks healthiest from outside.
 if docker compose exec -T db pg_isready -q 2>/dev/null; then
   clear_alert "db-connections" "اتصال به دیتابیس"
+elif heal "db" "اتصال به دیتابیس" \
+       "docker compose exec -T db pg_isready -q" \
+       docker compose restart db; then
+  clear_alert "db-connections" "اتصال به دیتابیس"
 else
   alert "db-connections" \
-    "دیتابیس به اتصال جواب نمی‌دهد" \
+    "دیتابیس جواب نمی‌دهد و ری‌استارت خودکار هم درستش نکرد" \
     "کانتینر بالاست ولی pg_isready رد می‌کند." \
     "docker compose logs db --tail 50
 اگر «out of memory» بود، مصرف حافظه را ببینید: docker stats --no-stream
@@ -99,12 +170,16 @@ fi
 code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost/api/v1/health || echo 000)"
 if [ "$code" = "200" ]; then
   clear_alert "api-health" "سلامت API"
+elif heal "api" "سلامت API" \
+       "curl -fsS --max-time 10 http://localhost/api/v1/health" \
+       docker compose restart api; then
+  clear_alert "api-health" "سلامت API"
 else
   alert "api-health" \
-    "API جواب نمی‌دهد" \
+    "API جواب نمی‌دهد و ری‌استارت خودکار هم جواب نداد" \
     "پاسخ: HTTP $code" \
     "docker compose logs api --tail 50
-اگر migration گیر کرده: docker compose restart api"
+اگر migration گیر کرده باشد، در لاگ پیداست — ری‌استارت تنهایی حلش نمی‌کند."
 fi
 
 # ---- 4. disk ----

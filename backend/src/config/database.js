@@ -115,6 +115,53 @@ function decryptRelations(result) {
   return out;
 }
 
+/**
+ * Retry a query the connection dropped underneath, and only that.
+ *
+ * When Postgres restarts, the queries already in flight fail with a connection
+ * error. Nothing is wrong with them — the same query a second later succeeds.
+ * Without this, a database restart that lasts two seconds shows up as an error
+ * page for whoever happened to be clicking.
+ *
+ * Deliberately narrow, because a retry in the wrong place is worse than none:
+ *
+ *   - Only connection-level errors. P1001 cannot reach the server, P1017 the
+ *     server closed the connection. A constraint violation or a timeout is a
+ *     real answer and must be returned, not retried.
+ *   - Only reads. Replaying a create that may have committed before the
+ *     connection dropped would duplicate a havale or a payment. A failed write
+ *     is the user's to retry, with a button and their own judgement.
+ *
+ * Registered first so it wraps the encryption middleware below: a retried query
+ * goes through the whole chain again, rather than re-running a half-processed one.
+ */
+const RETRYABLE_CODES = new Set(['P1001', 'P1017']);
+const READ_ACTIONS = new Set([
+  'findUnique', 'findUniqueOrThrow', 'findFirst', 'findFirstOrThrow',
+  'findMany', 'count', 'aggregate', 'groupBy',
+]);
+
+prisma.$use(async (params, next) => {
+  if (!READ_ACTIONS.has(params.action)) return next(params);
+
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await next(params);
+    } catch (err) {
+      if (!RETRYABLE_CODES.has(err.code)) throw err;
+      lastError = err;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+    }
+  }
+  logger.warn('Read failed after 3 attempts', {
+    model: params.model,
+    action: params.action,
+    code: lastError?.code,
+  });
+  throw lastError;
+});
+
 prisma.$use(async (params, next) => {
   const { model, action, args } = params;
 
@@ -135,9 +182,42 @@ prisma.$use(async (params, next) => {
   return decryptRelations(model && ENCRYPTED[model] ? decryptRead(model, result) : result);
 });
 
-async function connectDatabase() {
-  await prisma.$connect();
-  logger.info('Database connected');
+/**
+ * Connect, waiting for the database rather than giving up on it.
+ *
+ * Postgres takes a few seconds to start accepting connections, and it restarts
+ * on its own for reasons that have nothing to do with us — a backup, a package
+ * upgrade, the kernel reclaiming memory. The previous version called $connect
+ * once; a failure reached start()'s catch and exited the process. Docker's
+ * restart policy then brought it back, which *worked*, but as a crash loop:
+ * the API flapped for as long as the database took, and every flap was a burst
+ * of failed requests for whoever was using the panel at the time.
+ *
+ * Waiting is the cheaper answer. Roughly a minute of backoff covers every
+ * restart we have actually seen; past that, exiting is right, because the
+ * problem is not "starting up" any more and a container that keeps trying
+ * hides it.
+ */
+async function connectDatabase({ retries = 10, baseDelayMs = 500 } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await prisma.$connect();
+      if (attempt > 1) logger.info(`Database connected after ${attempt} attempts`);
+      else logger.info('Database connected');
+      return;
+    } catch (err) {
+      if (attempt >= retries) {
+        logger.error('Database unreachable, giving up', { attempts: attempt, error: err.message });
+        throw err;
+      }
+      // Capped exponential backoff: 0.5s, 1s, 2s, 4s, 8s, then 10s each.
+      const delay = Math.min(baseDelayMs * 2 ** (attempt - 1), 10000);
+      logger.warn(`Database not ready (attempt ${attempt}/${retries}), retrying in ${delay}ms`, {
+        error: err.message,
+      });
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 }
 
 async function disconnectDatabase() {

@@ -6,10 +6,33 @@
 # One file for staging and for production. A staging environment that differs
 # from production only tells you about staging.
 
+# ── Two settings repeated on every service, and why ──────────────────────────
+#
+# logging: Docker's json-file driver keeps every line forever by default. On a
+#   server that runs for a year, container logs are the single most likely
+#   thing to fill the disk — and a full disk stops Postgres writing, which
+#   takes the whole system down. The cause is invisible from the application:
+#   nothing is wrong with it, there is simply nowhere left to write. Three
+#   files of 10MB each is a few days of history per service and a hard ceiling
+#   of 30MB, which cannot become the reason the site is down.
+#
+# mem_limit: without one, a leak or a heavy query grows until the *kernel*
+#   picks a process to kill, and it picks the biggest — which is Postgres.
+#   That is the "database went away for no reason" outage, and it is
+#   unattributable after the fact because the log just stops. With a limit,
+#   the container that misbehaves is the one that dies, it dies with a clear
+#   OOM status, and the restart policy brings it back. Values are generous for
+#   this workload and overridable in .env if the server changes.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: '10m', max-file: '3' }
+
 services:
   web:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    logging: *logging
+    mem_limit: ${WEB_MEM_LIMIT:-128m}
     ports:
       - '80:80'
       - '443:443'
@@ -39,12 +62,19 @@ services:
   api:
     build: ./backend
     restart: unless-stopped
+    logging: *logging
+    mem_limit: ${API_MEM_LIMIT:-512m}
     env_file: .env
     environment:
       # Built from the same credentials the database container uses, so the two
       # cannot drift apart. A connection string in one place and a password in
       # another is how a stack comes up unable to reach its own database.
       DATABASE_URL: postgresql://${POSTGRES_USER:-havale}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-havale}?schema=public
+      # Kept below mem_limit on purpose. V8 only runs a full garbage collection
+      # when it approaches its heap limit, so without this it happily grows
+      # past the container's ceiling and gets killed by the kernel with no
+      # warning. Told the real budget, it collects instead of dying.
+      NODE_OPTIONS: --max-old-space-size=384
     # No published port: the API is reachable through nginx and from nowhere
     # else. Publishing 3000 would leave a second door with no TLS on it.
     expose:
@@ -57,6 +87,13 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
+    mem_limit: ${DB_MEM_LIMIT:-1g}
+    # Postgres puts index builds and sorts here, and the Docker default is a
+    # 64MB /dev/shm. A query that needs more fails with "could not resize
+    # shared memory segment" — an error that reads like a broken database and
+    # is a container setting.
+    shm_size: 256m
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-havale}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -80,6 +117,8 @@ services:
   adminer:
     image: adminer:4
     restart: unless-stopped
+    logging: *logging
+    mem_limit: ${ADMINER_MEM_LIMIT:-128m}
     expose:
       - '8080'
     environment:
