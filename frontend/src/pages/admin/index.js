@@ -8,6 +8,10 @@ import {
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
+import {
+  loadStaff, staffPage, newStaffModal, editStaffModal, staffPasswordModal,
+  setStaffStatus, onStaffFormChange, toggleGroup,
+} from './staff.js';
 
 /**
  * The admin panel.
@@ -59,6 +63,7 @@ export function registerAdminRoutes(route) {
   }));
 
   route('adm-catalog', loadAdminCatalog);
+  route('adm-staff', loadStaff);
 }
 
 export function renderAdminPage(page) {
@@ -73,6 +78,7 @@ export function renderAdminPage(page) {
     case 'adm-seats': return seatsPage();
     case 'adm-settings': return settingsPage();
     case 'adm-catalog': return catalogPage();
+    case 'adm-staff': return staffPage();
     default: return emptyBox('صفحه پیدا نشد.');
   }
 }
@@ -663,6 +669,12 @@ function settingsPage() {
 // ── event handling ──────────────────────────────────────────────────────────
 
 export function handleAdminClick(d, el) {
+  if (d.newStaff !== undefined) return newStaffModal();
+  if (d.editStaff) return editStaffModal(d.editStaff);
+  if (d.staffPassword) return staffPasswordModal(d.staffPassword);
+  if (d.staffStatus) return setStaffStatus(d.staffStatus, d.status);
+  if (d.permAll) return toggleGroup(el.closest('form'), d.permAll, true);
+  if (d.permNone) return toggleGroup(el.closest('form'), d.permNone, false);
   if (d.activity) return showActivityDetail(d.activity);
   if (d.reviewReport) return reviewReportModal(d.reviewReport);
   if (d.approveSuspension) return approveSuspension(d.approveSuspension);
@@ -676,6 +688,8 @@ export function handleAdminClick(d, el) {
   if (d.editSetting) return editSettingModal(d.editSetting, d.type, d.value);
   return handleCatalogClick(d, el);
 }
+
+export { onStaffFormChange };
 
 export function handleAdminSubmit(form) {
   switch (form.dataset.form) {

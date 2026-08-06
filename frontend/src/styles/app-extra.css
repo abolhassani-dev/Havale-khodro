@@ -236,7 +236,18 @@ textarea.in { resize: vertical; min-height: 60px; }
 }
 .tab.on { background: var(--primary-08); color: var(--primary); border-color: var(--primary-15); }
 
+/* دکمه‌های انتهای ردیف.
+   روی <div> فلکس درست است، ولی روی <td> نه: سلولی که display:flex بگیرد دیگر
+   سلول جدول نیست و از چیدمان ستون‌ها بیرون می‌افتد — دکمه‌ها کنار جدول رها
+   می‌شدند، انگار بیرون کارت. در «کاربران سیستم» که سه دکمه دارد کاملاً پیدا بود.
+   زیر ۷۰۰px قاعده‌ی کارت‌شدن جدول‌ها همین td را عمداً دوباره فلکس می‌کند، پس
+   این اصلاح فقط بالای همان نقطه اعمال می‌شود. */
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; }
+
+@media (min-width: 701px) {
+  td.row-actions { display: table-cell; white-space: nowrap; text-align: start; }
+  td.row-actions > .btn + .btn { margin-inline-start: 6px; }
+}
 
 tr.dim, .dim { opacity: 0.55; }
 
@@ -795,4 +806,69 @@ a[data-go],
     /* Under the drawer, over everything else. */
     z-index: 55;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Permission checkboxes
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* The point of this screen is that the reader can see, at a glance, exactly
+   what an account will be able to do. So: real checkboxes, grouped under the
+   part of the system they affect, each with a sentence saying what it means —
+   not a list of keys that only make sense to whoever wrote them. */
+.perms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.perm-group {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.perm-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+  font-size: 13.5px;
+}
+.perm-head b { flex: 1; font-weight: 800; }
+.perm-head .btn { padding: 2px 9px; font-size: 11.5px; }
+
+.perm {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-top: 1px solid var(--line-2);
+  transition: background .12s;
+}
+.perm:first-of-type { border-top: 0; }
+.perm:hover { background: #fdfcf8; }
+
+/* Large enough to hit with a thumb. The default 13px box on a phone is a
+   coin-toss between ticking a permission and scrolling past it. */
+.perm input[type="checkbox"] {
+  width: 18px; height: 18px; margin-top: 2px;
+  accent-color: var(--primary);
+  flex: none; cursor: pointer;
+}
+
+.perm b { display: block; font-size: 13.5px; font-weight: 700; }
+.perm-hint {
+  display: block;
+  font-size: 12px; color: var(--ink-3); line-height: 1.75;
+  margin-top: 1px;
+}
+
+/* A ticked row reads as on without having to look at the box itself. */
+.perm:has(input:checked) { background: var(--primary-08); }
+.perm:has(input:checked) b { color: var(--primary-2); }
+
+@media (max-width: 700px) {
+  .perms { grid-template-columns: 1fr; }
 }

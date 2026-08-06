@@ -73,37 +73,34 @@ export function isAdmin() {
 }
 
 /**
- * Permissions, mirroring the server's table.
+ * An agency, as opposed to anybody who merely is not an administrator.
  *
- * This decides what to *show*, never what to allow — the server checks every
- * request regardless. Hiding a button the server would refuse is courtesy;
- * relying on the hidden button for security would be the classic mistake, since
- * this code runs on the viewer's machine.
+ * The two used to be the same question and the code asked it the second way,
+ * with `!isAdmin()`. Then a role appeared that is neither — DEVELOPER — and
+ * every one of those places quietly claimed it was an agency: it was shown the
+ * agency menu, asked for a subscription it cannot have, and told its
+ * subscription had expired.
  */
-const PERMISSIONS = {
-  // Everything a super admin has, plus the three the owner keeps: creating the
-  // accounts that run the system, the system alert devices, and the error log.
-  OWNER: {
-    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
-    subscriptions: true, seats: true, agents: true, monitoring: true,
-    bulkContacts: true, settings: true, catalog: true,
-    staff: true, systemAlerts: true, errorLog: true,
-  },
-  // Deliberately empty, and the same on the server. What a developer should be
-  // able to see is a decision to make when there is a real person to make it
-  // about; until then the account can sign in and do nothing.
-  DEVELOPER: {},
-  SUPER_ADMIN: {
-    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
-    subscriptions: true, seats: true, agents: true, monitoring: true,
-    bulkContacts: true, settings: true, catalog: true,
-  },
-  SUPPORT: { tickets: true, reports: true, contactEdit: true },
-  FINANCE: { subscriptions: true, seats: true },
-  AGENT: {},
-};
+export function isAgent() {
+  return state.user?.role === 'AGENT';
+}
 
+/**
+ * Permissions, as resolved by the server for this account.
+ *
+ * The interface used to keep its own copy of the policy table and decide from
+ * that. Two copies of one rule is two rules, and these had already drifted —
+ * the frontend's SUPER_ADMIN was missing `export`. Worse, a per-account tick
+ * would have been invisible to it entirely, because a copied table can only
+ * ever answer about roles.
+ *
+ * So the server sends the answer rather than the rules, and this reads it.
+ *
+ * As always, this decides what to *show* and never what to allow: the server
+ * checks every request regardless. Hiding a button the server would refuse is
+ * courtesy; relying on it would be the classic mistake, since this code runs on
+ * the viewer's machine.
+ */
 export function can(permission) {
-  const role = state.user?.role;
-  return Boolean(role && PERMISSIONS[role] && PERMISSIONS[role][permission]);
+  return Boolean(state.user?.permissions?.[permission]);
 }

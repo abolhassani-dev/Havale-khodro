@@ -14,6 +14,10 @@
  *   node tests/dev-server.js &                 # static files + /api proxy
  *   cd ../backend && npm run dev &
  *   AGENT_USER=... AGENT_PASS=... ADMIN_USER=... ADMIN_PASS=... node tests/smoke.mjs
+ *
+ * OWNER_USER / OWNER_PASS are optional and unlock the owner's own screen. They
+ * are optional because that account is made on the server by hand and has no
+ * fixed name — which is the point of it.
  */
 import { chromium } from 'playwright';
 
@@ -255,6 +259,122 @@ await step('catalogue editor lists brands', async () => {
   await page.click('[data-go="adm-catalog"]');
   await page.waitForSelector('.cat-brand', { timeout: 8000 });
 });
+
+// An ordinary administrator must not learn that the owner account exists. The
+// menu is the one place it would show, so this asserts on the menu rather than
+// on the route: the route is refused by the server either way, but a greyed-out
+// «کاربران سیستم» would answer the question all by itself.
+await step('an ordinary admin sees no trace of the owner', async () => {
+  const nav = await page.textContent('.nav');
+  if (nav.includes('کاربران سیستم')) throw new Error('the staff screen is in the menu');
+  if (nav.includes('مالک')) throw new Error('the owner heading is in the menu');
+});
+
+// A heading with nothing under it advertises a part of the system the reader
+// cannot reach — and «مالک» would advertise the account this design exists to
+// keep quiet. Checked for every account the suite signs in as, because
+// per-account ticks make an empty group the ordinary case rather than the odd
+// one.
+await step('no menu heading stands over an empty section', async () => {
+  const empty = await page.evaluate(() =>
+    [...document.querySelectorAll('.nav .group')]
+      .filter((g) => !g.nextElementSibling || g.nextElementSibling.classList.contains('group'))
+      .map((g) => g.textContent.trim())
+  );
+  if (empty.length) throw new Error('headings over nothing: ' + empty.join(', '));
+});
+
+/**
+ * The owner's screen.
+ *
+ * Skipped unless an owner account is supplied, because there is exactly one and
+ * it was made on the server by hand — the whole point being that it cannot be
+ * created from inside the product. Run it with:
+ *
+ *   OWNER_USER=... OWNER_PASS=... node tests/smoke.mjs
+ */
+if (process.env.OWNER_USER) {
+  await step('owner signs in and reaches the staff screen', async () => {
+    await page.click('[data-logout]');
+    await page.waitForSelector('form[data-form="login"]', { timeout: 8000 });
+    await page.fill('#username', process.env.OWNER_USER);
+    await page.fill('#password', process.env.OWNER_PASS);
+    await page.click('button[type=submit]');
+    await page.waitForSelector('.sidebar', { timeout: 8000 });
+    await page.click('.nav [data-go="adm-staff"]');
+    await page.waitForSelector('table', { timeout: 8000 });
+  });
+
+  await step('the permission boxes come from the server, not from this file', async () => {
+    await page.click('[data-new-staff]');
+    await page.waitForSelector('.modal [data-staff-form]', { timeout: 5000 });
+    const boxes = await page.locator('.modal input[name^="perm:"]').count();
+    if (!boxes) throw new Error('no permission checkboxes rendered');
+
+    // The owner-only permissions are not offered: they cannot be delegated, and
+    // a box that always refuses to save is worse than no box.
+    const owner = await page.locator('.modal input[name="perm:staff"]').count();
+    if (owner) throw new Error('an owner-only permission is offered for delegation');
+  });
+
+  // OWNER is deliberately absent from the list the server sends. A screen that
+  // could mint a second owner is a screen worth attacking.
+  await step('the owner role cannot be handed out', async () => {
+    const roles = await page.locator('.modal #role option').allTextContents();
+    if (roles.some((r) => r.trim() === 'مالک')) throw new Error('OWNER is offered as a role');
+  });
+
+  // The role is a starting point, not the answer — the reason this screen exists
+  // at all. If the dropdown stops re-ticking, the label and the boxes disagree
+  // and the label is what everybody remembers. It failed exactly this way once:
+  // the handler recognised the form by a `data-form` name no modal ever carries.
+  await step('choosing a role re-ticks its defaults', async () => {
+    await page.selectOption('.modal #role', 'FINANCE');
+    await page.waitForTimeout(150);
+    const finance = await page.locator('.modal input[name^="perm:"]:checked').count();
+    await page.selectOption('.modal #role', 'SUPER_ADMIN');
+    await page.waitForTimeout(150);
+    const superAdmin = await page.locator('.modal input[name^="perm:"]:checked').count();
+    if (!finance) throw new Error('FINANCE ticked nothing at all');
+    if (finance === superAdmin) throw new Error('the role dropdown changed nothing');
+  });
+
+  await step('«همه» and «هیچ‌کدام» tick one group and no other', async () => {
+    const key = await page.locator('.modal [data-perm-all]').first().getAttribute('data-perm-all');
+    const others = () =>
+      page.locator(`.modal .perm:not([data-group="${key}"]) input:checked`).count();
+
+    await page.selectOption('.modal #role', 'SUPER_ADMIN');
+    await page.waitForTimeout(150);
+    const before = await others();
+
+    await page.click(`.modal [data-perm-none="${key}"]`);
+    if (await page.locator(`.modal .perm[data-group="${key}"] input:checked`).count()) {
+      throw new Error('«هیچ‌کدام» left boxes ticked');
+    }
+    if ((await others()) !== before) throw new Error('«هیچ‌کدام» reached into another group');
+
+    await page.click(`.modal [data-perm-all="${key}"]`);
+    const all = await page.locator(`.modal .perm[data-group="${key}"] input`).count();
+    const on = await page.locator(`.modal .perm[data-group="${key}"] input:checked`).count();
+    if (on !== all) throw new Error(`«همه» ticked ${on} of ${all}`);
+  });
+
+  await page.click('.modal [data-close-modal]');
+
+  // The row for the owner's own account offers no buttons. Suspending yourself
+  // out of the only account that can un-suspend you should not be one click
+  // away, and the server refuses it too.
+  await step('the owner account cannot be changed from the screen', async () => {
+    const owner = page.locator('tbody tr', { hasText: process.env.OWNER_USER });
+    if (await owner.locator('[data-staff-status]').count()) {
+      throw new Error('the owner row offers a suspend button');
+    }
+    if (await owner.locator('[data-edit-staff]').count()) {
+      throw new Error('the owner row offers an edit button');
+    }
+  });
+}
 
 /**
  * The phone drawer.

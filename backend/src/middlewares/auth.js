@@ -3,7 +3,7 @@ const authRepository = require('../modules/auth/auth.repository');
 const { UnauthorizedError, ForbiddenError } = require('../errors/AppError');
 const { ERROR_CODES } = require('../constants/errorCodes');
 const { MESSAGES } = require('../constants/messages');
-const { can, isAdmin, ROLES } = require('../constants/roles');
+const { userCan, isAdmin, ROLES } = require('../constants/roles');
 const config = require('../config');
 
 const COOKIE_NAME = config.session.cookieName;
@@ -59,14 +59,19 @@ function requireAdmin(req, _res, next) {
 }
 
 /**
- * Checks a named permission from the role table rather than comparing role
- * strings at the call site, so the whole policy stays readable in one file and
- * a role change does not mean hunting through routes.
+ * Checks a named permission rather than comparing role strings at the call
+ * site, so the whole policy stays readable in one file and a role change does
+ * not mean hunting through routes.
+ *
+ * Asked of the *user*, not the role: a role is the default, and an account may
+ * carry ticks that differ from it. Checking the role alone would have made the
+ * per-account boxes decorative — every one of these twenty-seven routes would
+ * still have answered on the role.
  */
 function requirePermission(permission) {
   return (req, _res, next) => {
     if (!req.user) return next(new UnauthorizedError());
-    if (!can(req.user.role, permission)) return next(new ForbiddenError());
+    if (!userCan(req.user, permission)) return next(new ForbiddenError());
     return next();
   };
 }

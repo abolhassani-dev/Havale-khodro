@@ -1,5 +1,5 @@
 import { html, raw } from './ui/html.js';
-import { getState, subscribe, isAdmin } from './state/store.js';
+import { getState, subscribe } from './state/store.js';
 import { route, resolve, startRouter, go } from './router.js';
 import { boot, watchSession } from './session.js';
 import { auth } from './api/index.js';
@@ -22,7 +22,9 @@ import {
 } from './pages/agent/account.js';
 import { soonPage } from './pages/agent/soon.js';
 import { profilePage, submitProfilePassword } from './pages/agent/profile.js';
-import { registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit } from './pages/admin/index.js';
+import {
+  registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit, onStaffFormChange,
+} from './pages/admin/index.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets } from './api/index.js';
@@ -39,6 +41,7 @@ const TITLES = {
   tickets: ['پشتیبانی', 'تیکت‌های شما'],
   ticket: ['تیکت', ''],
   profile: ['تنظیمات حساب', 'مشخصات نمایندگی و رمز عبور'],
+  'no-access': ['دسترسی تعیین نشده', ''],
 };
 
 /**
@@ -69,6 +72,27 @@ function registerRoutes() {
   registerAdminRoutes(route);
 }
 
+/**
+ * An account that can sign in and reach nothing.
+ *
+ * Every box unticked is a state the owner can now produce in two clicks, and
+ * the DEVELOPER role starts there by design. Without this the panel opened onto
+ * an empty frame or a refusal, which reads as a broken system rather than a
+ * deliberate one — and the person it happens to has no way to tell the
+ * difference or to know who to ask.
+ */
+function noAccessPage() {
+  return html`
+  <div class="soon-card">
+    <h2>هنوز دسترسی‌ای برای این حساب تعیین نشده است</h2>
+    <p>
+      حساب شما ساخته شده و ورودتان درست بوده، ولی هیچ بخشی برایتان فعال نیست.
+      این یعنی خطا رخ نداده — فقط هنوز کسی تیک دسترسی‌ها را نزده است.
+    </p>
+    <p>از مالک سامانه بخواهید دسترسی‌های لازم را برایتان فعال کند.</p>
+  </div>`;
+}
+
 function pageBody() {
   const { page, loading, error } = getState();
 
@@ -86,6 +110,7 @@ function pageBody() {
     case 'tickets': return ticketsPage();
     case 'ticket': return ticketPage();
     case 'profile': return profilePage();
+    case 'no-access': return noAccessPage();
     default:
       if (SOON_PAGES.has(page)) return soonPage();
       return renderAdminPage(page);
@@ -152,6 +177,7 @@ function adminTitle(page) {
     'adm-monitor': 'مانیتورینگ',
     'adm-seats': 'درخواست‌های ظرفیت',
     'adm-settings': 'تنظیمات',
+    'adm-staff': 'کاربران سیستم',
   }[page] || '';
 }
 
@@ -182,6 +208,7 @@ const CLICK_KEYS = new Set([
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'editAgent',
   'grant', 'editSetting',
+  'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
@@ -288,6 +315,12 @@ function applyFilters(form) {
 function onChange(event) {
   if (event.target.name === 'brand') {
     onBrandChange(event.target.form);
+  }
+  // Choosing a role re-ticks its default permissions. Delegated like every
+  // other handler, because the modal is rebuilt on each render and anything
+  // bound to an element would be bound to one that no longer exists.
+  if (event.target.name === 'role') {
+    onStaffFormChange(event.target);
   }
 }
 

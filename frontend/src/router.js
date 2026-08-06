@@ -1,4 +1,5 @@
-import { getState, setState, isAdmin } from './state/store.js';
+import { getState, setState, isAdmin, isAgent } from './state/store.js';
+import { adminHome } from './ui/shell.js';
 
 /**
  * Routing on the hash.
@@ -28,9 +29,19 @@ function parseHash() {
   return { page, params: Object.fromEntries(new URLSearchParams(query || '')) };
 }
 
-/** Where somebody lands when they arrive with no route. */
+/**
+ * Where somebody lands when they arrive with no route.
+ *
+ * For an administrator that is the first page their own menu offers, not the
+ * dashboard: the dashboard needs `monitoring`, so sending everybody there
+ * opened the panel onto a refusal for anyone without it — which was already
+ * true of a finance account and is now true of anybody whose owner unticked
+ * that one box.
+ */
 export function homeFor() {
-  return isAdmin() ? 'adm-dash' : 'dash';
+  if (isAgent()) return 'dash';
+  if (!isAdmin()) return 'no-access';
+  return adminHome() || 'no-access';
 }
 
 export async function resolve() {
@@ -50,7 +61,12 @@ export async function resolve() {
     return;
   }
 
-  const target = page && routes.has(page) ? page : homeFor();
+  const home = homeFor();
+  // An account with nothing open to it stays on the explanation, whatever is in
+  // the address bar. Otherwise a leftover #dash from a previous sign-in sends it
+  // to a page whose loader fails, and the answer to "why can I not get in" is a
+  // stack of red boxes instead of a sentence.
+  const target = home === 'no-access' ? home : page && routes.has(page) ? page : home;
   const loader = routes.get(target);
 
   setState({ page: target, params, loading: true, error: null, data: {} });

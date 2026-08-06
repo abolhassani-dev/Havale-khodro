@@ -4,6 +4,7 @@ const Joi = require('joi');
 const agentService = require('./agent.service');
 const monitoringService = require('./monitoring.service');
 const catalogAdminRoutes = require('../catalog/catalog.admin.routes');
+const staffRoutes = require('./staff.routes');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -36,6 +37,8 @@ const iranMobile = Joi.string()
 // ── catalogue ───────────────────────────────────────────────────────────────
 
 router.use('/catalog', catalogAdminRoutes);
+// Owner only — the router itself requires the `staff` permission.
+router.use('/staff', staffRoutes);
 
 // ── monitoring ──────────────────────────────────────────────────────────────
 

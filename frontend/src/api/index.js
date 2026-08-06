@@ -53,6 +53,15 @@ export const subAgents = {
   setPassword: (id, password) => api.put(`/sub-agents/${id}/password`, { password }),
 };
 
+/** Owner only — every one of these is refused with 403 for anybody else. */
+export const staff = {
+  list: () => api.get('/admin/staff'),
+  options: () => api.get('/admin/staff/options'),
+  create: (payload) => api.post('/admin/staff', payload),
+  update: (id, payload) => api.patch(`/admin/staff/${id}`, payload),
+  setPassword: (id, password) => api.put(`/admin/staff/${id}/password`, { password }),
+};
+
 export const reports = {
   file: (payload) => api.post('/reports', payload),
   againstMe: () => api.get('/reports/against-me'),

@@ -68,6 +68,30 @@ admins="$(db_query "SELECT count(*) FROM \"User\" WHERE role <> 'AGENT' AND stat
   || bad "هیچ حساب مدیریتی فعالی وجود ندارد — کسی نمی‌تواند نمایندگی بسازد یا تیکت جواب دهد" \
          "docker compose exec -T $API_SERVICE npm run seed"
 
+# ── the owner account ────────────────────────────────────────────────────────
+#
+# Counted, never named. The whole value of this account is that nobody knows it
+# exists, so a check that printed its username would undo the thing it is
+# checking — and this output gets pasted into chats.
+#
+# Its absence is a warning rather than a failure: the system runs without one.
+# What is missing is the ability to create or change administrator accounts,
+# which is only noticed on the day somebody needs to be added or removed.
+owners="$(db_query "SELECT count(*) FROM \"User\" WHERE role = 'OWNER' AND status = 'ACTIVE';")"
+
+if [ "${owners:-0}" = "0" ]; then
+  warn "حساب مالک ساخته نشده — مدیریت کاربران سیستم در دسترس نیست" \
+       "docker compose exec api npm run create:owner   (نام کاربری را جایی ننویسید)"
+elif [ "${owners:-0}" -gt 1 ] 2>/dev/null; then
+  # More than one is not a syntax error, but it is not what --force is for
+  # either: two accounts that see everything is twice the surface and half the
+  # accountability.
+  warn "$owners حساب مالک فعال وجود دارد — انتظار یکی بود" \
+       "اگر عمدی نبوده، اضافی را تعلیق کنید"
+else
+  ok "حساب مالک وجود دارد"
+fi
+
 # ── the catalogue ────────────────────────────────────────────────────────────
 #
 # An empty catalogue means nobody can post a listing at all: the model is

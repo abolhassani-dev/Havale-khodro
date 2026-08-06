@@ -1,6 +1,6 @@
 import { html, raw } from './html.js';
 import { icon } from './icons.js';
-import { getState, isAdmin, can } from '../state/store.js';
+import { getState, isAdmin, isAgent, can } from '../state/store.js';
 import { date, faDigits } from './format.js';
 import { BRAND } from '../constants.js';
 
@@ -116,7 +116,44 @@ const ADMIN_NAV = [
   { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
   { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
   { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
+  { group: 'مالک' },
+  { page: 'adm-staff', icon: 'shield', label: 'کاربران سیستم', permission: 'staff' },
 ];
+
+/**
+ * The admin menu as this account sees it.
+ *
+ * Two passes, because one is not enough. The first drops items the account has
+ * no permission for; the second drops any heading left standing over nothing.
+ *
+ * The second pass is not decoration. A heading with no items under it announces
+ * a part of the system the reader cannot reach, and «مالک» would announce the
+ * one account the whole design exists to keep quiet. It was originally solved
+ * by giving that one heading a permission of its own — which fixed «مالک» and
+ * left «مدیریت» and «نظارت و مالی» hanging empty over a support account, as a
+ * real sign-in showed. Per-account ticks make that the ordinary case rather
+ * than the odd one, so the rule is general: a heading is shown when something
+ * follows it.
+ */
+export function adminMenu() {
+  const allowed = ADMIN_NAV.filter((item) => (item.permission ? can(item.permission) : true));
+
+  return allowed.filter(
+    (item, i) => !item.group || (allowed[i + 1] && !allowed[i + 1].group)
+  );
+}
+
+/**
+ * Where an administrator lands.
+ *
+ * The dashboard, when they can open it — and otherwise the first thing in their
+ * menu that they can. Sending everybody to the dashboard meant a finance or
+ * support account, and now anybody whose `monitoring` box is unticked, opened
+ * the panel onto a refusal. Null when the account can reach nothing at all.
+ */
+export function adminHome() {
+  return adminMenu().find((item) => item.page)?.page || null;
+}
 
 function link(item, current) {
   return html`<a class="${item.page === current ? 'on' : ''}" data-go="${item.page}">
@@ -165,26 +202,30 @@ function adminItem(item, current) {
 export function sidebar() {
   const s = getState();
   const admin = isAdmin();
+  const agent = isAgent();
 
+  // Three cases, not two. An account that is neither gets an empty menu rather
+  // than the agency one — which is what `!admin` used to give it, complete with
+  // «حواله‌های من» for a user that has no agency behind it.
   const body = admin
-    ? ADMIN_NAV.filter((item) => (item.permission ? can(item.permission) : true)).map((item) =>
-        adminItem(item, s.page)
-      )
-    : AGENT_NAV.map((item) =>
-        item.children
-          ? navSection(item, s.page, s.openNav || [], s.user)
-          : link(item, s.page)
-      );
+    ? adminMenu().map((item) => adminItem(item, s.page))
+    : agent
+      ? AGENT_NAV.map((item) =>
+          item.children
+            ? navSection(item, s.page, s.openNav || [], s.user)
+            : link(item, s.page)
+        )
+      : raw('');
 
-  const footer = admin
-    ? html`<b>${s.user?.fullName || ''}</b>${roleLabel(s.user?.role)}`
-    : html`<b>${s.user?.agency?.code || ''}</b>${s.user?.agency?.name || ''} — ${s.user?.agency?.city || ''}`;
+  const footer = agent
+    ? html`<b>${s.user?.agency?.code || ''}</b>${s.user?.agency?.name || ''} — ${s.user?.agency?.city || ''}`
+    : html`<b>${s.user?.fullName || ''}</b>${roleLabel(s.user?.role)}`;
 
   return html`
   <aside class="sidebar ${s.sidebarOpen ? 'show' : ''}" id="sb">
     <div class="brand">
       <div class="mark"><img src="/assets/logo.svg" alt=""> ${BRAND.nameFa}</div>
-      <div class="sub">${admin ? 'پنل مدیریت' : 'پنل نمایندگی‌ها'}</div>
+      <div class="sub">${agent ? 'پنل نمایندگی‌ها' : 'پنل مدیریت'}</div>
       <!-- Phone only. The button that opens this menu is in the top bar, which
            the open menu covers — so without a way out from inside, the drawer
            was a one-way door. -->
@@ -199,12 +240,15 @@ export function sidebar() {
 }
 
 function roleLabel(role) {
-  return { SUPER_ADMIN: 'مدیر کل', SUPPORT: 'پشتیبانی', FINANCE: 'مالی' }[role] || '';
+  return {
+    OWNER: 'مالک', DEVELOPER: 'دولوپر',
+    SUPER_ADMIN: 'مدیر کل', SUPPORT: 'پشتیبانی', FINANCE: 'مالی',
+  }[role] || '';
 }
 
 export function topbar(title, crumb) {
   const s = getState();
-  const admin = isAdmin();
+  const agent = isAgent();
   const active = s.access?.active;
 
   return html`
@@ -216,17 +260,17 @@ export function topbar(title, crumb) {
     </div>
     <div class="spacer"></div>
     ${
-      admin
-        ? ''
-        : html`<span class="tag ${active ? 'g' : 'r'}">
+      agent
+        ? html`<span class="tag ${active ? 'g' : 'r'}">
             ${active ? `اشتراک فعال تا ${date(s.access?.expiresAt)}` : 'اشتراک منقضی'}
           </span>`
+        : ''
     }
     <div class="who">
       <div class="av">${(s.user?.fullName || '?').slice(0, 1)}</div>
       <div>
         <div class="nm">${s.user?.fullName || ''}</div>
-        <div class="rl">${admin ? roleLabel(s.user?.role) : s.user?.agency?.name || ''}</div>
+        <div class="rl">${agent ? s.user?.agency?.name || '' : roleLabel(s.user?.role)}</div>
       </div>
     </div>
     <button class="btn sm" data-logout>خروج</button>
@@ -236,7 +280,9 @@ export function topbar(title, crumb) {
 /** Blueprint 7.3: a standing explanation, so nobody wonders why buttons are dead. */
 export function expiredBanner() {
   const s = getState();
-  if (isAdmin() || s.access?.active) return raw('');
+  // Only an agency can have an expired subscription. Asked as `!isAdmin()`,
+  // this told a developer account its subscription had run out.
+  if (!isAgent() || s.access?.active) return raw('');
 
   return html`
   <div class="banner warn">

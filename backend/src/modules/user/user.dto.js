@@ -1,4 +1,4 @@
-const { isAdmin } = require('../../constants/roles');
+const { ROLES, isAdmin, effectivePermissions } = require('../../constants/roles');
 
 /**
  * The boundary between a database row and what leaves the process.
@@ -19,15 +19,26 @@ function toPublicUser(user) {
     status: user.status,
     isAdmin: isAdmin(user.role),
 
-    agency: isAdmin(user.role)
-      ? null
-      : {
-          code: user.agencyCode,
-          name: user.agencyName,
-          city: user.city,
-          coordinatorName: user.coordinatorName,
-          coordinatorPhone: user.coordinatorPhone,
-        },
+    // The resolved answer for this account — role defaults with its own ticks
+    // applied — rather than the role alone. The interface used to keep its own
+    // copy of the policy table and decide from that, and the two had already
+    // drifted: the frontend's SUPER_ADMIN was missing `export`. Sending the
+    // answer instead of the rules means there is only one policy.
+    permissions: effectivePermissions(user),
+
+    // Only an agency has one. Asked as "not an admin", this handed a developer
+    // account an agency object full of undefined — which is not null, so every
+    // `if (user.agency)` downstream believed it.
+    agency:
+      user.role === ROLES.AGENT
+        ? {
+            code: user.agencyCode,
+            name: user.agencyName,
+            city: user.city,
+            coordinatorName: user.coordinatorName,
+            coordinatorPhone: user.coordinatorPhone,
+          }
+        : null,
 
     isReseller: user.isReseller,
     parentId: user.parentId,

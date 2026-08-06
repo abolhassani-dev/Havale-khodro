@@ -1,5 +1,5 @@
 import { auth, subscription } from './api/index.js';
-import { setState, isAdmin } from './state/store.js';
+import { getState, setState } from './state/store.js';
 import { on } from './api/client.js';
 import { toast } from './ui/feedback.js';
 
@@ -14,9 +14,15 @@ import { toast } from './ui/feedback.js';
 export async function boot() {
   try {
     const user = await auth.me();
-    // Admins have no subscription; asking for one would 403 and look like a bug
-    // in the logs every time an administrator signs in.
-    const access = user.isAdmin || user.mustChangePassword ? null : await subscription.me();
+    // Only an agency has a subscription. This used to ask for one on behalf of
+    // anybody who was not an administrator, which was the same thing until the
+    // DEVELOPER role existed — a role that is neither. The 403 that came back
+    // landed in the catch below, which clears the user, so the account signed in
+    // successfully and was thrown straight back to the login screen with nothing
+    // said. Asking on the role rather than on "not an admin" is the difference
+    // between one condition and its accidental complement.
+    const isAgent = user.role === 'AGENT';
+    const access = isAgent && !user.mustChangePassword ? await subscription.me() : null;
     setState({ user, access });
     return user;
   } catch {
@@ -27,7 +33,7 @@ export async function boot() {
 
 /** Refreshes entitlement after something that could have changed it. */
 export async function refreshAccess() {
-  if (isAdmin()) return;
+  if (getState().user?.role !== 'AGENT') return;
   try {
     setState({ access: await subscription.me() });
   } catch {
