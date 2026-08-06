@@ -49,6 +49,62 @@ export function errorBox(error) {
   </div>`;
 }
 
+/**
+ * Where a form puts the reason its submission was refused.
+ *
+ * An empty slot in the markup, filled by `showFormError` afterwards. It has to
+ * work this way round: `render()` rebuilds the page by replacing innerHTML, so
+ * routing a form error through the store re-creates every input as an empty
+ * one. The user is told what was wrong and, in the same instant, loses
+ * everything they had typed — which is worse than not being told.
+ *
+ * Writing into the slot leaves the form untouched.
+ */
+export function formErrorSlot() {
+  return raw('<div class="errslot" data-err hidden></div>');
+}
+
+export function showFormError(form, error) {
+  const slot = form?.querySelector('[data-err]');
+  if (!slot) return;
+
+  const details = Array.isArray(error?.details) ? error.details : [];
+  slot.hidden = false;
+  // Built with the DOM rather than innerHTML: these strings come back from the
+  // server carrying values the user typed.
+  slot.replaceChildren();
+  const box = document.createElement('div');
+  box.className = 'banner danger';
+  const ico = document.createElement('span');
+  ico.className = 'b-ico';
+  ico.textContent = '✕';
+  const txt = document.createElement('div');
+  txt.className = 'b-txt';
+  const b = document.createElement('b');
+  b.textContent = error?.message || 'خطا';
+  txt.append(b);
+  if (details.length) {
+    const ul = document.createElement('ul');
+    ul.style.marginTop = '4px';
+    details.forEach((d) => {
+      const li = document.createElement('li');
+      li.textContent = d.message || String(d);
+      ul.append(li);
+    });
+    txt.append(ul);
+  }
+  box.append(ico, txt);
+  slot.append(box);
+  slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+export function clearFormError(form) {
+  const slot = form?.querySelector('[data-err]');
+  if (!slot) return;
+  slot.hidden = true;
+  slot.replaceChildren();
+}
+
 export function loadingBox() {
   return html`<div class="empty">در حال بارگذاری…</div>`;
 }

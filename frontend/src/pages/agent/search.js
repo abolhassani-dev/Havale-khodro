@@ -154,15 +154,19 @@ function card(h) {
         <span class="tag ${h.kind === 'OFFER' ? '' : 'c'}">${KIND_LABEL[h.kind]}</span>
         <h3>${h.carType}</h3>
       </div>
-      <span class="tag">${SOLH_LABEL[h.solh]}</span>
+      <span class="solh ${h.solh === 'SOLH' ? 'is-solh' : 'is-vek'}">
+        <span class="solh-k">واگذاری</span>
+        <b>${SOLH_LABEL[h.solh]}</b>
+      </span>
     </header>
 
     <dl>
       ${field('مبلغ حواله', money(h.amountToman))}
-      ${field('پرداخت‌شده', money(h.paidAmountToman))}
+      ${field('مبلغ واریزی', money(h.paidAmountToman))}
       ${field('رنگ', h.carColor || 'هر رنگ')}
       ${field('مدل', h.model || '—')}
       ${field('تحویل', h.deliveryDays ? `${faDigits(h.deliveryDays)} روز` : '—')}
+      ${field('مدت واریز', h.depositDays ? `${faDigits(h.depositDays)} روز` : '—')}
       ${field('شرکت', h.supplierCompany || '—')}
     </dl>
 
@@ -243,11 +247,10 @@ export async function doReveal(id) {
     toast('مشخصات تماس نمایش داده شد');
     await resolve();
   } catch (err) {
-    if (err.code === 'REVEAL_LIMIT_REACHED') {
-      setState({ error: err });
-      toast(err.message, 'danger');
-      return;
-    }
+    // Hitting the daily cap is not a broken page. This used to also set the
+    // page-level error, which replaced the entire result list with an error
+    // box — so the punishment for running out of reveals was losing the search
+    // you were in the middle of. The toast says it; the listings stay.
     toast(err.message, 'danger');
   }
 }

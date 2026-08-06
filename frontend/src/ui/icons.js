@@ -26,6 +26,13 @@ const PATHS = {
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
   shield: '<path d="M12 3l7.5 3v5.5c0 4.6-3.1 7.8-7.5 9.5-4.4-1.7-7.5-4.9-7.5-9.5V6L12 3z"/>',
   ticket: '<path d="M3 9V7a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 6v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-6z"/><path d="M14 5v14"/>',
+  file: '<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3.5A1.5 1.5 0 0110.5 2h3A1.5 1.5 0 0115 3.5V4"/><path d="M9 11h6M9 15h4"/>',
+  wrench: '<path d="M15.5 3.5a5.5 5.5 0 00-6.7 7L3 16.3V21h4.7l5.8-5.8a5.5 5.5 0 007-6.7l-3.2 3.2-2.8-.7-.7-2.8 3.2-3.2z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c.9-4 4.1-6 8-6s7.1 2 8 6"/>',
+  // Points down; the stylesheet rotates it a quarter turn when the group is
+  // closed, so one icon covers both states and they can never disagree.
+  chevron: '<path d="M6 9l6 6 6-6"/>',
 };
 
 export function icon(name, size = 17) {

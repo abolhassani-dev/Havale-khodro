@@ -587,3 +587,129 @@ tr.dim, .dim { opacity: 0.55; }
   direction: ltr; text-align: left;
   overflow-x: auto; max-height: 320px; white-space: pre;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Collapsible sidebar sections
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.navsec { margin-bottom: 2px; }
+
+.sechead {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 11px; border: 0; background: none; cursor: pointer;
+  border-radius: var(--r-sm);
+  color: #e4efec; font-size: 14.5px; font-weight: 700;
+  font-family: inherit; text-align: start;
+  transition: background .13s;
+}
+.sechead:hover { background: #ffffff12; }
+.sechead .ico { width: 19px; flex: none; opacity: .9; display: flex; }
+.sechead .lbl { flex: 1; }
+
+/* One chevron, rotated. Two glyphs for open and closed would be two things
+   that can disagree; a rotation cannot point the wrong way. */
+.sechead .chev { display: flex; opacity: .55; transition: transform .18s; }
+/* Positive rotation, because the document is RTL. Turning it the other way
+   gives the left-hand chevron an arrow pointing right — the LTR convention
+   mirrored the wrong way, which reads as "opens to the right" in a menu that
+   opens downward. */
+.navsec:not(.open) .sechead .chev { transform: rotate(90deg); }
+
+.sechead .soon {
+  font-size: 10px; font-weight: 700; letter-spacing: .02em;
+  color: var(--gold); background: #ffffff14;
+  border: 1px solid #ffffff24; border-radius: 20px; padding: 1px 7px;
+}
+
+/* Height is not animated: the sections hold different numbers of items, so a
+   fixed max-height either clips the tallest or lets the shortest hang. */
+.secbody { display: none; padding: 2px 0 6px; }
+.navsec.open .secbody { display: block; }
+
+/* Indented and slightly quieter than a section head, so the hierarchy reads
+   at a glance rather than having to be worked out. */
+.navsec .secbody a {
+  padding-inline-start: 30px;
+  font-size: 13.8px;
+  color: #bcd2cd;
+}
+.navsec .secbody a .ico { width: 17px; opacity: .7; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   The transfer-type badge on a listing card
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* This is the first thing an agency checks on a listing — صلح and وکالتی are
+   different deals, not a detail — so it gets its own bordered block instead of
+   sitting among the generic grey tags. */
+.solh {
+  flex: none;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 74px; padding: 5px 10px 6px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fbfaf6;
+  line-height: 1.3;
+}
+.solh .solh-k {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ink-3); text-transform: none;
+}
+.solh b { font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+
+.solh.is-solh { border-color: #2c6b4144; background: var(--ok-08); }
+.solh.is-solh b { color: var(--ok); }
+.solh.is-vek { border-color: #a85a2444; background: var(--copper-08); }
+.solh.is-vek b { color: var(--copper); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sections that are announced but not built yet
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.soon-card { max-width: 720px; }
+
+.soon-top {
+  display: flex; align-items: flex-start; gap: 13px;
+  padding: 16px 16px 13px;
+  border-bottom: 1px solid var(--line-2);
+}
+.soon-top h2 { font-size: 17px; font-weight: 800; }
+.soon-top .tag { margin-inline-start: auto; flex: none; }
+
+.soon-ico {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--primary-08); color: var(--primary);
+  border: 1px solid var(--primary-15);
+}
+
+.soon-lead { color: var(--ink-2); font-size: 13.5px; margin-top: 3px; }
+
+.soon-body { padding: 15px 16px; font-size: 14px; line-height: 2; color: var(--ink-1); }
+
+.soon-here {
+  margin: 13px 0;
+  padding: 9px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+}
+
+.soon-note { color: var(--ink-3); font-size: 13px; line-height: 1.9; }
+
+.soon-foot {
+  display: flex; gap: 9px; flex-wrap: wrap;
+  padding: 0 16px 16px;
+}
+
+@media (max-width: 700px) {
+  .soon-top { flex-wrap: wrap; }
+  .soon-top .tag { margin-inline-start: 0; }
+  .soon-foot .btn { flex: 1; }
+}
+
+/* The slot a form writes its refusal into. Empty and hidden until it has
+   something to say, so it takes no space in the normal case. */
+.errslot[hidden] { display: none; }
+.errslot { margin-bottom: 10px; }

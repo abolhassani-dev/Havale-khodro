@@ -72,9 +72,12 @@ const createBody = Joi.object({
 
     if (hasBoth) {
       if (BigInt(value.paidAmountToman) > BigInt(value.amountToman)) {
-        return helpers.error('any.custom', {
-          message: 'مبلغ پرداخت شده نمی‌تواند از مبلغ حواله بیشتر باشد',
-        });
+        // `helpers.message`, not `helpers.error('any.custom', { message })`.
+        // The latter fills Joi's own template — «"value" failed custom
+        // validation because {{#error.message}}» — from an `error` key that is
+        // not being passed, so the Persian sentence written here was dropped
+        // and the user was shown that fragment with an empty ending.
+        return helpers.message('مبلغ واریزی نمی‌تواند از مبلغ حواله بیشتر باشد');
       }
     }
     return value;

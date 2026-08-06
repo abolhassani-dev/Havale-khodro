@@ -4,7 +4,7 @@ import { getState, setState } from '../../state/store.js';
 import {
   money, faDigits, until, date, KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox, qtip } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { enDigits } from '../../ui/format.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
@@ -27,7 +27,7 @@ export async function loadMine(params) {
  * have to invent one (blueprint 5.2).
  */
 export function havaleFormPage(kind) {
-  const { data, error } = getState();
+  const { data } = getState();
   const tree = data.tree;
   const offer = kind === 'OFFER';
 
@@ -41,7 +41,7 @@ export function havaleFormPage(kind) {
       <h2>${offer ? 'ثبت حواله فروش' : 'ثبت درخواست خرید حواله'} ${qtip(offer ? 'مشخصات حواله‌ای که می‌خواهید واگذار کنید. بعد از ثبت، آگهی برای همه‌ی نمایندگی‌ها نمایش داده می‌شود ولی شماره تماس شما فقط برای کسی باز می‌شود که روی آگهی «نمایش مشخصات» بزند.' : 'مشخصات خودرویی که دنبالش هستید. درخواست شما برای همه‌ی نمایندگی‌ها نمایش داده می‌شود تا هر کس چنین حواله‌ای دارد با شما تماس بگیرد.')}</h2>
     </div>
 
-    <div style="padding:0 14px">${errorBox(error)}</div>
+    <div style="padding:0 14px">${formErrorSlot()}</div>
 
     <div class="fields">
       <div class="field">
@@ -78,10 +78,20 @@ export function havaleFormPage(kind) {
 
       ${numberField('model', 'مدل (سال)', offer, '۱۴۰۵')}
       ${numberField('amountToman', 'مبلغ حواله (تومان)', offer)}
-      ${numberField('paidAmountToman', 'مبلغ پرداخت‌شده (تومان)', offer)}
+      ${numberField('paidAmountToman', 'مبلغ واریزی (تومان)', offer)}
       ${numberField('deliveryDays', 'زمان تحویل (روز)', offer)}
 
       ${
+        // The deposit window, on both kinds. It used to appear only on a sale,
+        // and a purchase request had a read-only note in its place — but the
+        // field list says it is available on a request too, the API accepts it,
+        // and a buyer stating "I can deposit within ten days" is exactly the
+        // thing a seller reads a request to find out. Leaving it off meant a
+        // request could never carry it, and nothing said why.
+        //
+        // It is not the listing's lifetime here, which is why the two are now
+        // explained separately: a request always closes after seven days
+        // whatever this says.
         offer
           ? html`<div class="field">
               <label for="depositDays">مدت زمان واریز (روز)</label>
@@ -93,8 +103,13 @@ export function havaleFormPage(kind) {
               </div>
             </div>`
           : html`<div class="field">
-              <label>عمر آگهی</label>
-              <div class="readonly">درخواست خرید ۷ روز فعال می‌ماند</div>
+              <label for="depositDays">مدت زمان واریز (روز) <span class="opt">(اختیاری)</span></label>
+              <input class="in num" id="depositDays" name="depositDays" inputmode="numeric"
+                     min="${LIMITS.depositDaysMin}" max="${LIMITS.depositDaysMax}">
+              <div class="hint">
+                مهلتی که برای واریز در اختیار دارید. عمر خودِ آگهی به این بستگی ندارد —
+                درخواست خرید همیشه ۷ روز فعال می‌ماند و قابل تمدید است.
+              </div>
             </div>`
       }
 
@@ -160,15 +175,35 @@ export async function submitHavale(form) {
     description: form.description.value,
   };
 
+  // Which fields the API wants as text rather than as a number.
+  //
+  // `model` is the model *year* — «۱۴۰۵» — and the schema types it as a string,
+  // because it is a label rather than a quantity nobody will ever do arithmetic
+  // on. This list used to hold only carColor and description, so the year was
+  // sent as the number 1405 and the server answered «"model" must be a string»
+  // for every sale listing submitted from this form. The backend tests missed
+  // it because they build their payload directly and send '1405' as text — the
+  // request the browser actually makes was never the request under test.
+  const FREE_TEXT = new Set(['carColor', 'description']);
+
   Object.entries(optional).forEach(([key, value]) => {
     if (value === '' || value === undefined) return;
+
+    // Free text is passed through untouched — running enDigits over a
+    // description would rewrite the digits inside somebody's sentence.
+    if (FREE_TEXT.has(key)) {
+      payload[key] = value;
+      return;
+    }
     // Persian digits are what an Iranian keyboard produces, and the API takes
-    // numbers. Converting here rather than refusing is the difference between a
-    // form that works and one that blames the user for their keyboard.
-    payload[key] = ['carColor', 'description'].includes(key) ? value : Number(enDigits(value));
+    // Latin ones. Converting here rather than refusing is the difference
+    // between a form that works and one that blames the user for their
+    // keyboard. The year stays text after the conversion; everything else
+    // becomes a number.
+    payload[key] = key === 'model' ? enDigits(value) : Number(enDigits(value));
   });
 
-  setState({ error: null });
+  clearFormError(form);
 
   try {
     await havale.create(payload);
@@ -176,7 +211,7 @@ export async function submitHavale(form) {
     go('mine');
     await resolve();
   } catch (err) {
-    setState({ error: err });
+    showFormError(form, err);
   }
 }
 
@@ -339,7 +374,9 @@ export function havaleDetailModal(id) {
     title: `${item.carType} — ${KIND_LABEL[item.kind]}`,
     body: html`
       <div class="drow"><span>مبلغ حواله</span><b>${money(item.amountToman)}</b></div>
-      <div class="drow"><span>پرداخت‌شده</span><b>${money(item.paidAmountToman)}</b></div>
+      <div class="drow"><span>مبلغ واریزی</span><b>${money(item.paidAmountToman)}</b></div>
+      <div class="drow"><span>مدت واریز</span><b>${item.depositDays ? `${faDigits(item.depositDays)} روز` : '—'}</b></div>
+      <div class="drow"><span>زمان تحویل</span><b>${item.deliveryDays ? `${faDigits(item.deliveryDays)} روز` : '—'}</b></div>
       <div class="drow"><span>رنگ</span><b>${item.carColor || 'هر رنگ'}</b></div>
       <div class="drow"><span>مدل</span><b>${item.model || '—'}</b></div>
       <div class="drow"><span>واگذاری</span><b>${SOLH_LABEL[item.solh]}</b></div>

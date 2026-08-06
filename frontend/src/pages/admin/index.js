@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox, qtip, pager, detailRow } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 
@@ -258,12 +258,12 @@ function agentPage() {
 }
 
 function newAgentPage() {
-  const { error } = getState();
+
 
   return html`
   <form class="card form" data-form="new-agent">
     <div class="card-h"><h2>ساخت حساب نمایندگی ${qtip('حساب تازه برای یک نمایندگی. رمز اولیه فقط همین یک بار نمایش داده می‌شود و نماینده در اولین ورود باید عوضش کند.')}</h2></div>
-    <div style="padding:0 14px">${errorBox(error)}</div>
+    <div style="padding:0 14px">${formErrorSlot()}</div>
     <div class="fields">
       ${field('username', 'نام کاربری', 'text', 'ltr')}
       ${field('password', 'رمز اولیه', 'text', 'ltr')}
@@ -694,7 +694,7 @@ function submitAgentSearch(form) {
 }
 
 async function submitNewAgent(form) {
-  setState({ error: null });
+  clearFormError(form);
   const payload = {};
   ['username', 'password', 'fullName', 'phone', 'agencyCode', 'agencyName', 'city',
     'coordinatorName', 'coordinatorPhone', 'adminNote'].forEach((key) => {
@@ -716,7 +716,7 @@ async function submitNewAgent(form) {
     });
     form.reset();
   } catch (err) {
-    setState({ error: err });
+    showFormError(form, err);
   }
 }
 

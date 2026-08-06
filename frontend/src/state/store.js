@@ -14,10 +14,28 @@ const state = {
   params: {},
   data: {},
   loading: false,
-  error: null,
   modal: null,
+  // Load failures only. There is nothing to show, so the whole page body is
+  // replaced by the message.
+  //
+  // A *submission* being refused is deliberately not stored here. It used to
+  // be, and because render() rebuilds the page by replacing innerHTML, telling
+  // the user what was wrong re-created every input as an empty one — they were
+  // told and lost everything they had typed in the same instant. Form errors
+  // are written straight into the form now (ui/feedback.js).
+  error: null,
   toast: null,
+  // Which sidebar sections the reader has opened by hand. Kept in state and not
+  // in the DOM because every render replaces the sidebar wholesale — read off
+  // the markup, the menu would snap shut on every click inside it.
+  openNav: [],
 };
+
+/** Opens a sidebar section, or closes it if it was already open. */
+export function toggleNavSection(id) {
+  const open = state.openNav.includes(id);
+  setState({ openNav: open ? state.openNav.filter((x) => x !== id) : [...state.openNav, id] });
+}
 
 const subscribers = new Set();
 

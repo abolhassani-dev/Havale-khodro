@@ -5,7 +5,7 @@ import {
   money, faDigits, date, dateTime, relative, enDigits,
   TICKET_STATUS_LABEL, REPORT_REASON_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, errorBox, qtip } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
 
@@ -347,7 +347,7 @@ function ticketTag(status) {
 }
 
 export function ticketPage() {
-  const { data, error } = getState();
+  const { data } = getState();
   const t = data.ticket;
   if (!t) return emptyBox('تیکت پیدا نشد.');
 
@@ -376,7 +376,7 @@ export function ticketPage() {
             این تیکت بسته شده است. برای ادامه، تیکت تازه باز کنید.
           </div>`
         : html`<form class="reply" data-form="ticket-reply" data-id="${t.id}">
-            ${errorBox(error)}
+            ${formErrorSlot()}
             <textarea class="in" name="body" rows="3" minlength="5" maxlength="4000"
                       placeholder="پاسخ شما…" required></textarea>
             <div class="reply-foot">
@@ -424,12 +424,12 @@ export function newTicketModal(subject = '') {
 }
 
 export async function submitTicketReply(form) {
-  setState({ error: null });
+  clearFormError(form);
   try {
     await tickets.reply(form.dataset.id, form.body.value);
     await resolve();
   } catch (err) {
-    setState({ error: err });
+    showFormError(form, err);
   }
 }
 

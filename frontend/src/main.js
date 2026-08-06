@@ -20,7 +20,11 @@ import {
   loadTickets, ticketsPage, loadTicket, ticketPage, newTicketModal, submitTicketReply,
   reportModal,
 } from './pages/agent/account.js';
+import { soonPage } from './pages/agent/soon.js';
+import { profilePage, submitProfilePassword } from './pages/agent/profile.js';
 import { registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit } from './pages/admin/index.js';
+import { SOON_PAGES } from './ui/shell.js';
+import { toggleNavSection } from './state/store.js';
 import { subAgents, tickets } from './api/index.js';
 
 /** Page titles, so the top bar and the document title agree. */
@@ -34,7 +38,18 @@ const TITLES = {
   'sub-agents': ['زیرنمایندگی‌ها', 'حالت ماژول'],
   tickets: ['پشتیبانی', 'تیکت‌های شما'],
   ticket: ['تیکت', ''],
+  profile: ['تنظیمات حساب', 'مشخصات نمایندگی و رمز عبور'],
 };
+
+/**
+ * Titles for the sections that are not built yet, derived from the menu itself.
+ *
+ * Written out by hand, these would be a second list to keep in step with the
+ * first — and the one that drifts is always the one nobody sees fail.
+ */
+for (const [page, { section, child }] of SOON_PAGES) {
+  TITLES[page] = [child.label, section.label];
+}
 
 function registerRoutes() {
   route('dash', loadDashboard);
@@ -46,6 +61,11 @@ function registerRoutes() {
   route('sub-agents', loadSubAgents);
   route('tickets', loadTickets);
   route('ticket', loadTicket);
+  route('profile', async () => ({}));
+  // Registered so the router recognises them: an unknown page silently
+  // redirects home, which would make every one of these menu items look like
+  // a dead click rather than a section that is on its way.
+  for (const page of SOON_PAGES.keys()) route(page, async () => ({}));
   registerAdminRoutes(route);
 }
 
@@ -65,7 +85,10 @@ function pageBody() {
     case 'sub-agents': return subAgentsPage();
     case 'tickets': return ticketsPage();
     case 'ticket': return ticketPage();
-    default: return renderAdminPage(page);
+    case 'profile': return profilePage();
+    default:
+      if (SOON_PAGES.has(page)) return soonPage();
+      return renderAdminPage(page);
   }
 }
 
@@ -152,7 +175,7 @@ function adminTitle(page) {
  * string somewhere else.
  */
 const CLICK_KEYS = new Set([
-  'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor',
+  'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword',
   'newTicket', 'closeTicket',
@@ -184,6 +207,7 @@ function onClick(event) {
     const params = Object.fromEntries(new URLSearchParams(d.goParams || ''));
     return go(d.go, params);
   }
+  if (d.navSection) return toggleNavSection(d.navSection);
   if (d.toggleSidebar !== undefined) return document.getElementById('sb')?.classList.toggle('show');
   if (d.closeModal !== undefined || el.hasAttribute('data-overlay')) return closeModal();
   if (d.confirm !== undefined) return runModalAction(null);
@@ -241,6 +265,7 @@ function onSubmit(event) {
     case 'login': return submitLogin(form);
     case 'change-password': return submitChangePassword(form);
     case 'havale': return submitHavale(form);
+    case 'profile-password': return submitProfilePassword(form);
     case 'ticket-reply': return submitTicketReply(form);
     case 'modal': return runModalAction(form);
     case 'search-filters': return applyFilters(form);
