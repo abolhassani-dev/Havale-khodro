@@ -72,14 +72,40 @@ done
 
 # Infrastructure files that must never be reachable over HTTP. Each of these
 # has been served by a misconfigured root at some point in somebody's career.
+#
+# Matched on the *content*, not the status code. nginx serves this as a single
+# page application — `try_files $uri $uri/ /index.html` — so every path that
+# does not exist comes back as 200 with the app's HTML in it. Judging by status
+# alone, the first version of this check reported that .env, .git/config and
+# the database panel's password file were all downloadable from the public
+# internet. They were not; every one of those responses was the home page.
+#
+# There is no scarier false positive available in this project, and it was
+# printed to the person who owns the server. So: ask for the file, and only
+# call it exposed if what comes back is recognisably that file.
+declare -A SIGNATURE=(
+  ['.env']='SESSION_SECRET=|POSTGRES_PASSWORD='
+  ['.git/config']='\[core\]|\[remote '
+  ['docker-compose.yml']='^services:|^  api:'
+  ['deploy/nginx/.htpasswd']='^[A-Za-z0-9_-]+:\$(apr1|2y)\$'
+  ['backend/package.json']='"dependencies"|"name":'
+  ['backend/.env']='SESSION_SECRET=|DATABASE_URL='
+  ['.git/HEAD']='^ref: refs/'
+)
+
 exposed=""
-for path in .env .git/config docker-compose.yml deploy/nginx/.htpasswd backend/package.json; do
-  code="$(http_code "$BASE/$path")"
-  [ "$code" = "200" ] && exposed="$exposed /$path"
+for path in "${!SIGNATURE[@]}"; do
+  body="$(curl -s --max-time 10 "${CURL_OPTS[@]}" "$BASE/$path" 2>/dev/null | head -c 4000)"
+  [ -n "$body" ] || continue
+  echo "$body" | grep -qE "${SIGNATURE[$path]}" && exposed="$exposed /$path"
 done
-[ -z "$exposed" ] \
-  && ok "فایل‌های زیرساختی از وب در دسترس نیستند" \
-  || bad "این فایل‌ها از وب قابل دریافت‌اند:$exposed" "در app.conf مسدودشان کنید"
+
+if [ -z "$exposed" ]; then
+  ok "فایل‌های زیرساختی از وب در دسترس نیستند"
+else
+  bad "این فایل‌ها واقعاً از وب قابل دریافت‌اند:$exposed" \
+      "فوری: در app.conf مسدود کنید و بعد همه‌ی رازهای داخلشان را عوض کنید"
+fi
 
 # Compression: not correctness, but the difference between a panel that feels
 # fast on a phone connection and one that does not.
