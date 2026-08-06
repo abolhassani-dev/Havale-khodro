@@ -12,8 +12,13 @@ import { SOON_PAGES } from '../../ui/shell.js';
  * business rather than a generic "coming soon", and points at the part of the
  * product that works today.
  *
- * They are static by design — no route loader, no request. Nothing here can
- * fail, so nothing here needs an error state.
+ * They run the full width of the content area, and the width is used rather
+ * than merely filled: the section's own menu items are laid out as a grid so
+ * the reader sees the shape of what is coming, not one long line of prose
+ * stretched across a desktop monitor.
+ *
+ * Static by design — no route loader, no request. Nothing here can fail, so
+ * nothing here needs an error state.
  */
 
 const COPY = {
@@ -25,6 +30,12 @@ const COPY = {
       'و درخواست خرید ثبت کنید تا نمایندگی‌های دیگر با شما تماس بگیرند. ' +
       'همان قواعد آشنای حواله اینجا هم برقرار است: مشخصات تماس تا وقتی طرف مقابل ' +
       '«نمایش مشخصات» نزند مخفی می‌ماند و سقف روزانه‌ی شما رعایت می‌شود.',
+    items: {
+      'car-search': 'جستجو در خودروهای موجود نمایندگی‌های دیگر، با فیلتر برند، مدل، رنگ و شهر.',
+      'car-sell': 'آگهی فروش خودرویی که در اختیار دارید، با مشخصات کامل و قیمت.',
+      'car-buy': 'اعلام خودرویی که دنبالش هستید، تا دارندگانش سراغ شما بیایند.',
+      'car-mine': 'همه‌ی آگهی‌های خودروی خودتان، با امکان تمدید و بستن.',
+    },
   },
   reg: {
     title: 'ثبت‌نامی خودرو',
@@ -35,6 +46,12 @@ const COPY = {
       'می‌تواند پاسخ دهد — و برعکس، اگر ظرفیت ثبت‌نامی دارید می‌توانید اعلامش کنید ' +
       'تا دیگران پیدایتان کنند. این با حواله فرق دارد: آنجا خودرو ثبت‌نام‌شده است ' +
       'و حواله‌اش جابه‌جا می‌شود، اینجا هنوز ثبت‌نامی در کار نیست.',
+    items: {
+      'reg-search': 'دیدن ظرفیت‌های ثبت‌نام اعلام‌شده و درخواست‌های باز دیگران.',
+      'reg-request': 'ثبت درخواست ثبت‌نام برای برندی که نمایندگی‌اش را ندارید.',
+      'reg-offer': 'اعلام ظرفیت ثبت‌نامی که در اختیار دارید.',
+      'reg-mine': 'پیگیری درخواست‌ها و ظرفیت‌های خودتان.',
+    },
   },
   parts: {
     title: 'قطعات خودرو',
@@ -43,22 +60,30 @@ const COPY = {
       'در فازهای بعدی، عرضه و تقاضای قطعات هم به سامانه اضافه می‌شود: قطعه‌ای که ' +
       'موجود دارید را آگهی کنید، یا قطعه‌ای که لازم دارید را درخواست بزنید و ' +
       'بگذارید تأمین‌کننده‌ها سراغتان بیایند.',
+    items: {
+      'parts-search': 'جستجو در قطعات موجود، بر اساس برند و مدل خودرو.',
+      'parts-offer': 'آگهی قطعه‌ای که موجود دارید.',
+      'parts-request': 'اعلام قطعه‌ای که لازم دارید.',
+      'parts-mine': 'آگهی‌ها و درخواست‌های قطعه‌ی خودتان.',
+    },
   },
 };
 
 export function soonPage() {
   const { page } = getState();
   const entry = SOON_PAGES.get(page);
-  if (!entry) return html`<div class="card"><div class="pad">این صفحه هنوز آماده نیست.</div></div>`;
+  if (!entry) {
+    return html`<div class="card"><div class="empty">این صفحه هنوز آماده نیست.</div></div>`;
+  }
 
   const { section, child } = entry;
-  const copy = COPY[section.id] || { title: section.label, lead: '', body: '' };
+  const copy = COPY[section.id] || { title: section.label, lead: '', body: '', items: {} };
 
   return html`
   <div class="card soon-card">
     <div class="soon-top">
       <span class="soon-ico">${icon(section.icon, 26)}</span>
-      <div>
+      <div class="soon-head">
         <h2>${copy.title}</h2>
         <p class="soon-lead">${copy.lead}</p>
       </div>
@@ -66,10 +91,19 @@ export function soonPage() {
     </div>
 
     <div class="soon-body">
-      <p>${copy.body}</p>
+      <p class="soon-intro">${copy.body}</p>
 
-      <div class="soon-here">
-        <b>صفحه‌ای که باز کردید:</b> ${child.label}
+      <div class="soon-grid">
+        ${section.children.map(
+          (c) => html`<div class="soon-item ${c.page === child.page ? 'here' : ''}">
+            <span class="soon-item-ico">${icon(c.icon, 16)}</span>
+            <div>
+              <b>${c.label}</b>
+              <span>${copy.items?.[c.page] || ''}</span>
+            </div>
+            ${c.page === child.page ? html`<span class="tag n">همین‌جا</span>` : ''}
+          </div>`
+        )}
       </div>
 
       <p class="soon-note">

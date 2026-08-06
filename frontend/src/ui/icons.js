@@ -33,6 +33,7 @@ const PATHS = {
   // Points down; the stylesheet rotates it a quarter turn when the group is
   // closed, so one icon covers both states and they can never disagree.
   chevron: '<path d="M6 9l6 6 6-6"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
 };
 
 export function icon(name, size = 17) {

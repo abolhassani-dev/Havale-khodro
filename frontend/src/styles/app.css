@@ -522,8 +522,19 @@ body { padding-bottom: 46px; }
   .grid.g3 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 760px) {
-  .sidebar { position: fixed; inset-inline-start: -100%; z-index: 60; transition: inset-inline-start .2s; }
-  .sidebar.show { inset-inline-start: 0; }
+  /* Parked with a transform rather than a negative inset. An element sitting at
+     `inset-inline-start: -100%` still counts toward the page's scrollable area,
+     so the closed drawer made every phone page scroll sideways by exactly one
+     screen width. A transform moves it without contributing overflow. */
+  .sidebar {
+    position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 60;
+    /* Positive, because the page is RTL: `inset-inline-start: 0` puts the
+       drawer against the right edge, so hiding it means pushing it further
+       right. translateX is physical and does not mirror itself. */
+    transform: translateX(100%);
+    transition: transform .22s ease;
+  }
+  .sidebar.show { transform: none; }
   .grid.g2, .grid.g3, .grid.g4 { grid-template-columns: 1fr; }
   .content { padding: 14px; }
   .topbar { padding: 0 14px; }

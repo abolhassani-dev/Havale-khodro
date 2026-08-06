@@ -256,6 +256,76 @@ await step('catalogue editor lists brands', async () => {
   await page.waitForSelector('.cat-brand', { timeout: 8000 });
 });
 
+/**
+ * The phone drawer.
+ *
+ * Its own viewport, because none of the above would have caught any of this:
+ * the button that opens the menu is underneath the menu once it is open, so
+ * there has to be a way out from inside — and the open state has to survive a
+ * re-render, or expanding a section inside the drawer makes the drawer vanish.
+ */
+const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+phone.on('pageerror', (e) => errors.push('pageerror (phone): ' + e.message));
+
+const drawerOpen = () => phone.locator('#sb').evaluate((el) => el.classList.contains('show'));
+const openDrawer = async () => { await phone.click('.menubtn'); await phone.waitForTimeout(350); };
+const scrollsSideways = () =>
+  phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+
+await step('phone: signs in', async () => {
+  await phone.goto(process.env.BASE_URL || 'http://localhost:5173/', { waitUntil: 'networkidle' });
+  await phone.fill('#username', process.env.AGENT_USER || 'alborz');
+  await phone.fill('#password', process.env.AGENT_PASS || 'Demo@12345');
+  await phone.click('button[type=submit]');
+  await phone.waitForSelector('.topbar', { timeout: 8000 });
+});
+
+// The closed drawer used to sit at `inset-inline-start: -100%`, which still
+// counts toward the page's scrollable width — so every phone page scrolled
+// sideways by exactly one screen.
+await step('phone: no page scrolls sideways', async () => {
+  if (await scrollsSideways()) throw new Error('the page is wider than the screen');
+});
+
+await step('phone: the drawer can be closed three ways', async () => {
+  await openDrawer();
+  if (!(await drawerOpen())) throw new Error('the menu button did not open it');
+
+  await phone.click('.sb-close');
+  await phone.waitForTimeout(350);
+  if (await drawerOpen()) throw new Error('the ✕ inside did not close it');
+
+  await openDrawer();
+  await phone.locator('.sb-backdrop').click({ position: { x: 40, y: 500 } });
+  await phone.waitForTimeout(350);
+  if (await drawerOpen()) throw new Error('tapping the page behind did not close it');
+
+  await openDrawer();
+  await phone.keyboard.press('Escape');
+  await phone.waitForTimeout(350);
+  if (await drawerOpen()) throw new Error('Escape did not close it');
+});
+
+await step('phone: the drawer survives expanding a section', async () => {
+  await openDrawer();
+  await phone.click('[data-nav-section="car"]');
+  await phone.waitForTimeout(350);
+  if (!(await drawerOpen())) throw new Error('expanding a section closed the whole menu');
+
+  await phone.click('.nav [data-go="car-search"]');
+  await phone.waitForTimeout(700);
+  if (await drawerOpen()) throw new Error('following a link left the menu covering the page');
+  await phone.waitForSelector('.soon-card', { timeout: 8000 });
+  if (await scrollsSideways()) throw new Error('the page scrolls sideways');
+});
+
+await step('phone: menu items take a pointer, not a text caret', async () => {
+  const cursor = await phone
+    .locator('.nav [data-go="search"]')
+    .evaluate((el) => getComputedStyle(el).cursor);
+  if (cursor !== 'pointer') throw new Error(`cursor is "${cursor}"`);
+});
+
 if (errors.length) { console.log('\nconsole errors:'); errors.slice(0, 10).forEach((e) => console.log('  ', e)); process.exitCode = 1; }
 else console.log('\nno console errors');
 

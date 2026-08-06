@@ -181,14 +181,21 @@ export function sidebar() {
     : html`<b>${s.user?.agency?.code || ''}</b>${s.user?.agency?.name || ''} — ${s.user?.agency?.city || ''}`;
 
   return html`
-  <aside class="sidebar" id="sb">
+  <aside class="sidebar ${s.sidebarOpen ? 'show' : ''}" id="sb">
     <div class="brand">
       <div class="mark"><img src="/assets/logo.svg" alt=""> ${BRAND.nameFa}</div>
       <div class="sub">${admin ? 'پنل مدیریت' : 'پنل نمایندگی‌ها'}</div>
+      <!-- Phone only. The button that opens this menu is in the top bar, which
+           the open menu covers — so without a way out from inside, the drawer
+           was a one-way door. -->
+      <button class="sb-close" data-toggle-sidebar aria-label="بستن منو">${icon('close', 18)}</button>
     </div>
     <nav class="nav">${body}</nav>
     <div class="sidefoot">${footer}</div>
-  </aside>`;
+  </aside>
+  <!-- The second way out: tapping the page behind the drawer. Shown only while
+       the drawer is open, via the CSS sibling of .sidebar.show. -->
+  <div class="sb-backdrop" data-toggle-sidebar aria-hidden="true"></div>`;
 }
 
 function roleLabel(role) {

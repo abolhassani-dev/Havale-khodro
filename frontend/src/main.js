@@ -24,7 +24,7 @@ import { soonPage } from './pages/agent/soon.js';
 import { profilePage, submitProfilePassword } from './pages/agent/profile.js';
 import { registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit } from './pages/admin/index.js';
 import { SOON_PAGES } from './ui/shell.js';
-import { toggleNavSection } from './state/store.js';
+import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets } from './api/index.js';
 
 /** Page titles, so the top bar and the document title agree. */
@@ -204,11 +204,15 @@ function onClick(event) {
   if (el.hasAttribute('data-overlay') && event.target !== el) return;
 
   if (d.go !== undefined) {
+    // On a phone the menu is an overlay covering the page. Following a link
+    // without closing it left the reader looking at the menu they had just
+    // used, with the page they asked for hidden behind it.
+    closeSidebar();
     const params = Object.fromEntries(new URLSearchParams(d.goParams || ''));
     return go(d.go, params);
   }
   if (d.navSection) return toggleNavSection(d.navSection);
-  if (d.toggleSidebar !== undefined) return document.getElementById('sb')?.classList.toggle('show');
+  if (d.toggleSidebar !== undefined) return toggleSidebar();
   if (d.closeModal !== undefined || el.hasAttribute('data-overlay')) return closeModal();
   if (d.confirm !== undefined) return runModalAction(null);
   if (d.logout !== undefined) return doLogout();
@@ -288,7 +292,11 @@ function onChange(event) {
 }
 
 function onKeydown(event) {
-  if (event.key === 'Escape' && getState().modal) closeModal();
+  if (event.key !== 'Escape') return;
+  // The modal sits on top of the drawer, so it goes first — one Escape should
+  // dismiss one thing, the one the reader is looking at.
+  if (getState().modal) return closeModal();
+  closeSidebar();
 }
 
 async function start() {

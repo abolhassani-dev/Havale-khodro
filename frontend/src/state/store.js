@@ -29,12 +29,27 @@ const state = {
   // in the DOM because every render replaces the sidebar wholesale — read off
   // the markup, the menu would snap shut on every click inside it.
   openNav: [],
+  // Whether the phone drawer is showing — and here for exactly the same reason,
+  // which the first version of this got wrong. It toggled a class on the live
+  // element instead, so the drawer survived until the next render and then
+  // disappeared: tapping ☰ opened it, tapping a section to expand it re-rendered
+  // the shell, and the whole menu was gone. Which looks, from the outside, like
+  // a menu that cannot be closed and cannot be used.
+  sidebarOpen: false,
 };
 
 /** Opens a sidebar section, or closes it if it was already open. */
 export function toggleNavSection(id) {
   const open = state.openNav.includes(id);
   setState({ openNav: open ? state.openNav.filter((x) => x !== id) : [...state.openNav, id] });
+}
+
+export function toggleSidebar() {
+  setState({ sidebarOpen: !state.sidebarOpen });
+}
+
+export function closeSidebar() {
+  if (state.sidebarOpen) setState({ sidebarOpen: false });
 }
 
 const subscribers = new Set();
