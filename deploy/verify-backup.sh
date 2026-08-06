@@ -115,6 +115,11 @@ done
 echo
 if [ "$FAILED" = "0" ]; then
   echo "✓ this backup restores. Verified $(date '+%Y-%m-%d %H:%M')."
+  # Leaves a dated mark, so preflight can answer "when did anyone last prove a
+  # backup restores?" — a question that otherwise depends on somebody
+  # remembering, which is the same as nobody knowing.
+  STAMP="${RESTORE_STAMP:-/var/lib/feranocar/last-restore-test}"
+  mkdir -p "$(dirname "$STAMP")" 2>/dev/null && date '+%Y-%m-%d %H:%M' > "$STAMP" 2>/dev/null || true
 else
   echo "✗ the backup restored but is missing data that cannot legitimately be empty." >&2
   echo "  Do not rely on it. Check /var/log/feranocar-backup.log." >&2
