@@ -76,16 +76,18 @@ export function brandPicker(
       <div class="bpick-items">
         ${brands.map((b) => {
           const grants = grantsByBrand[b.id] || [];
-          return html`<div class="bpick-cell" data-cell data-brand-id="${b.id}"
+          const nModels = b._count?.models;
+          return html`<div class="bpick-cell ${on.has(b.id) ? 'on' : grants.length ? 'part' : ''}"
+                           data-cell data-brand-id="${b.id}"
                            data-bname="${b.name} ${b.slug || ''}"
                            data-grants="${grants.join(',')}">
             <div class="bpick-row">
-              <label class="bpick-item ${on.has(b.id) ? 'on' : grants.length ? 'part' : ''}">
+              <label class="bpick-item">
                 <input type="checkbox" data-brand="${b.id}" ${raw(on.has(b.id) ? 'checked' : '')}>
                 ${
                   b.logo
                     ? html`<img src="/assets/brands/${b.logo}" alt="" loading="lazy">`
-                    : html`<span class="bpick-nologo"></span>`
+                    : html`<span class="bpick-nologo">${(b.name || '؟').slice(0, 1)}</span>`
                 }
                 <span class="bpick-name">${b.name}</span>
                 <span class="bpick-badge" data-badge>
@@ -93,7 +95,9 @@ export function brandPicker(
                 </span>
               </label>
               <button type="button" class="bpick-x" data-brand-expand="${b.id}"
-                      aria-label="مدل‌های ${b.name}">مدل‌ها</button>
+                      aria-label="مدل‌های ${b.name}">
+                <span>مدل‌ها</span>${nModels ? html`<i>${faDigits(nModels)}</i>` : ''}<span class="bpick-chev" aria-hidden="true"></span>
+              </button>
             </div>
             <div class="bpick-mlist" hidden data-mlist></div>
           </div>`;
@@ -164,7 +168,6 @@ function sync(el) {
 
   el.querySelectorAll('[data-cell]').forEach((cell) => {
     const box = cell.querySelector('input[data-brand]');
-    const item = cell.querySelector('.bpick-item');
     const badge = cell.querySelector('[data-badge]');
     const models = box.checked ? [] : cellModelIds(cell);
 
@@ -172,8 +175,8 @@ function sync(el) {
     singleModels += models.length;
 
     box.indeterminate = !box.checked && models.length > 0;
-    item.classList.toggle('on', box.checked);
-    item.classList.toggle('part', !box.checked && models.length > 0);
+    cell.classList.toggle('on', box.checked);
+    cell.classList.toggle('part', !box.checked && models.length > 0);
     badge.textContent = !box.checked && models.length ? `${faDigits(models.length)} مدل` : '';
   });
 
@@ -225,6 +228,15 @@ async function expand(brandId) {
     return true;
   }
 
+  // Accordion: opening one closes the others. Nothing is lost by hiding —
+  // touched cells are read from their boxes even while hidden, untouched ones
+  // from their initial grants — and one open list at a time is the difference
+  // between a readable page and the mess this picker used to be.
+  el.querySelectorAll('[data-cell].open').forEach((other) => {
+    other.querySelector('[data-mlist]').hidden = true;
+    other.classList.remove('open');
+  });
+
   cell.classList.add('open');
   list.hidden = false;
   if (list.dataset.loaded) return true;
@@ -251,6 +263,12 @@ async function expand(brandId) {
 
   const brandChecked = cell.querySelector('input[data-brand]').checked;
   const granted = new Set(cell.dataset.grants.split(',').filter(Boolean));
+
+  if (!models.length) {
+    list.textContent = 'مدلی برای انتخاب نیست.';
+    list.dataset.loaded = '1';
+    return true;
+  }
 
   list.textContent = '';
   for (const m of models) {

@@ -889,56 +889,115 @@ a[data-go],
 .bpick {
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: var(--paper-2);
+  background: var(--card);
   overflow: hidden;
 }
 
 .bpick-h {
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px; flex-wrap: wrap;
-  padding: 11px 13px;
-  background: var(--card);
+  padding: 11px 14px;
+  background: var(--paper-2);
   border-bottom: 1px solid var(--line);
 }
 
-.bpick-note { padding: 8px 13px; border-bottom: 1px solid var(--line-2); background: var(--primary-08); }
+.bpick-note { padding: 8px 14px; border-bottom: 1px solid var(--line-2); background: var(--primary-08); }
 
-.bpick-q { margin: 10px 13px; width: calc(100% - 26px); }
+/* جستجو بیرونِ ناحیه‌ی اسکرول، تا موقع پیمایش فهرست همیشه در دید بماند. */
+.bpick-q { margin: 10px 12px; width: calc(100% - 24px); }
 
-/* ارتفاع ثابت با اسکرول داخلی: ۱۸۶ برند نباید فرم را چند صفحه کند و دکمه‌ی
-   «بساز» را از دسترس ببرد. */
-.bpick-body { max-height: 340px; overflow-y: auto; padding: 0 13px 12px; }
+/* یک ستون، یک اسکرول. نسخه‌ی شبکه‌ای — چند ستون با لیست مدلِ بازشونده وسطش —
+   عملاً غیرقابل استفاده بود: اسم‌ها می‌بریدند و مدل‌ها در ستونی به عرض یک کارت
+   باز می‌شدند. الگوی دیوار و باما همین فهرست تک‌ستونه است: هر برند یک ردیف
+   تمام-عرض، مدل‌هایش زیر همان ردیف. */
+.bpick-body { max-height: min(50vh, 460px); overflow-y: auto; }
 
-.bpick-group + .bpick-group { margin-top: 12px; }
+.bpick-cell { border-top: 1px solid var(--line-2); }
+.bpick-cell:first-child { border-top: 0; }
 
-.bpick-ghead {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 0; margin-bottom: 4px;
-  border-bottom: 1px solid var(--line-2);
-  cursor: pointer;
-}
-.bpick-ghead b { font-size: 13px; }
+/* حالت‌ها روی خود ردیف، با نشانه‌ی لبه — در فهرست بلند، موقع اسکرول چشم
+   انتخاب‌شده‌ها را با همین نوار پیدا می‌کند. */
+.bpick-cell.on { background: var(--primary-08); box-shadow: inset -3px 0 0 var(--primary); }
+.bpick-cell.part { background: var(--copper-08); box-shadow: inset -3px 0 0 #a85a24; }
 
-/* شبکه‌ی خودتنظیم: روی دسکتاپ چند ستون، روی گوشی یکی — بدون media query،
-   چون نقطه‌ی شکست را عرضِ خودِ ستون تعیین می‌کند نه عرض صفحه. */
-.bpick-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 8px; }
+.bpick-row { display: flex; align-items: center; }
+.bpick-cell:not(.on):not(.part) .bpick-row:hover { background: var(--paper-2); }
 
 .bpick-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  font-size: 13px;
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px;
+  font-size: 13.5px;
   cursor: pointer;
-  transition: background .12s, border-color .12s;
 }
-.bpick-item:hover { background: var(--card); }
-.bpick-item.on { background: var(--primary-08); border-color: var(--primary-15); font-weight: 600; }
+.bpick-cell.on .bpick-item { font-weight: 700; }
 
-.bpick-item img { width: 22px; height: 22px; object-fit: contain; flex: none; }
-/* جای خالی هم‌اندازه‌ی لوگو، تا اسم برندهای بدون لوگو با بقیه هم‌تراز بماند. */
-.bpick-nologo { width: 22px; height: 22px; flex: none; }
+.bpick input[type="checkbox"] {
+  width: 17px; height: 17px; flex: none; margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.bpick-item img { width: 26px; height: 26px; object-fit: contain; flex: none; }
+/* برند بدون لوگو: حرف اولش در قاب هم‌اندازه، تا ردیف‌ها هم‌تراز بمانند. */
+.bpick-nologo {
+  width: 26px; height: 26px; flex: none;
+  display: grid; place-items: center;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  font-size: 12px; color: var(--ink-3);
+}
 .bpick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bpick-badge { color: #a85a24; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+
+/* دکمه‌ی بازکردن مدل‌ها: قرص کوچک با تعداد و فلشی که با باز شدن برمی‌گردد. */
+.bpick-x {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-inline-end: 12px;
+  padding: 5px 11px;
+  border: 1px solid var(--line-2); background: var(--card);
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3);
+  cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+.bpick-x:hover { color: var(--primary); border-color: var(--primary-3); }
+.bpick-x i {
+  font-style: normal; font-size: 10.5px;
+  background: var(--paper-2); border-radius: 999px;
+  padding: 1px 6px;
+}
+.bpick-chev {
+  width: 7px; height: 7px; flex: none;
+  border-left: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg) translateY(-2px);
+  transition: transform .15s;
+}
+.bpick-cell.open .bpick-chev { transform: rotate(135deg) translateY(-1px); }
+
+/* مدل‌های یک برند: تمام-عرض زیر ردیف خودش، بدون اسکرول داخلی — تنها اسکرول،
+   اسکرول خود فهرست است. آکاردئون در JS نمی‌گذارد چند لیست هم‌زمان باز بماند. */
+.bpick-mlist {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1px 12px;
+  padding: 4px 40px 12px 14px;
+  background: var(--paper-2);
+  border-top: 1px dashed var(--line-2);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.bpick-mlist[hidden] { display: none; }
+
+.bpick-model {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.bpick-model:hover { background: var(--card); }
+.bpick-model input[type="checkbox"] { width: 15px; height: 15px; }
 
 /* ================================================================
    کاتالوگ خودرو — شبکه‌ی برندها و صفحه‌ی برند
@@ -1008,33 +1067,6 @@ a[data-go],
   overflow-y: auto;
   border-top: 1px solid var(--line-2);
 }
-
-/* ── انتخاب مدل داخل انتخاب‌گر برند ── */
-.bpick-cell { border-radius: var(--r-sm); }
-.bpick-cell.open { grid-column: 1 / -1; background: var(--card); border: 1px solid var(--line); }
-.bpick-row { display: flex; align-items: center; gap: 4px; }
-.bpick-row .bpick-item { flex: 1; min-width: 0; }
-.bpick-badge { color: var(--primary); font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.bpick-item.part { background: var(--copper-08); border-color: #a85a2426; }
-
-.bpick-x {
-  flex: none;
-  border: 1px solid var(--line-2); background: var(--card);
-  border-radius: var(--r-sm);
-  font-size: 11.5px; color: var(--ink-3);
-  padding: 4px 8px; cursor: pointer;
-}
-.bpick-x:hover { color: var(--primary); border-color: var(--primary-15); }
-
-.bpick-mlist {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 2px 10px;
-  padding: 8px 12px 10px;
-  border-top: 1px dashed var(--line-2);
-  max-height: 240px; overflow-y: auto;
-  font-size: 12.5px;
-}
-.bpick-model { display: flex; align-items: center; gap: 7px; padding: 3px 2px; cursor: pointer; }
 
 /* ================================================================
    پاس ظاهری — داشبورد، نمایندگی‌ها، رنگ‌ها
