@@ -33,6 +33,21 @@ const AGENT_SELECT = {
   createdAt: true,
 };
 
+// What a sub-agency row shows nested under its parent — and what the file
+// page lists for a parent's children. No phone: nothing encrypted crosses
+// here, so the relation needs no decrypt pass.
+const CHILD_ROW_SELECT = {
+  id: true,
+  agencyCode: true,
+  agencyName: true,
+  fullName: true,
+  city: true,
+  status: true,
+  lastLoginAt: true,
+  fakeStrikes: true,
+  falseReportStrikes: true,
+};
+
 const agentRepository = {
   AGENT_SELECT,
 
@@ -41,7 +56,16 @@ const agentRepository = {
   },
 
   findById(id) {
-    return prisma.user.findUnique({ where: { id }, select: AGENT_SELECT });
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        ...AGENT_SELECT,
+        // The file page shows where an account sits in the hierarchy: a
+        // child names its parent, a parent lists its children.
+        parent: { select: { id: true, agencyCode: true, agencyName: true } },
+        children: { select: CHILD_ROW_SELECT, orderBy: { agencyCode: 'asc' } },
+      },
+    });
   },
 
   update(id, data) {
@@ -53,26 +77,43 @@ const agentRepository = {
    * agency code, a name, a mobile number.
    */
   list({ query, status, city, isReseller, skip = 0, take = 25 }) {
+    // The phone column is encrypted at rest, so substring search on it is
+    // impossible by design — `contains` used to sit in this list and turned
+    // every text search into a 500. A query that is a whole mobile number
+    // still finds its account, through the blind index's exact match.
+    const textMatch = (q) => [
+      { agencyCode: { contains: q, mode: 'insensitive' } },
+      { agencyName: { contains: q, mode: 'insensitive' } },
+      { fullName: { contains: q, mode: 'insensitive' } },
+      { username: { contains: q, mode: 'insensitive' } },
+      ...(/^09\d{9}$/.test(q) ? [{ phone: q }] : []),
+    ];
+
+    // Top-level agencies only: sub-agencies ride along under their parent, so
+    // the page reads as the hierarchy it is. A query that matches a child
+    // surfaces the parent — with the child visible beneath it.
     const where = {
       role: 'AGENT',
+      parentId: null,
       ...(status ? { status } : {}),
       ...(city ? { city } : {}),
       ...(isReseller === undefined ? {} : { isReseller }),
       ...(query
-        ? {
-            OR: [
-              { agencyCode: { contains: query, mode: 'insensitive' } },
-              { agencyName: { contains: query, mode: 'insensitive' } },
-              { fullName: { contains: query, mode: 'insensitive' } },
-              { username: { contains: query, mode: 'insensitive' } },
-              { phone: { contains: query } },
-            ],
-          }
+        ? { OR: [...textMatch(query), { children: { some: { OR: textMatch(query) } } }] }
         : {}),
     };
 
     return prisma.$transaction([
-      prisma.user.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, select: AGENT_SELECT }),
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        select: {
+          ...AGENT_SELECT,
+          children: { select: CHILD_ROW_SELECT, orderBy: { agencyCode: 'asc' } },
+        },
+      }),
       prisma.user.count({ where }),
     ]);
   },

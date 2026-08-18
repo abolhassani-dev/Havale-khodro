@@ -87,14 +87,17 @@ async function brandChoices(userId) {
 }
 
 /**
- * Replaces an account's grants — both grains, one transaction.
+ * Checks a wanted grant set without writing anything.
  *
- * Delete-then-insert rather than a diff: the set is small, and a half-applied
- * change here is an agency that can suddenly post things nobody chose.
+ * Returns the set as it would be stored — ids verified against the live
+ * catalogue, brand-covered model rows dropped, the ceiling enforced. Split
+ * from the write so a caller composing a larger transaction (creating a
+ * sub-agency: account, grants, seat) can refuse *before* the first insert
+ * instead of leaving a half-made account behind.
  */
-async function setBrands({ userId, brandIds, modelIds = [], limitTo = null }) {
+async function validateGrants({ brandIds, modelIds = [], limitTo = null }) {
   const wantedBrands = [...new Set(brandIds || [])];
-  let wantedModels = [...new Set(modelIds || [])];
+  const wantedModels = [...new Set(modelIds || [])];
 
   // Every id has to be real and active — a stale picker, or a hand-made
   // request, must not write rows that point at nothing.
@@ -119,7 +122,6 @@ async function setBrands({ userId, brandIds, modelIds = [], limitTo = null }) {
   // is what the duplicate row would quietly stop meaning.
   const brandSet = new Set(wantedBrands);
   const modelRows = realModels.filter((m) => !brandSet.has(m.brandId));
-  wantedModels = modelRows.map((m) => m.id);
 
   // A parent may only hand out what it holds: a whole brand only if it holds
   // the brand; a single model if it holds the brand or that very model.
@@ -138,20 +140,38 @@ async function setBrands({ userId, brandIds, modelIds = [], limitTo = null }) {
     }
   }
 
-  await prisma.$transaction([
-    prisma.brandAccess.deleteMany({ where: { userId } }),
-    prisma.modelAccess.deleteMany({ where: { userId } }),
-    prisma.brandAccess.createMany({
-      data: wantedBrands.map((brandId) => ({ userId, brandId })),
-      skipDuplicates: true,
-    }),
-    prisma.modelAccess.createMany({
-      data: wantedModels.map((carModelId) => ({ userId, carModelId })),
-      skipDuplicates: true,
-    }),
-  ]);
+  return { brandIds: wantedBrands, modelIds: modelRows.map((m) => m.id) };
+}
 
-  return wantedBrands.length + wantedModels.length;
+/**
+ * Replaces an account's grants — both grains, one transaction.
+ *
+ * Delete-then-insert rather than a diff: the set is small, and a half-applied
+ * change here is an agency that can suddenly post things nobody chose.
+ *
+ * Pass `db` to run inside a caller's interactive transaction; without it the
+ * write brings its own.
+ */
+async function setBrands({ userId, brandIds, modelIds = [], limitTo = null, db = null }) {
+  const valid = await validateGrants({ brandIds, modelIds, limitTo });
+
+  const write = async (tx) => {
+    await tx.brandAccess.deleteMany({ where: { userId } });
+    await tx.modelAccess.deleteMany({ where: { userId } });
+    await tx.brandAccess.createMany({
+      data: valid.brandIds.map((brandId) => ({ userId, brandId })),
+      skipDuplicates: true,
+    });
+    await tx.modelAccess.createMany({
+      data: valid.modelIds.map((carModelId) => ({ userId, carModelId })),
+      skipDuplicates: true,
+    });
+  };
+
+  if (db) await write(db);
+  else await prisma.$transaction(write);
+
+  return valid.brandIds.length + valid.modelIds.length;
 }
 
 /**
@@ -178,4 +198,6 @@ async function assertMayPost({ userId, carModelId }) {
   }
 }
 
-module.exports = { allowedSets, allowedBrandIds, brandChoices, setBrands, assertMayPost };
+module.exports = {
+  allowedSets, allowedBrandIds, brandChoices, validateGrants, setBrands, assertMayPost,
+};

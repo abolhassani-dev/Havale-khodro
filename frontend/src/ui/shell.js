@@ -83,7 +83,10 @@ const AGENT_NAV = [
     label: 'پروفایل کاربری',
     children: [
       { page: 'profile', icon: 'settings', label: 'تنظیمات حساب' },
-      { page: 'subscription', icon: 'clock', label: 'اشتراک من' },
+      // A sub-agency's access rides on the parent's subscription. The page
+      // would show dates and invoices that are not theirs to act on, so for
+      // them it simply is not in the menu.
+      { page: 'subscription', icon: 'clock', label: 'اشتراک من', notForSubagent: true },
       { page: 'sub-agents', icon: 'users', label: 'زیرنمایندگی‌ها', needsReseller: true },
       { page: 'tickets', icon: 'mail', label: 'پشتیبانی' },
     ],
@@ -163,7 +166,11 @@ function link(item, current) {
 
 /** Hides entries the account cannot use, so no menu item answers "not for you". */
 function visible(children, user) {
-  return children.filter((child) => (child.needsReseller ? Boolean(user?.isReseller) : true));
+  return children.filter((child) => {
+    if (child.needsReseller && !user?.isReseller) return false;
+    if (child.notForSubagent && user?.parentId) return false;
+    return true;
+  });
 }
 
 function navSection(section, current, openIds, user) {
@@ -260,10 +267,17 @@ export function topbar(title, crumb) {
     </div>
     <div class="spacer"></div>
     ${
+      // A sub-agency is not told subscription dates — its access follows the
+      // parent's subscription, which it can neither see nor renew. It gets a
+      // chip only when access is off, and without a date.
       agent
-        ? html`<span class="tag ${active ? 'g' : 'r'}">
-            ${active ? `اشتراک فعال تا ${date(s.access?.expiresAt)}` : 'اشتراک منقضی'}
-          </span>`
+        ? s.user?.parentId
+          ? active
+            ? ''
+            : html`<span class="tag r">دسترسی غیرفعال</span>`
+          : html`<span class="tag ${active ? 'g' : 'r'}">
+              ${active ? `اشتراک فعال تا ${date(s.access?.expiresAt)}` : 'اشتراک منقضی'}
+            </span>`
         : ''
     }
     <div class="who">
@@ -283,6 +297,21 @@ export function expiredBanner() {
   // Only an agency can have an expired subscription. Asked as `!isAdmin()`,
   // this told a developer account its subscription had run out.
   if (!isAgent() || s.access?.active) return raw('');
+
+  // A sub-agency cannot renew anything — its access follows the parent's
+  // subscription. Telling it to «تمدید اشتراک» would send it to a page it does
+  // not have, about a payment that is not its to make.
+  if (s.user?.parentId) {
+    return html`
+    <div class="banner warn">
+      <span class="b-ico">⚠</span>
+      <div class="b-txt">
+        <b>دسترسی حساب شما فعال نیست</b>
+        دسترسی زیرمجموعه از اشتراک نمایندگی مادر می‌آید. برای فعال شدن دوباره،
+        با نمایندگی مادر خود هماهنگ کنید.
+      </div>
+    </div>`;
+  }
 
   return html`
   <div class="banner warn">

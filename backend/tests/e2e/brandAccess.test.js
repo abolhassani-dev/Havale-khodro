@@ -335,12 +335,19 @@ maybe('brand access', () => {
 
     it('may not hand down a brand it does not hold itself', async () => {
       const parent = await parentOf([brands[0].id]);
+      const body = { ...subAgencyBody(), brandIds: [brands[1].id] };
 
       await request(app)
         .post(api('/sub-agents'))
         .set('Cookie', parent.cookie)
-        .send({ ...subAgencyBody(), brandIds: [brands[1].id] })
+        .send(body)
         .expect(403);
+
+      // And the refusal left nothing behind. The three-step version created
+      // the account first and hit the ceiling second — the child existed with
+      // no grants and no seat subscription, and signed in to an inexplicable
+      // «اشتراک منقضی». A sub-agency exists whole or not at all.
+      expect(await prisma.user.count({ where: { username: body.username } })).toBe(0);
     });
 
     // Omitting the field means "the same as mine", which is the right answer

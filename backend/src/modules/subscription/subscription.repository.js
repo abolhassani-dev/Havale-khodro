@@ -35,8 +35,8 @@ const subscriptionRepository = {
     return prisma.plan.findMany({ where: { isActive: true }, orderBy: { priceToman: 'asc' } });
   },
 
-  create(data) {
-    return prisma.subscription.create({ data, include: { plan: true } });
+  create(data, db = prisma) {
+    return db.subscription.create({ data, include: { plan: true } });
   },
 
   /**

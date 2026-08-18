@@ -177,16 +177,19 @@ async function grant({ actor, userId, planId, note }) {
  * the parent every time (blueprint 4.5). The far-future date is a placeholder,
  * not a promise.
  */
-function issueSeatSubscription({ userId, planId, priceToman, createdById }) {
-  return subscriptionRepository.create({
-    userId,
-    planId,
-    startsAt: new Date(),
-    expiresAt: addDays(new Date(), 3650),
-    priceToman,
-    origin: 'PARENT_SEAT',
-    createdById,
-  });
+function issueSeatSubscription({ userId, planId, priceToman, createdById, db = undefined }) {
+  return subscriptionRepository.create(
+    {
+      userId,
+      planId,
+      startsAt: new Date(),
+      expiresAt: addDays(new Date(), 3650),
+      priceToman,
+      origin: 'PARENT_SEAT',
+      createdById,
+    },
+    db
+  );
 }
 
 // ── seat capacity ───────────────────────────────────────────────────────────

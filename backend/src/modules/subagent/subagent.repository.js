@@ -50,8 +50,8 @@ const subagentRepository = {
     return new Map(rows.map((r) => [r.ownerId, r._count._all]));
   },
 
-  create(data) {
-    return prisma.user.create({ data });
+  create(data, db = prisma) {
+    return db.user.create({ data });
   },
 
   // Matched via the phone's blind index — the client middleware rewrites

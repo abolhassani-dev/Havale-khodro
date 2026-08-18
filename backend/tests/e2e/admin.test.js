@@ -141,6 +141,35 @@ maybe('admin panel', () => {
       }
     });
 
+    // The list's text search used to run `contains` against the encrypted
+    // phone column, which the client middleware rightly refuses — so typing
+    // anything into the search box answered 500. Text matches the readable
+    // columns; a whole mobile number still finds its account exactly, through
+    // the blind index.
+    it('searches by text without touching the encrypted phone column', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const payload = agencyPayload();
+
+      const made = await request(app)
+        .post(api('/admin/agents'))
+        .set('Cookie', superAdmin.cookie)
+        .send(payload)
+        .expect(201);
+      created.push(made.body.data.id);
+
+      const byName = await request(app)
+        .get(api(`/admin/agents?query=${encodeURIComponent(payload.agencyName)}`))
+        .set('Cookie', superAdmin.cookie)
+        .expect(200);
+      expect(byName.body.data.items.some((a) => a.id === made.body.data.id)).toBe(true);
+
+      const byPhone = await request(app)
+        .get(api(`/admin/agents?query=${payload.phone}`))
+        .set('Cookie', superAdmin.cookie)
+        .expect(200);
+      expect(byPhone.body.data.items.some((a) => a.id === made.body.data.id)).toBe(true);
+    });
+
     it('is closed to agents entirely', async () => {
       const { cookie } = await agent();
       await request(app).get(api('/admin/agents')).set('Cookie', cookie).expect(403);

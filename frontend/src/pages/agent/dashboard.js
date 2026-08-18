@@ -40,11 +40,21 @@ export function dashboardPage() {
       `${faDigits(usage?.dailyUsed ?? 0)} / ${faDigits(usage?.dailyLimit ?? 0)}`,
       `این دوره: ${faDigits(usage?.monthlyUsed ?? 0)} از ${faDigits(usage?.monthlyLimit ?? 0)}`
     )}
-    ${stat(
-      'اشتراک',
-      sub?.active ? `${faDigits(sub.daysLeft)} روز` : 'منقضی',
-      sub?.active ? `تا ${date(sub.expiresAt)}` : 'برای ادامه تمدید کنید'
-    )}
+    ${
+      // A sub-agency's access rides on the parent's subscription: no dates, no
+      // day counts, no renewal — only whether the account works right now.
+      user?.parentId
+        ? stat(
+            'دسترسی',
+            sub?.active ? 'فعال' : 'غیرفعال',
+            sub?.active ? 'زیرمجموعه‌ی نمایندگی مادر' : 'با نمایندگی مادر هماهنگ کنید'
+          )
+        : stat(
+            'اشتراک',
+            sub?.active ? `${faDigits(sub.daysLeft)} روز` : 'منقضی',
+            sub?.active ? `تا ${date(sub.expiresAt)}` : 'برای ادامه تمدید کنید'
+          )
+    }
   </div>
 
   ${

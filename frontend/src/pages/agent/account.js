@@ -26,6 +26,21 @@ export function subscriptionPage() {
   const { data, user } = getState();
   const { me, invoice, seats, orders } = data;
 
+  // The menu hides this page from sub-agencies, but a bookmark or a typed hash
+  // still lands here. What it would show — dates, invoices, a renew flow — is
+  // the parent's business, not theirs.
+  if (user?.parentId) {
+    return html`
+    <div class="card">
+      <div class="card-h"><h2>اشتراک</h2></div>
+      <div style="padding:14px" class="hint">
+        حساب شما زیرمجموعه‌ی یک نمایندگی مادر است و اشتراک آن از اشتراک نمایندگی مادر
+        خوانده می‌شود — نیازی به تمدید جداگانه نیست. اگر دسترسی حساب فعال نیست، با
+        نمایندگی مادر خود هماهنگ کنید.
+      </div>
+    </div>`;
+  }
+
   return html`
   <div class="cols">
     <div class="card">

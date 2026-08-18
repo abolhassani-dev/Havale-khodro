@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 
 const config = require('../../config');
+const { prisma } = require('../../config/database');
 const { subagentRepository } = require('./subagent.repository');
 const subscriptionService = require('../subscription/subscription.service');
 const authRepository = require('../auth/auth.repository');
@@ -87,22 +88,6 @@ const subagentService = {
     const phoneTaken = await subagentRepository.findByPhone(payload.phone);
     if (phoneTaken) throw new ConflictError(MESSAGES.ADMIN.PHONE_TAKEN);
 
-    const child = await subagentRepository.create({
-      username: payload.username,
-      passwordHash: await bcrypt.hash(payload.password, config.security.bcryptRounds),
-      phone: payload.phone,
-      fullName: payload.fullName,
-      role: 'AGENT',
-      agencyCode: await nextAgencyCode(user.agencyCode),
-      agencyName: payload.agencyName,
-      city: payload.city,
-      coordinatorName: payload.coordinatorName,
-      coordinatorPhone: payload.coordinatorPhone,
-      parentId: user.id,
-      // The parent chose this password and therefore knows it.
-      mustChangePassword: true,
-    });
-
     // The brands this sub-agency may post under, capped by the parent's own.
     //
     // This is the point of the whole feature: a main agency with twenty
@@ -115,20 +100,56 @@ const subagentService = {
     // sub-agency that is simply an extra desk rather than a specialised one.
     const mine = await brandAccess.allowedSets(user.id);
     const mineModelIds = mine.modelGrants.map((g) => g.id);
-    await brandAccess.setBrands({
-      userId: child.id,
+    const grants = {
       brandIds: payload.brandIds ?? mine.brandIds,
       modelIds: payload.modelIds ?? (payload.brandIds ? [] : mineModelIds),
       limitTo: { brandIds: mine.brandIds, modelIds: mineModelIds },
-    });
+    };
+    // Checked before anything is written. This used to be discovered *after*
+    // the account insert, and a refusal left a half-made child behind — an
+    // account with no grants and no seat subscription, which then signed in to
+    // an inexplicable «اشتراک منقضی».
+    await brandAccess.validateGrants(grants);
 
-    // The seat subscription carries no meaningful expiry of its own — it always
-    // reads the parent's (blueprint 4.5).
-    await subscriptionService.issueSeatSubscription({
-      userId: child.id,
-      planId: access.subscription.planId,
-      priceToman: BigInt(seats.unitPriceToman),
-      createdById: user.id,
+    const passwordHash = await bcrypt.hash(payload.password, config.security.bcryptRounds);
+    const agencyCode = await nextAgencyCode(user.agencyCode);
+
+    // Account, grants, seat: one transaction. A sub-agency either exists
+    // whole or not at all — the three-step version could be interrupted
+    // between any two steps and leave an account that half-works.
+    const child = await prisma.$transaction(async (tx) => {
+      const created = await subagentRepository.create(
+        {
+          username: payload.username,
+          passwordHash,
+          phone: payload.phone,
+          fullName: payload.fullName,
+          role: 'AGENT',
+          agencyCode,
+          agencyName: payload.agencyName,
+          city: payload.city,
+          coordinatorName: payload.coordinatorName,
+          coordinatorPhone: payload.coordinatorPhone,
+          parentId: user.id,
+          // The parent chose this password and therefore knows it.
+          mustChangePassword: true,
+        },
+        tx
+      );
+
+      await brandAccess.setBrands({ userId: created.id, ...grants, db: tx });
+
+      // The seat subscription carries no meaningful expiry of its own — it
+      // always reads the parent's (blueprint 4.5).
+      await subscriptionService.issueSeatSubscription({
+        userId: created.id,
+        planId: access.subscription.planId,
+        priceToman: BigInt(seats.unitPriceToman),
+        createdById: user.id,
+        db: tx,
+      });
+
+      return created;
     });
 
     await authRepository.recordActivity({

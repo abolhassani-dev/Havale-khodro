@@ -201,8 +201,8 @@ function agentsPage() {
                   <th>اخطار</th><th>آخرین ورود</th><th></th></tr>
             </thead>
             <tbody>
-              ${items.map(
-                (a) => html`<tr class="${a.status === 'SUSPENDED' ? 'dim' : ''}">
+              ${items.flatMap((a) => [
+                html`<tr class="${a.status === 'SUSPENDED' ? 'dim' : ''}">
                   <td>
                     <div class="agent-id">
                       <span class="agent-av" style="--h:${hueOf(a.agencyCode)}">
@@ -226,8 +226,36 @@ function agentsPage() {
                   <td style="text-align:left">
                     <button class="btn sm" data-go="adm-agent" data-go-params="id=${a.id}">پرونده</button>
                   </td>
-                </tr>`
-              )}
+                </tr>`,
+                ...(a.children || []).map(
+                  (c) => html`<tr class="child-row ${c.status === 'SUSPENDED' ? 'dim' : ''}">
+                    <td>
+                      <div class="agent-id child">
+                        <span class="child-tick" aria-hidden="true"></span>
+                        <span class="agent-av sm" style="--h:${hueOf(c.agencyCode)}">
+                          ${(c.agencyName || '؟').slice(0, 1)}
+                        </span>
+                        <span>
+                          <b>${c.agencyName}</b>
+                          <span class="tag n">زیرمجموعه</span>
+                          <span class="sub"><span class="num">${c.agencyCode}</span> · ${c.fullName}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td>${c.city}</td>
+                    <td>
+                      <span class="tag ${c.status === 'ACTIVE' ? 'g' : 'r'}">
+                        ${c.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
+                      </span>
+                    </td>
+                    <td class="num">${c.fakeStrikes ? faDigits(c.fakeStrikes) : '—'}</td>
+                    <td>${c.lastLoginAt ? relative(c.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
+                    <td style="text-align:left">
+                      <button class="btn sm" data-go="adm-agent" data-go-params="id=${c.id}">پرونده</button>
+                    </td>
+                  </tr>`
+                ),
+              ])}
             </tbody>
           </table>`
         : emptyBox('نمایندگی‌ای پیدا نشد.')
@@ -266,6 +294,14 @@ function agentPage() {
           <div class="af-name">
             <h2>${a.agencyName}</h2>
             <span class="tag ${active ? 'g' : 'r'}">${active ? 'فعال' : 'تعلیق‌شده'}</span>
+            ${
+              a.parent
+                ? html`<button class="tag b af-parent" data-go="adm-agent" data-go-params="id=${a.parent.id}"
+                          title="پرونده‌ی نمایندگی مادر">
+                    زیرمجموعه‌ی ${a.parent.agencyName}
+                  </button>`
+                : ''
+            }
             ${a.isReseller ? html`<span class="tag c">ماژول زیرنمایندگی</span>` : ''}
             ${strikes ? html`<span class="tag o">${faDigits(strikes)} اخطار</span>` : ''}
           </div>
@@ -277,7 +313,13 @@ function agentPage() {
         </div>
         <div class="af-cta">
           <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
-          ${can('subscriptions') ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>` : ''}
+          ${
+            // A sub-agency's access rides on the parent's subscription — a
+            // subscription issued to it directly would sit unused and confuse.
+            can('subscriptions') && !a.parent
+              ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>`
+              : ''
+          }
         </div>
       </div>
       ${
@@ -366,6 +408,49 @@ function agentPage() {
         </div>
       </div>
     </div>
+
+    ${
+      a.children?.length
+        ? html`<div class="card">
+            <div class="card-h">
+              <h2>زیرنمایندگی‌ها</h2>
+              <span class="tag n">${faDigits(a.children.length)} حساب</span>
+            </div>
+            <table class="agents-tbl">
+              <thead>
+                <tr><th>نمایندگی</th><th>شهر</th><th>وضعیت</th><th>آخرین ورود</th><th></th></tr>
+              </thead>
+              <tbody>
+                ${a.children.map(
+                  (c) => html`<tr class="${c.status === 'SUSPENDED' ? 'dim' : ''}">
+                    <td>
+                      <div class="agent-id">
+                        <span class="agent-av sm" style="--h:${hueOf(c.agencyCode)}">
+                          ${(c.agencyName || '؟').slice(0, 1)}
+                        </span>
+                        <span>
+                          <b>${c.agencyName}</b>
+                          <span class="sub"><span class="num">${c.agencyCode}</span> · ${c.fullName}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td>${c.city}</td>
+                    <td>
+                      <span class="tag ${c.status === 'ACTIVE' ? 'g' : 'r'}">
+                        ${c.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
+                      </span>
+                    </td>
+                    <td>${c.lastLoginAt ? relative(c.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
+                    <td style="text-align:left">
+                      <button class="btn sm" data-go="adm-agent" data-go-params="id=${c.id}">پرونده</button>
+                    </td>
+                  </tr>`
+                )}
+              </tbody>
+            </table>
+          </div>`
+        : ''
+    }
   </div>`;
 }
 
