@@ -136,6 +136,30 @@ function cellModelIds(cell) {
 }
 
 /**
+ * The ceiling on this cell's brand, when the chooser is working under one —
+ * the models a parent holds of a brand it does not hold whole. Null means the
+ * brand can be granted in full.
+ */
+function ceilingOf(el, cell) {
+  const rawMap = el.dataset.ceiling;
+  if (!rawMap) return null;
+  return JSON.parse(rawMap)[cell.dataset.brandId] || null;
+}
+
+/**
+ * What a ticked brand box means for a ceiling-limited brand: every model the
+ * ceiling allows — read from the boxes when the list has been fetched (the
+ * brand box drives them), and from the ceiling itself when it has not.
+ * The whole brand is not the parent's to give, so it is never sent.
+ */
+function cappedSelection(cell, cap) {
+  if (cell.querySelector('[data-mlist]').dataset.loaded) {
+    return [...cell.querySelectorAll('input[data-model]:checked')].map((b) => b.dataset.model);
+  }
+  return cap;
+}
+
+/**
  * The ticked grants, read back out the way a form reads inputs.
  *
  * Read from `scope` — the submitted form — and not from the document, for a
@@ -152,8 +176,14 @@ export function brandPickValue(scope = document) {
   const brandIds = [];
   const modelIds = [];
   el.querySelectorAll('[data-cell]').forEach((cell) => {
+    const cap = ceilingOf(el, cell);
     if (cell.querySelector('input[data-brand]').checked) {
-      brandIds.push(cell.dataset.brandId);
+      // Under a ceiling the brand box means "all the models I may give" and
+      // is sent as those models. Sent as the brand, the server rightly
+      // refused it — the whole brand is more than the parent holds — and the
+      // reader was told no for the very thing the screen offered them.
+      if (cap) modelIds.push(...cappedSelection(cell, cap));
+      else brandIds.push(cell.dataset.brandId);
     } else {
       modelIds.push(...cellModelIds(cell));
     }
@@ -169,15 +199,23 @@ function sync(el) {
   el.querySelectorAll('[data-cell]').forEach((cell) => {
     const box = cell.querySelector('input[data-brand]');
     const badge = cell.querySelector('[data-badge]');
-    const models = box.checked ? [] : cellModelIds(cell);
+    const cap = ceilingOf(el, cell);
 
-    if (box.checked) fullBrands += 1;
+    // Under a ceiling a ticked brand box is still a set of models — counted,
+    // shown and eventually saved as models, never as the whole brand.
+    let models = [];
+    let whole = false;
+    if (box.checked && cap) models = cappedSelection(cell, cap);
+    else if (box.checked) whole = true;
+    else models = cellModelIds(cell);
+
+    if (whole) fullBrands += 1;
     singleModels += models.length;
 
     box.indeterminate = !box.checked && models.length > 0;
-    cell.classList.toggle('on', box.checked);
-    cell.classList.toggle('part', !box.checked && models.length > 0);
-    badge.textContent = !box.checked && models.length ? `${faDigits(models.length)} مدل` : '';
+    cell.classList.toggle('on', whole);
+    cell.classList.toggle('part', !whole && models.length > 0);
+    badge.textContent = !whole && models.length ? `${faDigits(models.length)} مدل` : '';
   });
 
   const count = el.querySelector('[data-brand-count]');
