@@ -106,28 +106,26 @@ function catalogGrid() {
 
   <div class="card">
     <div class="card-h">
-      <h2>رنگ‌ها ${qtip('رنگ‌هایی که در فرم ثبت حواله پیشنهاد می‌شوند. «ترتیب» جای رنگ در فهرست را تعیین می‌کند.')}</h2>
+      <h2>رنگ‌ها ${qtip('رنگ‌هایی که در فرم ثبت حواله پیشنهاد می‌شوند. روی هر رنگ بزنید تا نام و ترتیبش را عوض کنید؛ با × غیرفعال می‌شود و از فرم ثبت می‌افتد.')}</h2>
       <button class="btn primary sm" data-new-color>رنگ جدید</button>
     </div>
-    <table>
-      <thead><tr><th>نام</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead>
-      <tbody>
-        ${colors.map(
-          (c) => html`<tr class="${c.isActive ? '' : 'dim'}">
-            <td>${c.name}</td>
-            <td class="num">${faDigits(c.sortOrder)}</td>
-            <td>${activeTag(c.isActive)}</td>
-            <td class="row-actions">
-              <button class="btn sm" data-edit-color="${c.id}" data-name="${c.name}"
-                      data-order="${c.sortOrder}">ویرایش</button>
-              <button class="btn sm" data-toggle-color="${c.id}" data-active="${c.isActive}">
-                ${c.isActive ? 'غیرفعال' : 'فعال'}
-              </button>
-            </td>
-          </tr>`
-        )}
-      </tbody>
-    </table>
+    <div class="swatches">
+      ${colors.map(
+        (c) => html`<span class="swatch ${c.isActive ? '' : 'dim'}">
+          <button type="button" class="swatch-b" data-edit-color="${c.id}"
+                  data-name="${c.name}" data-order="${c.sortOrder}"
+                  title="ویرایش ${c.name}">
+            <i style="background:${swatchColor(c.name)}"></i>
+            ${c.name}
+          </button>
+          <button type="button" class="swatch-x" data-toggle-color="${c.id}"
+                  data-active="${c.isActive}"
+                  title="${c.isActive ? 'غیرفعال کردن' : 'فعال کردن'}">
+            ${c.isActive ? '×' : '↺'}
+          </button>
+        </span>`
+      )}
+    </div>
   </div>`;
 }
 
@@ -215,6 +213,24 @@ function brandDetail(brandId) {
         : emptyBox('این برند هنوز مدلی ندارد.')
     }
   </div>`;
+}
+
+/**
+ * The dot beside a colour's name.
+ *
+ * A best-effort map from the Persian names to something the eye recognises —
+ * decoration, not data: an unmapped name gets a neutral dot and everything
+ * still works, because the product only ever stores the name.
+ */
+const SWATCH = {
+  'سفید': '#f7f7f2', 'مشکی': '#20242a', 'خاکستری': '#8b9096', 'نوک‌مدادی': '#4a4f57',
+  'نقره‌ای': '#c9cdd4', 'تیتانیوم': '#9aa1a3', 'آبی': '#2563b0', 'قرمز': '#b3322e',
+  'سبز': '#2f7d4f', 'قهوه‌ای': '#6d4a2f', 'بژ': '#d9c9a3', 'طوسی': '#a7a9ac',
+  'زرد': '#e0b62b', 'نارنجی': '#d97a2b', 'بنفش': '#6d4a8f', 'کرم': '#e8ddc0',
+};
+
+function swatchColor(name) {
+  return SWATCH[(name || '').trim()] || 'linear-gradient(135deg,#cfc9b8,#8b9096)';
 }
 
 function companyName(id) {

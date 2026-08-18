@@ -1,4 +1,5 @@
 import { html, raw } from '../../ui/html.js';
+import { icon } from '../../ui/icons.js';
 import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
@@ -96,12 +97,12 @@ function dashPage() {
 
   return html`
   <div class="stats">
-    ${stat('نمایندگی‌ها', faDigits(o.agencies ?? 0), `${faDigits(o.activeAgencies ?? 0)} فعال`)}
-    ${stat('حواله‌ی زنده', faDigits(o.liveHavales ?? 0), 'در لیست عمومی')}
-    ${stat('بازدید ۲۴ ساعت', faDigits(o.revealsLast24h ?? 0), 'نمایش مشخصات')}
-    ${stat('اشتراک فعال', faDigits(o.liveSubscriptions ?? 0), '')}
-    ${stat('گزارش در انتظار', faDigits(o.pendingReports ?? 0), 'نیاز به بررسی')}
-    ${stat('تیکت باز', faDigits(o.openTickets ?? 0), '')}
+    ${stat('نمایندگی‌ها', faDigits(o.agencies ?? 0), `${faDigits(o.activeAgencies ?? 0)} فعال`, 'shield')}
+    ${stat('حواله‌ی زنده', faDigits(o.liveHavales ?? 0), 'در لیست عمومی', 'file')}
+    ${stat('بازدید ۲۴ ساعت', faDigits(o.revealsLast24h ?? 0), 'نمایش مشخصات', 'eye')}
+    ${stat('اشتراک فعال', faDigits(o.liveSubscriptions ?? 0), '', 'clock', 'ok')}
+    ${stat('گزارش در انتظار', faDigits(o.pendingReports ?? 0), o.pendingReports ? 'نیاز به بررسی' : 'خالی', 'flag', o.pendingReports ? 'warn' : '')}
+    ${stat('تیکت باز', faDigits(o.openTickets ?? 0), '', 'ticket', o.openTickets ? 'warn' : '')}
   </div>
 
   <div class="card">
@@ -137,10 +138,27 @@ function dashPage() {
   </div>`;
 }
 
-function stat(label, value, hint) {
-  return html`<div class="stat">
-    <div class="s-l">${label}</div><div class="s-v num">${value}</div><div class="s-h">${hint}</div>
+function stat(label, value, hint, iconName = 'dashboard', tone = '') {
+  return html`<div class="stat ${tone ? `is-${tone}` : ''}">
+    <span class="s-i">${icon(iconName, 19)}</span>
+    <div>
+      <div class="s-l">${label}</div>
+      <div class="s-v num">${value}</div>
+      <div class="s-h">${hint}</div>
+    </div>
   </div>`;
+}
+
+/**
+ * A stable hue for an agency's avatar, from its code.
+ *
+ * Derived, not stored: the same agency keeps the same colour everywhere and
+ * forever, and colour is what the eye actually finds a row by.
+ */
+function hueOf(code) {
+  let h = 0;
+  for (const ch of String(code || '')) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
 }
 
 // ── agencies ────────────────────────────────────────────────────────────────
@@ -177,25 +195,34 @@ function agentsPage() {
 
     ${
       items.length
-        ? html`<table>
+        ? html`<table class="agents-tbl">
             <thead>
-              <tr><th>نمایندگی</th><th>کد</th><th>شهر</th><th>وضعیت</th>
+              <tr><th>نمایندگی</th><th>شهر</th><th>وضعیت</th>
                   <th>اخطار</th><th>آخرین ورود</th><th></th></tr>
             </thead>
             <tbody>
               ${items.map(
-                (a) => html`<tr>
-                  <td><b>${a.agencyName}</b><div class="sub">${a.fullName}</div></td>
-                  <td class="num">${a.agencyCode}</td>
+                (a) => html`<tr class="${a.status === 'SUSPENDED' ? 'dim' : ''}">
+                  <td>
+                    <div class="agent-id">
+                      <span class="agent-av" style="--h:${hueOf(a.agencyCode)}">
+                        ${(a.agencyName || '؟').slice(0, 1)}
+                      </span>
+                      <span>
+                        <b>${a.agencyName}</b>
+                        ${a.isReseller ? html`<span class="tag c">ماژول</span>` : ''}
+                        <span class="sub"><span class="num">${a.agencyCode}</span> · ${a.fullName}</span>
+                      </span>
+                    </div>
+                  </td>
                   <td>${a.city}</td>
                   <td>
                     <span class="tag ${a.status === 'ACTIVE' ? 'g' : 'r'}">
                       ${a.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
                     </span>
-                    ${a.isReseller ? html`<span class="tag c">ماژول</span>` : ''}
                   </td>
-                  <td class="num">${faDigits(a.fakeStrikes)}</td>
-                  <td>${a.lastLoginAt ? relative(a.lastLoginAt) : 'هرگز'}</td>
+                  <td class="num">${a.fakeStrikes ? faDigits(a.fakeStrikes) : '—'}</td>
+                  <td>${a.lastLoginAt ? relative(a.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
                   <td style="text-align:left">
                     <button class="btn sm" data-go="adm-agent" data-go-params="id=${a.id}">پرونده</button>
                   </td>

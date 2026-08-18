@@ -1035,3 +1035,64 @@ a[data-go],
   font-size: 12.5px;
 }
 .bpick-model { display: flex; align-items: center; gap: 7px; padding: 3px 2px; cursor: pointer; }
+
+/* ================================================================
+   پاس ظاهری — داشبورد، نمایندگی‌ها، رنگ‌ها
+   ================================================================ */
+
+/* کارت آمار: آیکون در حباب + عدد درشت. لحن‌ها فقط رنگ حباب را عوض می‌کنند. */
+.stat { display: flex; align-items: flex-start; gap: 11px; }
+.stat .s-i {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: var(--primary-08); color: var(--primary);
+  border: 1px solid var(--primary-15);
+}
+.stat.is-ok .s-i { background: var(--ok-08); color: var(--ok); border-color: #2c6b4126; }
+.stat.is-warn .s-i { background: var(--copper-08); color: var(--copper); border-color: #a85a2426; }
+
+/* هویت نمایندگی در جدول: آواتار رنگی + دو خط */
+.agent-id { display: flex; align-items: center; gap: 10px; }
+.agent-id > span:last-child { display: grid; gap: 1px; }
+.agent-av {
+  flex: none;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  font-weight: 800; font-size: 15px;
+  color: #fff;
+  /* رنگ پایدار از کد نمایندگی — چشم ردیف را با رنگ پیدا می‌کند.
+     --h به‌صورت inline از خود ردیف می‌آید؛ attr() در CSS فقط برای content
+     کار می‌کند و این‌جا بی‌صدا همه را یک‌رنگ می‌کرد. */
+  background: hsl(var(--h, 160) 35% 42%);
+}
+
+/* چیپ‌های رنگ */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+.swatch { display: inline-flex; align-items: stretch; }
+.swatch-b {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px 0 0 999px;
+  border-inline-start: 1px solid var(--line);
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  cursor: pointer;
+}
+.swatch-b:hover { border-color: var(--primary-3); }
+.swatch-b i {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1px solid #00000022;
+}
+.swatch-x {
+  padding: 0 9px;
+  background: var(--paper-2);
+  border: 1px solid var(--line); border-inline-end: none;
+  border-radius: 0 999px 999px 0;
+  color: var(--ink-3); font-size: 13px; cursor: pointer;
+}
+.swatch-x:hover { color: var(--danger); }
+.swatch.dim { opacity: .5; }
