@@ -198,11 +198,11 @@ function agentsPage() {
         ? html`<table class="agents-tbl">
             <thead>
               <tr><th>نمایندگی</th><th>شهر</th><th>وضعیت</th>
-                  <th>اخطار</th><th>آخرین ورود</th><th></th></tr>
+                  <th>زیرمجموعه</th><th>اخطار</th><th>آخرین ورود</th><th></th></tr>
             </thead>
             <tbody>
-              ${items.flatMap((a) => [
-                html`<tr class="${a.status === 'SUSPENDED' ? 'dim' : ''}">
+              ${items.map(
+                (a) => html`<tr class="${a.status === 'SUSPENDED' ? 'dim' : ''}">
                   <td>
                     <div class="agent-id">
                       <span class="agent-av" style="--h:${hueOf(a.agencyCode)}">
@@ -221,41 +221,14 @@ function agentsPage() {
                       ${a.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
                     </span>
                   </td>
+                  <td class="num">${a._count?.children ? faDigits(a._count.children) : '—'}</td>
                   <td class="num">${a.fakeStrikes ? faDigits(a.fakeStrikes) : '—'}</td>
                   <td>${a.lastLoginAt ? relative(a.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
                   <td style="text-align:left">
                     <button class="btn sm" data-go="adm-agent" data-go-params="id=${a.id}">پرونده</button>
                   </td>
-                </tr>`,
-                ...(a.children || []).map(
-                  (c) => html`<tr class="child-row ${c.status === 'SUSPENDED' ? 'dim' : ''}">
-                    <td>
-                      <div class="agent-id child">
-                        <span class="child-tick" aria-hidden="true"></span>
-                        <span class="agent-av sm" style="--h:${hueOf(c.agencyCode)}">
-                          ${(c.agencyName || '؟').slice(0, 1)}
-                        </span>
-                        <span>
-                          <b>${c.agencyName}</b>
-                          <span class="tag n">زیرمجموعه</span>
-                          <span class="sub"><span class="num">${c.agencyCode}</span> · ${c.fullName}</span>
-                        </span>
-                      </div>
-                    </td>
-                    <td>${c.city}</td>
-                    <td>
-                      <span class="tag ${c.status === 'ACTIVE' ? 'g' : 'r'}">
-                        ${c.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
-                      </span>
-                    </td>
-                    <td class="num">${c.fakeStrikes ? faDigits(c.fakeStrikes) : '—'}</td>
-                    <td>${c.lastLoginAt ? relative(c.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
-                    <td style="text-align:left">
-                      <button class="btn sm" data-go="adm-agent" data-go-params="id=${c.id}">پرونده</button>
-                    </td>
-                  </tr>`
-                ),
-              ])}
+                </tr>`
+              )}
             </tbody>
           </table>`
         : emptyBox('نمایندگی‌ای پیدا نشد.')
@@ -1051,7 +1024,18 @@ async function agentBrandsModal(id) {
       ${brandPicker(choices.brands, {
         selected: choices.brands.filter((b) => b.allowed).map((b) => b.id),
         selectedModels: choices.modelGrants,
+        // For a sub-agency the server narrows the list to the family's
+        // holdings and sends the model ceiling with it — the picker can only
+        // offer what the save would accept.
+        modelCeiling: choices.ceiling || null,
       })}
+      ${
+        choices.ceiling
+          ? html`<div class="hint" style="margin-top:6px">
+              این حساب زیرمجموعه است — فقط برندها و مدل‌های نمایندگی مرکزی‌اش قابل انتخاب‌اند.
+            </div>`
+          : ''
+      }
       <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
         تغییر فوراً اعمال می‌شود. آگهی‌های قبلی سر جایشان می‌مانند — محدودیت فقط جلوی
         ثبتِ جدید را می‌گیرد. برای دسترسیِ فقط چند مدل از یک برند، روی «مدل‌ها» بزنید.

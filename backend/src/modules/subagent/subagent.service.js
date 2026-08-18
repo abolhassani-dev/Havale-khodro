@@ -191,6 +191,42 @@ const subagentService = {
     return updated;
   },
 
+  /** What a child currently holds — for the parent's picker to open with. */
+  async getBrands({ user, id }) {
+    const child = await this.requireChild(user, id);
+    return brandAccess.allowedSets(child.id);
+  },
+
+  /**
+   * Replaces a child's grants after the fact, under the same ceiling that
+   * creation enforces.
+   *
+   * Creation used to be the only moment a parent could choose these — a child
+   * whose work changed, or one created before this screen existed, needed an
+   * administrator for what is the parent's own decision about its own brands.
+   */
+  async setBrands({ user, id, brandIds, modelIds }) {
+    const child = await this.requireChild(user, id);
+    const mine = await brandAccess.allowedSets(user.id);
+
+    await brandAccess.setBrands({
+      userId: child.id,
+      brandIds,
+      modelIds,
+      limitTo: { brandIds: mine.brandIds, modelIds: mine.modelGrants.map((g) => g.id) },
+    });
+
+    await authRepository.recordActivity({
+      userId: user.id,
+      action: 'SUBAGENT_BRANDS_SET',
+      targetType: 'USER',
+      targetId: child.id,
+      summary: child.agencyCode,
+    });
+
+    return brandAccess.allowedSets(child.id);
+  },
+
   /** The parent may set a sub-agent's password (blueprint 3.8). */
   async resetPassword({ user, id, password }) {
     const child = await this.requireChild(user, id);

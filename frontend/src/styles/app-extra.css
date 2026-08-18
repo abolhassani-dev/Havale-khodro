@@ -1196,19 +1196,8 @@ a[data-go],
   .af-gap { display: none; }
 }
 
-/* ── زیرشاخه‌ها زیر نمایندگی مرکزی، در جدول نمایندگی‌ها ── */
+/* ── زیرمجموعه‌ها: آواتار کوچک در کارت پرونده‌ی نمایندگی مرکزی ── */
 .agent-av.sm { width: 28px; height: 28px; border-radius: 8px; font-size: 12.5px; }
-.child-row td { background: var(--paper-2); }
-.child-row td:first-child { padding-inline-start: 26px; }
-/* خط اتصال به والد: گوشه‌ی ↳ با border، تا در هر فونت و مرورگری یک‌شکل باشد */
-.child-tick {
-  flex: none;
-  width: 12px; height: 14px;
-  margin-top: -8px;
-  border-inline-start: 1.5px solid var(--line);
-  border-bottom: 1.5px solid var(--line);
-  border-end-start-radius: 7px;
-}
-/* تگ والد در سربرگ پرونده، کلیک‌شونده */
+/* تگ نمایندگی مرکزی در سربرگ پرونده‌ی زیرمجموعه، کلیک‌شونده */
 button.af-parent { cursor: pointer; }
 button.af-parent:hover { text-decoration: underline; }

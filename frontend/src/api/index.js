@@ -55,6 +55,8 @@ export const subAgents = {
   create: (payload) => api.post('/sub-agents', payload),
   setStatus: (id, status) => api.put(`/sub-agents/${id}/status`, { status }),
   setPassword: (id, password) => api.put(`/sub-agents/${id}/password`, { password }),
+  brands: (id) => api.get(`/sub-agents/${id}/brands`),
+  setBrands: (id, picked) => api.put(`/sub-agents/${id}/brands`, picked),
 };
 
 /** Owner only — every one of these is refused with 403 for anybody else. */

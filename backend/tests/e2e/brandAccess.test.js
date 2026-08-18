@@ -369,6 +369,89 @@ maybe('brand access', () => {
       expect(rows.map((r) => r.brandId).sort()).toEqual([brands[0].id, brands[1].id].sort());
     });
 
+    // Creation used to be the only moment a parent could choose a child's
+    // brands — changing them afterwards took an administrator, for what is the
+    // parent's own decision about its own brands.
+    it('lets a parent re-divide an existing child, under the same ceiling', async () => {
+      const parent = await parentOf([brands[0].id]);
+      const made = await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send(subAgencyBody())
+        .expect(201);
+      created.push(made.body.data.id);
+      const childId = made.body.data.id;
+
+      // Narrow the child to one model of the brand.
+      const model = await prisma.carModel.findFirst({
+        where: { brandId: brands[0].id, isActive: true },
+        select: { id: true },
+      });
+      await request(app)
+        .put(api(`/sub-agents/${childId}/brands`))
+        .set('Cookie', parent.cookie)
+        .send({ brandIds: [], modelIds: [model.id] })
+        .expect(200);
+
+      const got = await request(app)
+        .get(api(`/sub-agents/${childId}/brands`))
+        .set('Cookie', parent.cookie)
+        .expect(200);
+      expect(got.body.data.brandIds).toEqual([]);
+      expect(got.body.data.modelGrants.map((g) => g.id)).toEqual([model.id]);
+
+      // The ceiling still holds: a brand the parent does not have is refused.
+      await request(app)
+        .put(api(`/sub-agents/${childId}/brands`))
+        .set('Cookie', parent.cookie)
+        .send({ brandIds: [brands[1].id], modelIds: [] })
+        .expect(403);
+
+      // And another agency cannot even learn the child exists.
+      const stranger = await agent({ brands: [brands[0].id] });
+      await request(app)
+        .get(api(`/sub-agents/${childId}/brands`))
+        .set('Cookie', stranger.cookie)
+        .expect(404);
+    });
+
+    // The admin screen must obey the same ceiling as the parent: granting a
+    // sub-agency a brand its central agency does not hold would let the child
+    // post cars its own family may not.
+    it('stops an admin from granting a child past its central agency', async () => {
+      const parent = await parentOf([brands[0].id]);
+      const made = await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send(subAgencyBody())
+        .expect(201);
+      created.push(made.body.data.id);
+      const childId = made.body.data.id;
+
+      const admin = await staff('SUPER_ADMIN');
+
+      // The picker's choices are narrowed to the family's holdings.
+      const got = await request(app)
+        .get(api(`/admin/agents/${childId}/brands`))
+        .set('Cookie', admin.cookie)
+        .expect(200);
+      expect(got.body.data.brands.map((b) => b.id)).toEqual([brands[0].id]);
+
+      const over = await request(app)
+        .put(api(`/admin/agents/${childId}/brands`))
+        .set('Cookie', admin.cookie)
+        .send({ brandIds: [brands[1].id] })
+        .expect(403);
+      expect(over.body.error.message).toContain('نمایندگی مرکزی');
+
+      // Within the family it still works.
+      await request(app)
+        .put(api(`/admin/agents/${childId}/brands`))
+        .set('Cookie', admin.cookie)
+        .send({ brandIds: [brands[0].id] })
+        .expect(200);
+    });
+
     // The phone is unique across every account. Before the pre-check this died
     // on the database's constraint — a 500 that production renders as
     // «Something went wrong», which is how a real parent actually met it.

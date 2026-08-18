@@ -43,6 +43,7 @@ const ACTION_PHRASES = {
   SUBAGENT_SUSPENDED: 'زیرنماینده را تعلیق کرد',
   SUBAGENT_ACTIVATED: 'زیرنماینده را فعال کرد',
   SUBAGENT_PASSWORD_RESET: 'رمز زیرنماینده را عوض کرد',
+  SUBAGENT_BRANDS_SET: 'برندهای زیرنماینده را تنظیم کرد',
   AGENT_CREATED: 'حساب نمایندگی ساخت',
   AGENT_UPDATED: 'مشخصات نمایندگی را ویرایش کرد',
   AGENT_SUSPENDED: 'حساب نمایندگی را تعلیق کرد',

@@ -109,10 +109,9 @@ const agentRepository = {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        select: {
-          ...AGENT_SELECT,
-          children: { select: CHILD_ROW_SELECT, orderBy: { agencyCode: 'asc' } },
-        },
+        // A count, not the children themselves: the list stays a list of
+        // central agencies, and the family is opened from the agency's file.
+        select: { ...AGENT_SELECT, _count: { select: { children: true } } },
       }),
       prisma.user.count({ where }),
     ]);

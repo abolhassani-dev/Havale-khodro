@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const config = require('../../config');
 const agentRepository = require('./agent.repository');
 const authRepository = require('../auth/auth.repository');
+const brandAccess = require('../catalog/brandAccess.service');
 const { MESSAGES } = require('../../constants/messages');
 const { ConflictError, NotFoundError, BadRequestError } = require('../../errors/AppError');
 
@@ -70,6 +71,38 @@ const agentService = {
   async list(filters) {
     const [items, total] = await agentRepository.list(filters);
     return { items, total };
+  },
+
+  /**
+   * The picker's data for this account: every brand for a central agency, and
+   * only the family's holdings — with the model ceiling — for a sub-agency.
+   */
+  async brandChoicesFor(id) {
+    const agent = await agentRepository.findById(id);
+    if (!agent) throw new NotFoundError('نمایندگی');
+    if (!agent.parentId) return brandAccess.brandChoices(id);
+    return brandAccess.brandChoicesWithin(id, agent.parentId);
+  },
+
+  /**
+   * Replaces an account's grants. For a sub-agency the central agency's own
+   * grants are the ceiling — an administrator divides the family's holdings,
+   * it does not extend them past what the family itself may post.
+   */
+  async setBrands({ id, brandIds, modelIds }) {
+    const agent = await agentRepository.findById(id);
+    if (!agent) throw new NotFoundError('نمایندگی');
+
+    let limitTo = null;
+    let ceilingMessage = null;
+    if (agent.parentId) {
+      const parent = await brandAccess.allowedSets(agent.parentId);
+      limitTo = { brandIds: parent.brandIds, modelIds: parent.modelGrants.map((g) => g.id) };
+      ceilingMessage =
+        'به زیرمجموعه فقط می‌توان برندها و مدل‌هایی داد که نمایندگی مرکزی‌اش دارد';
+    }
+
+    return brandAccess.setBrands({ userId: id, brandIds, modelIds, limitTo, ceilingMessage });
   },
 
   async get(id) {

@@ -76,6 +76,49 @@ router.put(
 
 /**
  * @openapi
+ * /sub-agents/{id}/brands:
+ *   get:
+ *     tags: [SubAgent]
+ *     summary: The brand and model grants a sub-agency currently holds
+ */
+router.get(
+  '/:id/brands',
+  validate(schema.byId),
+  asyncHandler(async (req, res) =>
+    success(res, await subagentService.getBrands({ user: req.user, id: req.params.id }))
+  )
+);
+
+/**
+ * @openapi
+ * /sub-agents/{id}/brands:
+ *   put:
+ *     tags: [SubAgent]
+ *     summary: Replace a sub-agency's brand and model grants
+ *     description: >
+ *       Capped by the parent's own grants — the same ceiling creation enforces.
+ *       An empty set is allowed and means the child may post nothing.
+ *     responses:
+ *       403: { description: A brand or model outside the parent's own }
+ */
+router.put(
+  '/:id/brands',
+  validate(schema.setBrands),
+  asyncHandler(async (req, res) =>
+    success(
+      res,
+      await subagentService.setBrands({
+        user: req.user,
+        id: req.params.id,
+        brandIds: req.body.brandIds,
+        modelIds: req.body.modelIds,
+      })
+    )
+  )
+);
+
+/**
+ * @openapi
  * /sub-agents/{id}/password:
  *   put:
  *     tags: [SubAgent]

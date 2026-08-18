@@ -271,7 +271,7 @@ router.get(
   '/agents/:id/brands',
   requirePermission('agents'),
   validate({ params: idParam }),
-  asyncHandler(async (req, res) => success(res, await brandAccess.brandChoices(req.params.id)))
+  asyncHandler(async (req, res) => success(res, await agentService.brandChoicesFor(req.params.id)))
 );
 
 /**
@@ -301,8 +301,8 @@ router.put(
     }),
   }),
   asyncHandler(async (req, res) => {
-    const count = await brandAccess.setBrands({
-      userId: req.params.id,
+    const count = await agentService.setBrands({
+      id: req.params.id,
       brandIds: req.body.brandIds,
       modelIds: req.body.modelIds,
     });

@@ -48,6 +48,15 @@ const resetPasswordBody = Joi.object({
   password: Joi.string().min(8).max(128).required(),
 });
 
+// brandIds is required — this is a replace, and a missing field must not read
+// as "keep". Empty is allowed: clearing a child's access (winding it down) is
+// a decision the picker can express, unlike at creation where it is almost
+// never what was meant.
+const setBrandsBody = Joi.object({
+  brandIds: Joi.array().items(Joi.string().trim().max(40)).required(),
+  modelIds: Joi.array().items(Joi.string().trim().max(40)).default([]),
+});
+
 const statusBody = Joi.object({
   status: Joi.string().valid('ACTIVE', 'SUSPENDED').required(),
 });
@@ -58,5 +67,6 @@ module.exports = {
   create: { body: createBody },
   resetPassword: { body: resetPasswordBody, params: idParam },
   setStatus: { body: statusBody, params: idParam },
+  setBrands: { body: setBrandsBody, params: idParam },
   byId: { params: idParam },
 };

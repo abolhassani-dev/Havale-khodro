@@ -95,7 +95,7 @@ async function brandChoices(userId) {
  * sub-agency: account, grants, seat) can refuse *before* the first insert
  * instead of leaving a half-made account behind.
  */
-async function validateGrants({ brandIds, modelIds = [], limitTo = null }) {
+async function validateGrants({ brandIds, modelIds = [], limitTo = null, ceilingMessage = null }) {
   const wantedBrands = [...new Set(brandIds || [])];
   const wantedModels = [...new Set(modelIds || [])];
 
@@ -136,11 +136,37 @@ async function validateGrants({ brandIds, modelIds = [], limitTo = null }) {
       (m) => !ceilingBrands.has(m.brandId) && !ceilingModels.has(m.id)
     );
     if (overBrand || overModel) {
-      throw new ForbiddenError('فقط می‌توانید از برندها و مدل‌های خودتان به زیرنمایندگی بدهید');
+      throw new ForbiddenError(
+        ceilingMessage || 'فقط می‌توانید از برندها و مدل‌های خودتان به زیرنمایندگی بدهید'
+      );
     }
   }
 
   return { brandIds: wantedBrands, modelIds: modelRows.map((m) => m.id) };
+}
+
+/**
+ * The picker's data for a sub-agency, narrowed to the family's holdings.
+ *
+ * When an administrator configures a sub-agency it divides what the central
+ * agency holds — it cannot extend it, or the child could post cars its own
+ * family may not. Same shape as `brandChoices` plus the per-brand model
+ * ceiling for the central agency's partial brands.
+ */
+async function brandChoicesWithin(childId, parentId) {
+  const [choices, parent] = await Promise.all([brandChoices(childId), allowedSets(parentId)]);
+
+  const fullBrands = new Set(parent.brandIds);
+  const ceiling = {};
+  for (const g of parent.modelGrants) {
+    (ceiling[g.brandId] = ceiling[g.brandId] || []).push(g.id);
+  }
+
+  return {
+    brands: choices.brands.filter((b) => fullBrands.has(b.id) || ceiling[b.id]),
+    modelGrants: choices.modelGrants,
+    ceiling,
+  };
 }
 
 /**
@@ -152,8 +178,10 @@ async function validateGrants({ brandIds, modelIds = [], limitTo = null }) {
  * Pass `db` to run inside a caller's interactive transaction; without it the
  * write brings its own.
  */
-async function setBrands({ userId, brandIds, modelIds = [], limitTo = null, db = null }) {
-  const valid = await validateGrants({ brandIds, modelIds, limitTo });
+async function setBrands({
+  userId, brandIds, modelIds = [], limitTo = null, ceilingMessage = null, db = null,
+}) {
+  const valid = await validateGrants({ brandIds, modelIds, limitTo, ceilingMessage });
 
   const write = async (tx) => {
     await tx.brandAccess.deleteMany({ where: { userId } });
@@ -199,5 +227,6 @@ async function assertMayPost({ userId, carModelId }) {
 }
 
 module.exports = {
-  allowedSets, allowedBrandIds, brandChoices, validateGrants, setBrands, assertMayPost,
+  allowedSets, allowedBrandIds, brandChoices, brandChoicesWithin,
+  validateGrants, setBrands, assertMayPost,
 };

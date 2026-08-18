@@ -16,7 +16,7 @@ import {
 } from './pages/agent/listings.js';
 import {
   loadSubscription, subscriptionPage, orderSeatsModal,
-  loadSubAgents, subAgentsPage, newSubAgentModal, subAgentPasswordModal,
+  loadSubAgents, subAgentsPage, newSubAgentModal, subAgentPasswordModal, subAgentBrandsModal,
   loadTickets, ticketsPage, loadTicket, ticketPage, newTicketModal, submitTicketReply,
   reportModal,
 } from './pages/agent/account.js';
@@ -207,7 +207,7 @@ function adminTitle(page) {
 const CLICK_KEYS = new Set([
   'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
-  'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword',
+  'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
   'newTicket', 'closeTicket',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
@@ -261,6 +261,7 @@ function onClick(event) {
   if (d.newSubagent !== undefined) return newSubAgentModal();
   if (d.subagentStatus) return setSubAgentStatus(d.subagentStatus, d.status);
   if (d.subagentPassword) return subAgentPasswordModal(d.subagentPassword);
+  if (d.subagentBrands) return subAgentBrandsModal(d.subagentBrands);
   if (d.newTicket !== undefined) return newTicketModal(d.newTicket);
   if (d.closeTicket) return closeTicket(d.closeTicket);
 

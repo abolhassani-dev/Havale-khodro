@@ -239,6 +239,7 @@ export function subAgentsPage() {
                     </span>
                   </td>
                   <td class="row-actions">
+                    <button class="btn sm" data-subagent-brands="${c.id}">برندهای مجاز</button>
                     <button class="btn sm" data-subagent-status="${c.id}"
                             data-status="${c.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'}">
                       ${c.status === 'ACTIVE' ? 'تعلیق' : 'فعال‌سازی'}
@@ -326,6 +327,52 @@ function modalField(name, label, type = 'text', required = false, dir = 'rtl') {
     <input class="in" id="m-${name}" name="${name}" type="${type}" dir="${dir}"
            ${raw(required ? 'required' : '')}>
   </div>`;
+}
+
+/**
+ * Editing an existing sub-agency's brands — the after-the-fact version of the
+ * picker in the creation form, with the same ceiling.
+ *
+ * Without this, the set chosen at creation was final and only an administrator
+ * could change it: a child whose work changed, or one created before its
+ * brands were chosen, sent the parent to support for the parent's own
+ * decision.
+ */
+export async function subAgentBrandsModal(id) {
+  const parentBrands = getState().data.parentBrands || [];
+  const ceiling = Object.fromEntries(
+    parentBrands.filter((b) => !b.canPost).map((b) => [b.id, b.postableModelIds || []])
+  );
+
+  let current;
+  try {
+    current = await subAgents.brands(id);
+  } catch (err) {
+    return toast(err.message, 'danger');
+  }
+
+  return openModal({
+    type: 'form',
+    title: 'برندها و مدل‌های مجاز این زیرنماینده',
+    wide: true,
+    body: html`
+      ${brandPicker(parentBrands, {
+        selected: current.brandIds,
+        selectedModels: current.modelGrants,
+        modelCeiling: ceiling,
+        note: 'فقط برندها و مدل‌های خودتان قابل واگذاری‌اند. برای دسترسیِ فقط چند مدل از یک برند، روی «مدل‌ها» بزنید.',
+      })}
+      <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
+        تغییر فوراً اعمال می‌شود. آگهی‌های قبلی سر جایشان می‌مانند — محدودیت فقط جلوی
+        ثبتِ جدید را می‌گیرد.
+      </p>`,
+    confirmLabel: 'ذخیره',
+    onSubmit: async (form) => {
+      await subAgents.setBrands(id, brandPickValue(form));
+      toast('برندهای زیرنماینده به‌روز شد');
+      await resolve();
+    },
+  });
 }
 
 export function subAgentPasswordModal(id) {
