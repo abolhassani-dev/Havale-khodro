@@ -263,11 +263,11 @@ await step('admin can sign in and see monitoring', async () => {
   await page.click('button[type=submit]');
   await page.waitForSelector('.sidebar', { timeout: 8000 });
   await page.click('[data-go="adm-monitor"]');
-  await page.waitForSelector('table', { timeout: 8000 });
+  await page.waitForSelector('.tl-row, .empty', { timeout: 8000 });
 });
 
 await step('timeline entry explains itself in a sentence', async () => {
-  await page.click('tr[data-activity]');
+  await page.click('[data-activity]');
   await page.waitForSelector('.modal', { timeout: 5000 });
   const t = await page.textContent('.modal-b');
   if (t.trim().length < 20) throw new Error('description too short: ' + t);

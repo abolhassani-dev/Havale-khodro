@@ -56,6 +56,18 @@ export function dateTime(value) {
   return JALALI_TIME.format(new Date(value));
 }
 
+const TIME_ONLY = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+/** Just the clock — for feeds where a day heading already carries the date. */
+export function timeOnly(value) {
+  if (!value) return '—';
+  return TIME_ONLY.format(new Date(value));
+}
+
 /**
  * "۳ روز دیگر" / "۲ ساعت دیگر".
  *

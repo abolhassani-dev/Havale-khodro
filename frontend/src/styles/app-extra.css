@@ -1201,3 +1201,74 @@ a[data-go],
 /* تگ نمایندگی مرکزی در سربرگ پرونده‌ی زیرمجموعه، کلیک‌شونده */
 button.af-parent { cursor: pointer; }
 button.af-parent:hover { text-decoration: underline; }
+
+/* ================================================================
+   مانیتورینگ — خوراک تایم‌لاین و سابقه‌ی نمایش مشخصات
+   ================================================================ */
+
+.tl { padding: 2px 0 8px; }
+
+/* تاریخ یک بار بالای هر روز می‌آید تا ردیف‌ها فقط ساعت بگویند. */
+.tl-day {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px 6px;
+  color: var(--ink-3); font-size: 12px; font-weight: 700;
+}
+.tl-day::after { content: ''; flex: 1; border-top: 1px dashed var(--line-2); }
+
+.tl-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.tl-row:hover { background: var(--paper-2); }
+
+.tl-i {
+  flex: none;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: var(--paper-2); color: var(--ink-3);
+  border: 1px solid var(--line-2);
+}
+.tl-i.is-ok { background: var(--ok-08); color: var(--ok); border-color: #2c6b4126; }
+.tl-i.is-warn { background: var(--copper-08); color: var(--copper); border-color: #a85a2426; }
+.tl-i.is-bad { background: var(--danger-08); color: var(--danger); border-color: #9d2b2126; }
+
+.tl-b { flex: 1; min-width: 0; }
+.tl-t { font-size: 13.5px; }
+.tl-m { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+/* فلش «باز کن»: در راست‌به‌چپ رو به جلو یعنی رو به چپ */
+.tl-chev { flex: none; color: var(--ink-3); opacity: .45; transform: rotate(90deg); }
+
+.tl-filter {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--primary-08);
+}
+
+/* هر نمایش، یک جمله: چه کسی شماره‌ی چه کسی را دید — و خود شماره در قاب جدا. */
+.rv-row {
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line-2);
+}
+.rv-b { flex: 1; min-width: 230px; }
+.rv-t { font-size: 13.5px; }
+.rv-m { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
+.rv-phone {
+  flex: none;
+  display: grid; gap: 1px; justify-items: start;
+  padding: 6px 12px;
+  background: var(--paper-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-sm);
+}
+.rv-pl { font-size: 10.5px; color: var(--ink-3); }
+.rv-phone b { font-size: 14px; letter-spacing: .03em; }
+
+@media (max-width: 640px) {
+  .rv-phone { width: 100%; grid-auto-flow: column; justify-content: space-between; align-items: center; }
+}

@@ -3,7 +3,7 @@ import { icon } from '../../ui/icons.js';
 import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
-  money, faDigits, date, dateTime, relative, enDigits,
+  money, faDigits, date, dateTime, timeOnly, relative, enDigits,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -635,41 +635,121 @@ function adminTicketsPage() {
 
 // ── monitoring ──────────────────────────────────────────────────────────────
 
+/**
+ * Which icon and tone an activity row wears. Unknown actions fall back to a
+ * clock — the feed must never die on an action added later.
+ */
+const TL_ICON = {
+  LOGIN: ['user', 'ok'],
+  LOGIN_FAILED: ['shield', 'bad'],
+  LOGOUT: ['close', ''],
+  PASSWORD_CHANGED: ['settings', 'warn'],
+  HAVALE_CREATED: ['car', 'ok'],
+  HAVALE_UPDATED: ['car', ''],
+  HAVALE_RENEWED: ['clock', ''],
+  HAVALE_FULFILLED: ['car', 'ok'],
+  HAVALE_DELETED: ['close', 'warn'],
+  CONTACT_REVEALED: ['eye', ''],
+  REPORT_FILED: ['flag', 'warn'],
+  REPORT_CONFIRMED: ['flag', 'bad'],
+  REPORT_REJECTED: ['flag', ''],
+  REPORT_MARKED_ABUSIVE: ['flag', 'warn'],
+  REPORT_HELD: ['flag', 'warn'],
+  ACCOUNT_SUSPENDED_BY_STRIKES: ['shield', 'bad'],
+  TICKET_OPENED: ['mail', ''],
+  SUBSCRIPTION_GRANTED: ['ticket', 'ok'],
+  SEAT_ORDER_APPROVED: ['layers', 'ok'],
+  SEAT_ORDER_REJECTED: ['layers', 'warn'],
+  SUBAGENT_CREATED: ['users', 'ok'],
+  SUBAGENT_SUSPENDED: ['users', 'bad'],
+  SUBAGENT_ACTIVATED: ['users', 'ok'],
+  SUBAGENT_PASSWORD_RESET: ['users', 'warn'],
+  SUBAGENT_BRANDS_SET: ['users', ''],
+  AGENT_CREATED: ['shield', 'ok'],
+  AGENT_UPDATED: ['user', ''],
+  AGENT_SUSPENDED: ['shield', 'bad'],
+  AGENT_ACTIVATED: ['shield', 'ok'],
+  AGENT_PASSWORD_RESET: ['settings', 'warn'],
+  AGENT_FORCE_LOGGED_OUT: ['close', 'warn'],
+  AGENT_LIMITS_CHANGED: ['settings', ''],
+  CATALOG_CHANGED: ['car', ''],
+};
+
+function tlRow(row) {
+  const [ic, tone] = TL_ICON[row.action] || ['clock', ''];
+  return html`<div class="tl-row" data-activity="${row.id}">
+    <span class="tl-i ${tone ? `is-${tone}` : ''}">${icon(ic, 16)}</span>
+    <div class="tl-b">
+      <div class="tl-t">${row.headline}</div>
+      <div class="tl-m">
+        <span class="num">${timeOnly(row.createdAt)}</span>${
+          row.ip ? html` · <span class="num">${row.ip}</span>` : ''
+        }
+      </div>
+    </div>
+    <span class="tl-chev">${icon('chevron', 14)}</span>
+  </div>`;
+}
+
+/** One reveal, read as the sentence it is: who saw whose number, on what. */
+function rvRow(r) {
+  return html`<div class="rv-row">
+    <span class="agent-av sm" style="--h:${hueOf(r.viewer.agencyCode || r.viewer.name)}">
+      ${(r.viewer.name || '؟').slice(0, 1)}
+    </span>
+    <div class="rv-b">
+      <div class="rv-t"><b>${r.viewer.name}</b> شماره‌ی تماس <b>${r.owner.name}</b> را دید</div>
+      <div class="rv-m">
+        روی آگهی «${r.havale.carType}»
+        ${r.havale.serial ? html`<span class="num">#${faDigits(r.havale.serial)}</span>` : ''}
+        · <span class="num">${dateTime(r.at)}</span>
+        · کد صاحب آگهی <span class="num">${r.owner.agencyCode}</span>
+      </div>
+    </div>
+    <div class="rv-phone">
+      <span class="rv-pl">شماره‌ای که دید</span>
+      <b class="num">${r.shown.phone || '—'}</b>
+    </div>
+  </div>`;
+}
+
 function monitorPage() {
-  const { data } = getState();
+  const { data, params } = getState();
   const activity = data.activity?.items || [];
   const reveals = data.reveals?.items;
+
+  // Day headings carry the date once, so every row can show just the clock.
+  const feed = [];
+  let lastDay = null;
+  for (const row of activity) {
+    const day = date(row.createdAt);
+    if (day !== lastDay) {
+      lastDay = day;
+      feed.push(html`<div class="tl-day"><span class="num">${day}</span></div>`);
+    }
+    feed.push(tlRow(row));
+  }
 
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.')}</h2>
-      <span class="tag">صفحه‌ی ${faDigits(data.activityPage || 1)} — ${faDigits(data.activity?.total ?? 0)} رکورد</span>
-    </div>
-    <div class="hint" style="padding:8px 14px">
-      روی هر ردیف کلیک کنید تا کامل بگوید چه اتفاقی افتاده.
+      <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر رویداد کلیک کنید تا کامل بگوید چه اتفاقی افتاده.')}</h2>
+      <span class="tag">صفحه‌ی ${faDigits(data.activityPage || 1)} — ${faDigits(data.activity?.total ?? 0)} رویداد</span>
     </div>
     ${
-      activity.length
-        ? html`<table>
-            <thead><tr><th>زمان</th><th>رویداد</th><th>IP</th></tr></thead>
-            <tbody>
-              ${activity.map(
-                (row) => html`<tr data-activity="${row.id}" style="cursor:pointer">
-                  <td>${dateTime(row.createdAt)}</td>
-                  <td>${row.headline}</td>
-                  <td class="num">${row.ip || '—'}</td>
-                </tr>`
-              )}
-            </tbody>
-          </table>`
-        : emptyBox('رکوردی نیست.')
+      params?.userId
+        ? html`<div class="hint tl-filter">
+            فقط رویدادهای یک حساب نمایش داده می‌شود.
+            <button class="btn sm" data-go="adm-monitor">نمایش همه</button>
+          </div>`
+        : ''
     }
+    ${activity.length ? html`<div class="tl">${feed}</div>` : emptyBox('رکوردی نیست.')}
     ${pager({
       page: data.activityPage || 1,
       pages: Math.max(1, Math.ceil((data.activity?.total ?? 0) / 50)),
       go: 'adm-monitor',
-      params: getState().params?.userId ? { userId: getState().params.userId } : {},
+      params: params?.userId ? { userId: params.userId } : {},
     })}
   </div>
 
@@ -677,26 +757,17 @@ function monitorPage() {
     reveals
       ? html`<div class="card">
           <div class="card-h">
-            <h2>سابقه‌ی نمایش مشخصات ${qtip('چه کسی مشخصات تماس کدام آگهی را کی دیده. شماره‌ی ثبت‌شده همان لحظه‌ی نمایش است و به‌خاطر حساسیتش فقط مدیر کل این را می‌بیند.')}</h2>
+            <h2>چه کسی شماره‌ی چه کسی را دید ${qtip('هر بار که نماینده‌ای مشخصات تماس آگهی‌ای را باز می‌کند، این‌جا ثبت می‌شود. شماره‌ی ثبت‌شده همان لحظه‌ی نمایش است و به‌خاطر حساسیتش فقط مدیر کل این را می‌بیند.')}</h2>
             <span class="tag r">فقط مدیر کل</span>
           </div>
-          <div class="hint" style="padding:8px 14px">
-            شماره‌ای که نشان داده شده، <b>همان لحظه</b> ثبت شده — نه شماره‌ی فعلی پروفایل.
+          <div class="hint" style="padding:8px 16px 4px">
+            شماره‌ی ثبت‌شده <b>همان لحظه‌ی نمایش</b> است — اگر بعداً شماره‌ی پروفایل عوض شود، این سابقه تغییر نمی‌کند.
           </div>
-          <table>
-            <thead><tr><th>زمان</th><th>بیننده</th><th>حواله</th><th>صاحب آگهی</th><th>شماره‌ی نمایش‌داده‌شده</th></tr></thead>
-            <tbody>
-              ${reveals.map(
-                (r) => html`<tr>
-                  <td>${dateTime(r.at)}</td>
-                  <td>${r.viewer.name}</td>
-                  <td>${r.havale.carType}</td>
-                  <td>${r.owner.name} <span class="num">(${r.owner.agencyCode})</span></td>
-                  <td class="num">${r.shown.phone || '—'}</td>
-                </tr>`
-              )}
-            </tbody>
-          </table>
+          ${
+            reveals.length
+              ? html`<div class="rv">${reveals.map(rvRow)}</div>`
+              : emptyBox('هنوز نمایشی ثبت نشده.')
+          }
         </div>`
       : ''
   }`;
