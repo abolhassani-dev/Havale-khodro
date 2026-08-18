@@ -199,9 +199,39 @@ model User {
   activityLogs        ActivityLog[]
   errors              ErrorLog[]    @relation("UserErrors")
   smsMessages         SmsMessage[]
+  brandAccess         BrandAccess[]
 
   @@index([role, status])
   @@index([parentId])
+}
+
+/// اجازه‌ی ثبت آگهی روی یک شرکت یا یک برند.
+///
+/// هر ردیف یا `companyId` دارد یا `brandId` — نه هر دو. تیک روی شرکت یعنی
+/// «همه‌ی برندهای این شرکت، حالا و در آینده»، که همان معنای «دسترسی به
+/// محصولات ایران خودرو» است؛ اگر به‌جایش برندهای همان لحظه ذخیره می‌شد،
+/// برندی که فردا زیر آن شرکت اضافه شود جا می‌ماند و هیچ‌کس نمی‌فهمید چرا.
+///
+/// نبودِ ردیف یعنی «هیچ». پیش‌فرض عمداً بسته است: حسابی که کسی یادش برود
+/// تنظیمش کند نباید به همه‌چیز دسترسی داشته باشد.
+///
+/// فقط جلوی *ثبت* را می‌گیرد. دیدن و استعلام و ثبت درخواست خرید برای همه باز
+/// است — این محدودیت تقسیم کار است، نه پنهان‌کاری.
+model BrandAccess {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   CarCompany? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  brandId   String?
+  brand     CarBrand?   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, companyId])
+  @@unique([userId, brandId])
+  @@index([userId])
 }
 
 model Plan {
@@ -560,7 +590,8 @@ model CarCompany {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  brands CarBrand[]
+  brands      CarBrand[]
+  brandAccess BrandAccess[]
 
   @@index([isActive, sortOrder])
 }
@@ -579,7 +610,8 @@ model CarBrand {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  models CarModel[]
+  models      CarModel[]
+  brandAccess BrandAccess[]
 
   @@unique([companyId, name])
   @@index([isActive, sortOrder])
