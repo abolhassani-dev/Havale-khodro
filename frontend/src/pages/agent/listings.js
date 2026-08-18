@@ -3,6 +3,7 @@ import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import {
   money, faDigits, until, date, KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL,
+  PAYMENT_TYPES, PAYMENT_TYPE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { enDigits } from '../../ui/format.js';
@@ -77,8 +78,20 @@ export function havaleFormPage(kind) {
       </div>
 
       ${numberField('model', 'مدل (سال)', offer, '۱۴۰۵')}
+      ${numberField('carPriceToman', 'قیمت خودرو (تومان)', offer)}
       ${numberField('amountToman', 'مبلغ حواله (تومان)', offer)}
-      ${numberField('paidAmountToman', 'مبلغ واریزی (تومان)', offer)}
+      ${numberField('paidAmountToman', 'مبلغ واریز شده (تومان)', offer)}
+
+      <div class="field">
+        <label for="paymentType">
+          نحوه پرداخت ${raw(offer ? '' : '<span class="opt">(اختیاری)</span>')}
+        </label>
+        <select class="in" id="paymentType" name="paymentType" ${raw(offer ? 'required' : '')}>
+          <option value="">${offer ? 'انتخاب کنید' : 'فرقی نمی‌کند'}</option>
+          ${PAYMENT_TYPES.map(([value, label]) => html`<option value="${value}">${label}</option>`)}
+        </select>
+      </div>
+
       ${numberField('deliveryDays', 'زمان تحویل (روز)', offer)}
 
       ${
@@ -168,8 +181,10 @@ export async function submitHavale(form) {
   const optional = {
     carColor: form.carColor.value,
     model: form.model.value,
+    carPriceToman: form.carPriceToman.value,
     amountToman: form.amountToman.value,
     paidAmountToman: form.paidAmountToman.value,
+    paymentType: form.paymentType.value,
     deliveryDays: form.deliveryDays.value,
     depositDays: form.depositDays ? form.depositDays.value : '',
     description: form.description.value,
@@ -184,14 +199,18 @@ export async function submitHavale(form) {
   // for every sale listing submitted from this form. The backend tests missed
   // it because they build their payload directly and send '1405' as text — the
   // request the browser actually makes was never the request under test.
-  const FREE_TEXT = new Set(['carColor', 'description']);
+  //
+  // `paymentType` is here for the same reason and would fail louder: it is an
+  // enum, so `Number(enDigits('CASH'))` is NaN and every sale listing would be
+  // refused.
+  const AS_TEXT = new Set(['carColor', 'description', 'paymentType']);
 
   Object.entries(optional).forEach(([key, value]) => {
     if (value === '' || value === undefined) return;
 
-    // Free text is passed through untouched — running enDigits over a
-    // description would rewrite the digits inside somebody's sentence.
-    if (FREE_TEXT.has(key)) {
+    // Text is passed through untouched — running enDigits over a description
+    // would rewrite the digits inside somebody's sentence.
+    if (AS_TEXT.has(key)) {
       payload[key] = value;
       return;
     }
@@ -261,6 +280,12 @@ export function minePage() {
                   <td>${until(h.closesAt)}</td>
                   <td class="num">${faDigits(h.revealCount || 0)}</td>
                   <td class="row-actions">
+                    <!-- The detail view had a handler and a dispatch entry but
+                         nothing that emitted the attribute, so it could not be
+                         opened from anywhere. The table shows one of the three
+                         money figures; this is where the other two, the payment
+                         terms and the deposit window live. -->
+                    <button class="btn sm" data-open-havale="${h.id}">جزئیات</button>
                     <button class="btn sm" data-renew="${h.id}">تمدید</button>
                     ${
                       h.status === 'ACTIVE'
@@ -373,8 +398,10 @@ export function havaleDetailModal(id) {
     type: 'info',
     title: `${item.carType} — ${KIND_LABEL[item.kind]}`,
     body: html`
+      <div class="drow"><span>قیمت خودرو</span><b>${money(item.carPriceToman)}</b></div>
       <div class="drow"><span>مبلغ حواله</span><b>${money(item.amountToman)}</b></div>
-      <div class="drow"><span>مبلغ واریزی</span><b>${money(item.paidAmountToman)}</b></div>
+      <div class="drow"><span>مبلغ واریز شده</span><b>${money(item.paidAmountToman)}</b></div>
+      <div class="drow"><span>نحوه پرداخت</span><b>${PAYMENT_TYPE_LABEL[item.paymentType] || '—'}</b></div>
       <div class="drow"><span>مدت واریز</span><b>${item.depositDays ? `${faDigits(item.depositDays)} روز` : '—'}</b></div>
       <div class="drow"><span>زمان تحویل</span><b>${item.deliveryDays ? `${faDigits(item.deliveryDays)} روز` : '—'}</b></div>
       <div class="drow"><span>رنگ</span><b>${item.carColor || 'هر رنگ'}</b></div>

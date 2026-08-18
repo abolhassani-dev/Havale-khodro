@@ -89,6 +89,22 @@ export const SOLH_LABEL = { SOLH: 'صلح', VEKALATI: 'وکالتی' };
 
 export const KIND_LABEL = { OFFER: 'حواله فروش', REQUEST: 'درخواست خرید' };
 
+/**
+ * How the car itself is paid for.
+ *
+ * An array rather than an object so the dropdown keeps this order — نقد first,
+ * because it is both the simplest and the most common. Object key order happens
+ * to be stable for string keys, but relying on that to lay out an interface is
+ * relying on something nobody wrote down.
+ */
+export const PAYMENT_TYPES = [
+  ['CASH', 'نقد'],
+  ['STAGED', 'چند مرحله‌ای'],
+  ['INSTALLMENT', 'اقساط'],
+];
+
+export const PAYMENT_TYPE_LABEL = Object.fromEntries(PAYMENT_TYPES);
+
 export const HAVALE_STATUS_LABEL = {
   ACTIVE: 'فعال',
   FULFILLED: 'فروخته شد',

@@ -38,6 +38,8 @@ function baseFields(havale) {
     solh: havale.solh,
     amountToman: toNumber(havale.amountToman),
     paidAmountToman: toNumber(havale.paidAmountToman),
+    carPriceToman: toNumber(havale.carPriceToman),
+    paymentType: havale.paymentType,
     deliveryDays: havale.deliveryDays,
     depositDays: havale.depositDays,
     supplierCompany: havale.supplierCompany,

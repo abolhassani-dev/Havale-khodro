@@ -158,14 +158,33 @@ await step('a listing can actually be posted from the form', async () => {
   await page.selectOption('#carModelId', { index: 1 });
   await page.selectOption('#carColor', { index: 1 });
   await page.fill('#model', '۱۴۰۴');
+  await page.fill('#carPriceToman', '۱۲۰۰۰۰۰۰۰۰');
   await page.fill('#amountToman', '۹۵۰۰۰۰۰۰۰');
   await page.fill('#paidAmountToman', '۳۰۰۰۰۰۰۰۰');
+  // An enum, not a number. Sent through the digit conversion the money fields
+  // use, `Number(enDigits('CASH'))` is NaN and every sale listing is refused —
+  // which is what this step exists to notice.
+  await page.selectOption('#paymentType', 'STAGED');
   await page.fill('#deliveryDays', '۴۵');
   await page.fill('#depositDays', '۷');
   await page.fill('#description', 'ثبت آزمایشی از تست دودی');
   await page.click('form[data-form="havale"] button[type=submit]');
   await page.waitForFunction(() => location.hash.includes('mine'), null, { timeout: 8000 });
   await page.waitForSelector('table tbody tr', { timeout: 8000 });
+});
+
+// The three money figures are different things — the car, the transfer
+// document, and what has been paid so far — and a listing that shows one of
+// them under another's label is worse than one that shows none.
+await step('the listing carries the car price and the payment terms back', async () => {
+  await page.click('table tbody tr [data-open-havale]');
+  await page.waitForSelector('.modal-b', { timeout: 5000 });
+  const t = (await page.textContent('.modal-b')).replace(/\s+/g, ' ');
+  for (const label of ['قیمت خودرو', 'مبلغ حواله', 'مبلغ واریز شده', 'نحوه پرداخت']) {
+    if (!t.includes(label)) throw new Error(`«${label}» is missing from the listing`);
+  }
+  if (!t.includes('چند مرحله‌ای')) throw new Error('the payment terms did not come back: ' + t.slice(0, 200));
+  await page.click('[data-close-modal]');
 });
 
 // A refused submit must leave the form and its contents alone. Routing this
@@ -179,8 +198,10 @@ await step('a refused submit keeps what was typed', async () => {
   await page.selectOption('#carModelId', { index: 1 });
   await page.selectOption('#carColor', { index: 1 });
   await page.fill('#model', '۱۴۰۴');
+  await page.fill('#carPriceToman', '۲۰۰۰۰۰۰');
   await page.fill('#amountToman', '۱۰۰۰۰۰۰');
   await page.fill('#paidAmountToman', '۹۹۹۹۹۹۹۹۹');   // more than the total
+  await page.selectOption('#paymentType', 'CASH');
   await page.fill('#deliveryDays', '۳۰');
   await page.fill('#depositDays', '۷');
   await page.fill('#description', 'این متن نباید گم شود');

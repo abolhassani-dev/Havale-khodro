@@ -118,8 +118,13 @@ async function offer(overrides = {}) {
     solh: 'SOLH',
     carColor: color,
     model: '1405',
+    // The car's own price, above the price of the transfer document — the two
+    // are separate figures and this fixture keeps them separate so a test that
+    // confuses them fails.
+    carPriceToman: 2_400_000_000,
     amountToman: 1_800_000_000,
     paidAmountToman: 900_000_000,
+    paymentType: 'CASH',
     deliveryDays: 60,
     depositDays: 5,
     ...overrides,

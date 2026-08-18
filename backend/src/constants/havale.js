@@ -24,6 +24,25 @@ const SOLH_STATUS = {
   VEKALATI: 'VEKALATI',
 };
 
+/**
+ * How the car itself is paid for — not how the transfer document is paid for.
+ *
+ * Required on a sale, optional on a purchase request: a seller knows the terms
+ * of the car they hold, while a buyer looking for one may not care yet, and
+ * forcing a choice would mean picking a term they do not actually require.
+ */
+const PAYMENT_TYPE = {
+  CASH: 'CASH', // نقد
+  STAGED: 'STAGED', // چند مرحله‌ای
+  INSTALLMENT: 'INSTALLMENT', // اقساط
+};
+
+const PAYMENT_TYPE_LABELS = {
+  CASH: 'نقد',
+  STAGED: 'چند مرحله‌ای',
+  INSTALLMENT: 'اقساط',
+};
+
 /** Blueprint 5.12: the deposit window is between one and thirty days. */
 const DEPOSIT_DAYS = { MIN: 1, MAX: 30 };
 
@@ -46,6 +65,8 @@ module.exports = {
   HAVALE_KIND,
   HAVALE_STATUS,
   SOLH_STATUS,
+  PAYMENT_TYPE,
+  PAYMENT_TYPE_LABELS,
   DEPOSIT_DAYS,
   REQUEST_LIFETIME_DAYS,
   DEFAULT_REVEAL_LIMITS,

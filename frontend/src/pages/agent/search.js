@@ -1,7 +1,9 @@
 import { html, raw } from '../../ui/html.js';
 import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
-import { num, money, faDigits, until, KIND_LABEL, SOLH_LABEL } from '../../ui/format.js';
+import {
+  num, money, faDigits, until, KIND_LABEL, SOLH_LABEL, PAYMENT_TYPE_LABEL,
+} from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager } from '../../ui/feedback.js';
 import { usageChip } from '../../ui/shell.js';
 import { resolve } from '../../router.js';
@@ -161,8 +163,10 @@ function card(h) {
     </header>
 
     <dl>
+      ${field('قیمت خودرو', money(h.carPriceToman))}
       ${field('مبلغ حواله', money(h.amountToman))}
-      ${field('مبلغ واریزی', money(h.paidAmountToman))}
+      ${field('مبلغ واریز شده', money(h.paidAmountToman))}
+      ${field('نحوه پرداخت', PAYMENT_TYPE_LABEL[h.paymentType] || '—')}
       ${field('رنگ', h.carColor || 'هر رنگ')}
       ${field('مدل', h.model || '—')}
       ${field('تحویل', h.deliveryDays ? `${faDigits(h.deliveryDays)} روز` : '—')}

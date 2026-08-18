@@ -4,6 +4,7 @@ const {
   HAVALE_KIND,
   HAVALE_STATUS,
   SOLH_STATUS,
+  PAYMENT_TYPE,
   DEPOSIT_DAYS,
   LIST_PAGE_SIZE,
 } = require('../../constants/havale');
@@ -46,6 +47,8 @@ const createBody = Joi.object({
   model: requiredForOffer(Joi.string().trim().max(20)),
   amountToman: requiredForOffer(toman),
   paidAmountToman: requiredForOffer(toman),
+  carPriceToman: requiredForOffer(toman),
+  paymentType: requiredForOffer(Joi.string().valid(...Object.values(PAYMENT_TYPE))),
   deliveryDays: requiredForOffer(days),
 
   // The deposit window is also the listing's lifetime, which is why zero is not
@@ -77,7 +80,7 @@ const createBody = Joi.object({
         // validation because {{#error.message}}» — from an `error` key that is
         // not being passed, so the Persian sentence written here was dropped
         // and the user was shown that fragment with an empty ending.
-        return helpers.message('مبلغ واریزی نمی‌تواند از مبلغ حواله بیشتر باشد');
+        return helpers.message('مبلغ واریز شده نمی‌تواند از مبلغ حواله بیشتر باشد');
       }
     }
     return value;
@@ -92,6 +95,8 @@ const updateBody = Joi.object({
   model: Joi.string().trim().max(20).allow(null),
   amountToman: toman.allow(null),
   paidAmountToman: toman.allow(null),
+  carPriceToman: toman.allow(null),
+  paymentType: Joi.string().valid(...Object.values(PAYMENT_TYPE)).allow(null),
   deliveryDays: days.allow(null),
   description: Joi.string().trim().max(1000).allow('', null),
 })

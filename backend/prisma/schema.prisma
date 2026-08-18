@@ -70,6 +70,13 @@ enum SolhStatus {
   VEKALATI // وکالتی
 }
 
+/// نحوه‌ی پرداختِ خودِ خودرو — نه پرداخت حواله
+enum PaymentType {
+  CASH // نقد
+  STAGED // چند مرحله‌ای
+  INSTALLMENT // اقساط
+}
+
 enum ReportReason {
   FAKE_LISTING
   WRONG_PRICE
@@ -259,10 +266,18 @@ model Havale {
   carColor        String?
   model           String?
   amountToman     BigInt? // مبلغ حواله
-  paidAmountToman BigInt? // مبلغ واریزی تا امروز به شرکت خودروساز
+  paidAmountToman BigInt? // مبلغ واریز شده تا امروز به شرکت خودروساز
   deliveryDays    Int? // زمان تحویل، به روز
   depositDays     Int? // مدت زمان واریز: مهلت خریدار، به روز
   supplierCompany String?
+
+  /// قیمت خودِ خودرو — جدا از مبلغ حواله. مبلغ حواله بهای واگذاری سند است،
+  /// این عدد بهای خودرو. در «حواله فروش» الزامی، در «درخواست خرید» اختیاری.
+  carPriceToman BigInt?
+
+  /// نحوه‌ی پرداخت خودرو: نقد، چند مرحله‌ای یا اقساط.
+  /// در «حواله فروش» الزامی، در «درخواست خرید» اختیاری.
+  paymentType PaymentType?
 
   // اطلاعات تماس روی حواله ذخیره نمی‌شود؛ همیشه از پروفایل مالک خوانده می‌شود
   // تا با تغییر پروفایل، همه‌ی آگهی‌ها یکجا به‌روز شوند.
