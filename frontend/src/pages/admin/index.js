@@ -729,13 +729,15 @@ async function submitNewAgent(form) {
     if (value) payload[key] = key.includes('hone') ? enDigits(value) : value;
   });
   payload.isReseller = form.isReseller.value === 'true';
-  payload.brandIds = brandPickValue(form);
+  const picked = brandPickValue(form);
+  payload.brandIds = picked.brandIds;
+  payload.modelIds = picked.modelIds;
 
   // Refused here rather than on the server, because the server's refusal costs
   // a round trip and arrives after the reader has scrolled past the picker.
   // The server checks regardless — this is the courtesy, not the rule.
-  if (!payload.brandIds.length) {
-    showFormError(form, new Error('حداقل یک برند برای این نمایندگی انتخاب کنید'));
+  if (!payload.brandIds.length && !payload.modelIds.length) {
+    showFormError(form, new Error('حداقل یک برند یا مدل برای این نمایندگی انتخاب کنید'));
     document.querySelector('.bpick')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
@@ -850,25 +852,29 @@ async function forceLogout(id) {
 async function agentBrandsModal(id) {
   let choices;
   try {
-    choices = (await admin.agentBrands(id)).brands;
+    choices = await admin.agentBrands(id);
   } catch (err) {
     return toast(err.message, 'danger');
   }
 
   return openModal({
     type: 'form',
-    title: 'برندهای مجاز این نمایندگی',
+    title: 'برندها و مدل‌های مجاز این نمایندگی',
     wide: true,
     body: html`
-      ${brandPicker(choices, { selected: choices.filter((b) => b.allowed).map((b) => b.id) })}
+      ${brandPicker(choices.brands, {
+        selected: choices.brands.filter((b) => b.allowed).map((b) => b.id),
+        selectedModels: choices.modelGrants,
+      })}
       <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
         تغییر فوراً اعمال می‌شود. آگهی‌های قبلی سر جایشان می‌مانند — محدودیت فقط جلوی
-        ثبتِ جدید را می‌گیرد.
+        ثبتِ جدید را می‌گیرد. برای دسترسیِ فقط چند مدل از یک برند، روی «مدل‌ها» بزنید.
       </p>`,
     confirmLabel: 'ذخیره',
     onSubmit: async (form) => {
-      await admin.setAgentBrands(id, brandPickValue(form));
-      toast('برندها به‌روز شد');
+      const picked = brandPickValue(form);
+      await admin.setAgentBrands(id, picked);
+      toast('دسترسی‌ها به‌روز شد');
     },
   });
 }

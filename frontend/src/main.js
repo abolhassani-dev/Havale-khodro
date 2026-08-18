@@ -9,7 +9,7 @@ import { renderModal, runModalAction } from './ui/modal.js';
 
 import { loginPage, submitLogin, changePasswordPage, submitChangePassword } from './pages/auth.js';
 import { loadDashboard, dashboardPage } from './pages/agent/dashboard.js';
-import { loadSearch, searchPage, confirmReveal } from './pages/agent/search.js';
+import { loadSearch, searchPage, confirmReveal, onSearchBrandChange } from './pages/agent/search.js';
 import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
   renewModal, confirmFulfill, confirmDelete, havaleDetailModal,
@@ -216,7 +216,7 @@ const CLICK_KEYS = new Set([
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
-  'brandAll', 'brandNone',
+  'brandAll', 'brandNone', 'brandExpand',
 ]);
 
 function findTarget(node) {
@@ -359,6 +359,10 @@ function onChange(event) {
 
   if (event.target.name === 'brand') {
     onBrandChange(event.target.form);
+  }
+  // The search filters' brand box: swap the model options in place.
+  if (event.target.name === 'brandId' && event.target.form?.dataset.form === 'search-filters') {
+    onSearchBrandChange(event.target.form);
   }
   // Choosing a role re-ticks its default permissions. Delegated like every
   // other handler, because the modal is rebuilt on each render and anything

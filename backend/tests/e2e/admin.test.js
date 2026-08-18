@@ -428,10 +428,13 @@ maybe('admin panel', () => {
       catalogRows.models.push(model.body.data.id);
 
       const buyer = await agent();
-      const list = await request(app).get(api('/catalog')).set('Cookie', buyer.cookie).expect(200);
+      await request(app).get(api('/catalog')).set('Cookie', buyer.cookie).expect(200);
 
-      const models = list.body.data.brands.flatMap((b) => b.models).map((m) => m.id);
-      expect(models).toContain(model.body.data.id);
+      const lazy = await request(app)
+        .get(api(`/catalog/brands/${brand.id}/models`))
+        .set('Cookie', buyer.cookie)
+        .expect(200);
+      expect(lazy.body.data.models.map((m) => m.id)).toContain(model.body.data.id);
 
       await request(app)
         .post(api('/havales'))

@@ -18,6 +18,10 @@ export const auth = {
 
 export const catalog = {
   get: () => api.get('/catalog'),
+  // One brand's models, fetched when a brand is actually chosen. The full
+  // catalogue used to embed all 2044 and was the heaviest response in the
+  // product, paid on every visit to the search page and both listing forms.
+  brandModels: (id) => api.get(`/catalog/brands/${id}/models`),
 };
 
 export const havale = {
@@ -101,7 +105,7 @@ export const admin = {
   modelUsage: (id) => api.get(`/admin/catalog/models/${id}/usage`),
   brandModels: (id) => api.get(`/admin/catalog/brands/${id}/models`),
   agentBrands: (id) => api.get(`/admin/agents/${id}/brands`),
-  setAgentBrands: (id, brandIds) => api.put(`/admin/agents/${id}/brands`, { brandIds }),
+  setAgentBrands: (id, { brandIds, modelIds }) => api.put(`/admin/agents/${id}/brands`, { brandIds, modelIds }),
   createCompany: (payload) => api.post('/admin/catalog/companies', payload),
   updateCompany: (id, payload) => api.patch(`/admin/catalog/companies/${id}`, payload),
   createBrand: (payload) => api.post('/admin/catalog/brands', payload),

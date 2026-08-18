@@ -1008,3 +1008,30 @@ a[data-go],
   overflow-y: auto;
   border-top: 1px solid var(--line-2);
 }
+
+/* ── انتخاب مدل داخل انتخاب‌گر برند ── */
+.bpick-cell { border-radius: var(--r-sm); }
+.bpick-cell.open { grid-column: 1 / -1; background: var(--card); border: 1px solid var(--line); }
+.bpick-row { display: flex; align-items: center; gap: 4px; }
+.bpick-row .bpick-item { flex: 1; min-width: 0; }
+.bpick-badge { color: var(--primary); font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.bpick-item.part { background: var(--copper-08); border-color: #a85a2426; }
+
+.bpick-x {
+  flex: none;
+  border: 1px solid var(--line-2); background: var(--card);
+  border-radius: var(--r-sm);
+  font-size: 11.5px; color: var(--ink-3);
+  padding: 4px 8px; cursor: pointer;
+}
+.bpick-x:hover { color: var(--primary); border-color: var(--primary-15); }
+
+.bpick-mlist {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 2px 10px;
+  padding: 8px 12px 10px;
+  border-top: 1px dashed var(--line-2);
+  max-height: 240px; overflow-y: auto;
+  font-size: 12.5px;
+}
+.bpick-model { display: flex; align-items: center; gap: 7px; padding: 3px 2px; cursor: pointer; }

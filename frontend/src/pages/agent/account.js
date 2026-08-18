@@ -177,7 +177,11 @@ export async function loadSubAgents() {
   // before it ever renders — «همه» must mean "all of mine", never "all that
   // exist", or it would tick brands the server is about to refuse.
   const [list, tree] = await Promise.all([subAgents.list(), catalog.get()]);
-  return { list, parentBrands: (tree.brands || []).filter((b) => b.canPost) };
+  // Everything the parent may hand down: brands it holds whole, and brands it
+  // holds a few models of. The picker gets the partial ones with a ceiling, so
+  // it can only offer what the server would accept.
+  const mine = (tree.brands || []).filter((b) => b.canPost || b.postableModelIds?.length);
+  return { list, parentBrands: mine };
 }
 
 export function subAgentsPage() {
@@ -242,6 +246,13 @@ export function subAgentsPage() {
 
 export function newSubAgentModal() {
   const parentBrands = getState().data.parentBrands || [];
+  const fullBrands = parentBrands.filter((b) => b.canPost).map((b) => b.id);
+  const partialModels = parentBrands.flatMap((b) =>
+    b.canPost ? [] : (b.postableModelIds || []).map((id) => ({ id, brandId: b.id }))
+  );
+  const ceiling = Object.fromEntries(
+    parentBrands.filter((b) => !b.canPost).map((b) => [b.id, b.postableModelIds || []])
+  );
 
   openModal({
     type: 'form',
@@ -260,8 +271,10 @@ export function newSubAgentModal() {
       </div>
       <div style="margin-top:10px">
         ${brandPicker(parentBrands, {
-          selected: parentBrands.map((b) => b.id),
-          note: 'فقط برندهای خودتان قابل واگذاری‌اند. پیش‌فرض همه‌ی آن‌هاست — برای زیرنماینده‌ی تخصصی، فقط برند خودش را بگذارید.',
+          selected: fullBrands,
+          selectedModels: partialModels,
+          modelCeiling: ceiling,
+          note: 'فقط برندها و مدل‌های خودتان قابل واگذاری‌اند. پیش‌فرض همه‌ی آن‌هاست — برای زیرنماینده‌ی تخصصی، با «مدل‌ها» فقط مدل خودش را بگذارید.',
         })}
       </div>
       <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
@@ -275,12 +288,14 @@ export function newSubAgentModal() {
         'coordinatorName', 'coordinatorPhone'].forEach((key) => {
         payload[key] = key.includes('hone') ? enDigits(form[key].value.trim()) : form[key].value.trim();
       });
-      payload.brandIds = brandPickValue(form);
+      const picked = brandPickValue(form);
+      payload.brandIds = picked.brandIds;
+      payload.modelIds = picked.modelIds;
       // Refused here as well as on the server: an empty set is expressible in
       // the picker, but a sub-agency that can post nothing is almost never what
-      // was meant, and the server would reject the empty list anyway.
-      if (!payload.brandIds.length) {
-        throw new Error('حداقل یک برند برای زیرنماینده انتخاب کنید');
+      // was meant.
+      if (!picked.brandIds.length && !picked.modelIds.length) {
+        throw new Error('حداقل یک برند یا مدل برای زیرنماینده انتخاب کنید');
       }
 
       const child = await subAgents.create(payload);

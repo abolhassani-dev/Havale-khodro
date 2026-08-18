@@ -32,12 +32,12 @@ export function havaleFormPage(kind) {
   const tree = data.tree;
   const offer = kind === 'OFFER';
 
-  // A sale may only be posted under a brand this account holds; a purchase
-  // request may name any brand at all. So the same form offers two different
-  // lists, and the difference is the product rule rather than a convenience:
-  // wanting a car is not the same as dealing in it.
+  // A sale may only be posted under what this account holds — a whole brand,
+  // or single granted models inside one — while a purchase request may name
+  // any brand at all. Two lists from one form, and the difference is the
+  // product rule rather than a convenience: wanting a car is not dealing in it.
   const all = tree?.brands || [];
-  const brands = offer ? all.filter((b) => b.canPost) : all;
+  const brands = offer ? all.filter((b) => b.canPost || b.postableModelIds?.length) : all;
 
   return html`
   <form class="card form" data-form="havale" data-kind="${kind}">
@@ -178,22 +178,53 @@ function numberField(name, label, required, placeholder = '') {
   </div>`;
 }
 
-/** Repopulates the model list when the brand changes. */
-export function onBrandChange(form) {
+/**
+ * Repopulates the model list when the brand changes.
+ *
+ * The models arrive by their own request now — the catalogue stopped carrying
+ * all 2044 of them, which is what had made every page that loads it slow. All
+ * DOM, no store: a fetch that re-rendered the page would wipe the half-filled
+ * form around this dropdown.
+ *
+ * On a sale by an account that holds only part of the brand, the list is cut
+ * to the granted models — offering the rest would be offering a 403.
+ */
+export async function onBrandChange(form) {
   const { data } = getState();
   const brandId = form.brand.value;
   const brand = (data.tree?.brands || []).find((b) => b.id === brandId);
+  const offer = form.dataset.kind === 'OFFER';
 
   const select = form.carModelId;
   select.innerHTML = '';
-  select.disabled = !brand;
+  select.disabled = true;
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = brand ? 'انتخاب کنید' : 'ابتدا برند را انتخاب کنید';
+  placeholder.textContent = brand ? 'در حال بارگذاری…' : 'ابتدا برند را انتخاب کنید';
   select.appendChild(placeholder);
+  if (!brand) return;
 
-  (brand?.models || []).forEach((model) => {
+  let models = [];
+  try {
+    ({ models } = await catalog.brandModels(brandId));
+  } catch {
+    placeholder.textContent = 'بارگذاری مدل‌ها نشد — دوباره برند را انتخاب کنید';
+    return;
+  }
+
+  // The reader may have switched brands while this was in flight; filling the
+  // list of a brand they left would attach the wrong models to the right name.
+  if (form.brand.value !== brandId) return;
+
+  if (offer && !brand.canPost) {
+    const mine = new Set(brand.postableModelIds || []);
+    models = models.filter((m) => mine.has(m.id));
+  }
+
+  placeholder.textContent = 'انتخاب کنید';
+  select.disabled = false;
+  models.forEach((model) => {
     const option = document.createElement('option');
     option.value = model.id;
     // textContent, not innerHTML: a model name is operator-entered text and has

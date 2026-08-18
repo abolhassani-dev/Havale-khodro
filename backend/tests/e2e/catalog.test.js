@@ -42,7 +42,17 @@ maybe('catalog', () => {
 
     const fownix = res.body.data.brands.find((b) => b.slug === 'fownix');
     expect(fownix).toBeDefined();
-    expect(fownix.models.length).toBeGreaterThan(5);
+    // The models no longer ride along — 2044 of them made this the heaviest
+    // response in the product. The count comes with the brand; the models are
+    // one request away, made when a brand is actually chosen.
+    expect(fownix.models).toBeUndefined();
+    expect(fownix._count.models).toBeGreaterThan(5);
+
+    const lazy = await request(app)
+      .get(api(`/catalog/brands/${fownix.id}/models`))
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(lazy.body.data.models.length).toBe(fownix._count.models);
 
     // The thing that would break if the tree went back to hanging off the
     // company: a brand with none still arrives.

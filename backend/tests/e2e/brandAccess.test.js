@@ -171,14 +171,107 @@ maybe('brand access', () => {
       coordinatorPhone: `0935${tag.slice(-7)}`,
     };
 
-    // Absent entirely, and present but empty. The second is the one a form
-    // actually submits when nobody ticks a box.
+    // Absent entirely (schema), and present but adding up to nothing (route) —
+    // the second is what a form submits when nobody ticks a box. A single
+    // model with no brand is enough, which is the point of the model grain.
     await request(app).post(api('/admin/agents')).set('Cookie', cookie).send(body).expect(422);
     await request(app)
       .post(api('/admin/agents'))
       .set('Cookie', cookie)
-      .send({ ...body, brandIds: [] })
-      .expect(422);
+      .send({ ...body, brandIds: [], modelIds: [] })
+      .expect(400);
+  });
+
+  // The model grain: an agency whose whole job is one car.
+  describe('single-model grants', () => {
+    it('lets an account post exactly the granted model and nothing else of the brand', async () => {
+      const twoModels = await prisma.carModel.findMany({
+        where: { brandId: brands[0].id, isActive: true },
+        take: 2,
+        select: { id: true },
+      });
+      const { user, cookie } = await agent({ brands: [] });
+      await prisma.modelAccess.create({
+        data: { userId: user.id, carModelId: twoModels[0].id },
+      });
+
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await offer({ carModelId: twoModels[0].id }))
+        .expect(201);
+
+      // The sibling model of the same brand stays closed — the grant was the
+      // model, not the brand.
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await offer({ carModelId: twoModels[1].id }))
+        .expect(403);
+    });
+
+    it('drops a model grant that its brand grant already covers', async () => {
+      const { cookie } = await staff('SUPER_ADMIN');
+      const target = await agent({ brands: [] });
+      const model = await prisma.carModel.findFirst({
+        where: { brandId: brands[0].id, isActive: true },
+        select: { id: true },
+      });
+
+      await request(app)
+        .put(api(`/admin/agents/${target.user.id}/brands`))
+        .set('Cookie', cookie)
+        .send({ brandIds: [brands[0].id], modelIds: [model.id] })
+        .expect(200);
+
+      // Only the brand row is stored: the model row would be a duplicate that
+      // stops meaning anything the day the brand grant is removed.
+      expect(await prisma.modelAccess.count({ where: { userId: target.user.id } })).toBe(0);
+      expect(await prisma.brandAccess.count({ where: { userId: target.user.id } })).toBe(1);
+    });
+
+    it('a parent may hand down a single model it holds, and no other', async () => {
+      const twoModels = await prisma.carModel.findMany({
+        where: { brandId: brands[1].id, isActive: true },
+        take: 2,
+        select: { id: true },
+      });
+      const parent = await agent({ brands: [], isReseller: true, seatCredits: 5 });
+      await prisma.modelAccess.create({
+        data: { userId: parent.user.id, carModelId: twoModels[0].id },
+      });
+
+      const tag = `${Date.now()}${Math.floor(Math.random() * 999)}`;
+      const body = {
+        username: `test_m${tag}`,
+        password: 'Str0ngPassw0rd!',
+        fullName: 'زیرنمایندگی تک‌مدلی',
+        phone: `0914${tag.slice(-7)}`,
+        agencyName: 'زیرنمایندگی تست',
+        city: 'قم',
+        coordinatorName: 'مسئول هماهنگی',
+        coordinatorPhone: `0937${tag.slice(-7)}`,
+      };
+
+      const ok = await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send({ ...body, brandIds: [], modelIds: [twoModels[0].id] })
+        .expect(201);
+      created.push(ok.body.data.id);
+
+      await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send({
+          ...body,
+          username: `test_m2${tag}`,
+          phone: `0915${tag.slice(-7)}`,
+          brandIds: [],
+          modelIds: [twoModels[1].id],
+        })
+        .expect(403);
+    });
   });
 
   it('replaces the whole set when an admin saves the picker', async () => {
@@ -198,6 +291,7 @@ maybe('brand access', () => {
 
     const on = res.body.data.brands.filter((b) => b.allowed).map((b) => b.id);
     expect(on).toEqual([brands[1].id]);
+    expect(res.body.data.modelGrants).toEqual([]);
   });
 
   // The ceiling, which is what makes it safe to let a main agency configure its

@@ -2,42 +2,66 @@ const { prisma } = require('../../config/database');
 const { ForbiddenError, BadRequestError } = require('../../errors/AppError');
 
 /**
- * Which brands an account may post under.
+ * Which cars an account may post under.
  *
- * The rule in one sentence: an agency can *see* the whole market and can ask to
- * buy anything, but may only *offer* the brands it was given. That is how a
- * main agency divides work between twenty sub-agencies — one for Iran Khodro
- * products, one for Saipa — without any of them losing sight of the market they
- * are trading in.
+ * The rule in one sentence: an agency can *see* the whole market and can ask
+ * to buy anything, but may only *offer* what it was given. That is how a main
+ * agency divides work between twenty sub-agencies — one for Iran Khodro
+ * products, one that handles nothing but a single Fownix model — without any
+ * of them losing sight of the market they are trading in.
  *
- * Three consequences follow, and each is load-bearing:
+ * Two grains, deliberately:
  *
- *   Searching and viewing are untouched. This is a division of labour, not a
- *   wall; an agency that cannot see a listing cannot broker it either.
+ *   A brand grant means "every model of this brand, now and in future". It is
+ *   the ordinary case, and it keeps following the brand as models are added.
  *
- *   A purchase request is untouched. Wanting a car is not the same as dealing
- *   in it, and a sub-agency that handles Peugeot still buys whatever its
- *   customer walked in asking for.
+ *   A model grant means "exactly this one", for the agency whose whole job is
+ *   one car. Stored only when the brand is not already granted — a model row
+ *   under a granted brand would be a duplicate that stops meaning anything
+ *   the day the brand grant is removed.
  *
- *   No rows means nothing, not everything. The empty set is the safe default
- *   for an account somebody forgot to configure — which is why brand access is
- *   asked for when an agency is created rather than applied to it afterwards.
+ * Three consequences stay load-bearing from the brand-only days:
+ *
+ *   Searching and viewing are untouched — a division of labour, not a wall.
+ *   Purchase requests are untouched — wanting a car is not dealing in it.
+ *   No rows means nothing, not everything — the safe default for an account
+ *   somebody forgot to configure.
  */
 
-/** The brand ids this account may post under. Empty means none. */
+/**
+ * Everything this account holds: whole brands, and single models.
+ *
+ * Model grants come back with their brand, because every consumer needs the
+ * pair — the form to know which brand is partially open, the picker to show
+ * a count on the right row — and none of them should have to join it back.
+ */
+async function allowedSets(userId) {
+  const [brands, models] = await Promise.all([
+    prisma.brandAccess.findMany({ where: { userId }, select: { brandId: true } }),
+    prisma.modelAccess.findMany({
+      where: { userId },
+      select: { carModelId: true, carModel: { select: { brandId: true } } },
+    }),
+  ]);
+  return {
+    brandIds: brands.map((r) => r.brandId),
+    modelGrants: models.map((r) => ({ id: r.carModelId, brandId: r.carModel.brandId })),
+  };
+}
+
+/** Kept for callers that only care about whole brands. */
 async function allowedBrandIds(userId) {
-  const rows = await prisma.brandAccess.findMany({
-    where: { userId },
-    select: { brandId: true },
-  });
-  return rows.map((r) => r.brandId);
+  return (await allowedSets(userId)).brandIds;
 }
 
 /**
- * The same, as the picker needs it: every active brand, each flagged.
+ * The picker's data: every active brand flagged, plus the ids of singly
+ * granted models so a partial brand can show as partial.
  *
- * One query rather than one per brand, and it returns the brands themselves so
- * a caller never has to fetch the catalogue separately and join by hand.
+ * Deliberately *without* the models themselves — 2044 of them made this the
+ * heaviest response in the product, fetched by four different screens. The
+ * picker fetches one brand's models when somebody opens that brand, which is
+ * the only time anybody looks at them.
  */
 async function brandChoices(userId) {
   const [brands, allowed] = await Promise.all([
@@ -47,87 +71,111 @@ async function brandChoices(userId) {
       select: {
         id: true,
         name: true,
+        slug: true,
         logo: true,
-        company: { select: { id: true, name: true } },
-        _count: { select: { models: true } },
+        _count: { select: { models: { where: { isActive: true } } } },
       },
     }),
-    userId ? allowedBrandIds(userId) : [],
+    userId ? allowedSets(userId) : { brandIds: [], modelGrants: [] },
   ]);
 
-  const on = new Set(allowed);
-  return brands.map((b) => ({ ...b, allowed: on.has(b.id) }));
+  const on = new Set(allowed.brandIds);
+  return {
+    brands: brands.map((b) => ({ ...b, allowed: on.has(b.id) })),
+    modelGrants: allowed.modelGrants,
+  };
 }
 
 /**
- * Replaces an account's brand list.
+ * Replaces an account's grants — both grains, one transaction.
  *
- * Delete-then-insert rather than a diff, inside one transaction. The set is at
- * most 186 rows and the diff would be more code for the same result — and a
- * half-applied change here is an agency that can suddenly post things nobody
- * chose, which is worth a transaction on its own.
+ * Delete-then-insert rather than a diff: the set is small, and a half-applied
+ * change here is an agency that can suddenly post things nobody chose.
  */
-async function setBrands({ userId, brandIds, limitTo = null }) {
-  const wanted = [...new Set(brandIds || [])];
+async function setBrands({ userId, brandIds, modelIds = [], limitTo = null }) {
+  const wantedBrands = [...new Set(brandIds || [])];
+  let wantedModels = [...new Set(modelIds || [])];
 
-  // Every id has to be a real, active brand. Otherwise a stale picker — or a
-  // hand-made request — writes rows that point at nothing and read as access to
-  // a brand that no longer exists.
-  const real = await prisma.carBrand.findMany({
-    where: { id: { in: wanted }, isActive: true },
+  // Every id has to be real and active — a stale picker, or a hand-made
+  // request, must not write rows that point at nothing.
+  const realBrands = await prisma.carBrand.findMany({
+    where: { id: { in: wantedBrands }, isActive: true },
     select: { id: true },
   });
-  if (real.length !== wanted.length) throw new BadRequestError('برند نامعتبر انتخاب شده است');
+  if (realBrands.length !== wantedBrands.length) {
+    throw new BadRequestError('برند نامعتبر انتخاب شده است');
+  }
 
-  // A parent may only hand out what it holds. Checked here rather than in the
-  // route so that no future caller can reach the write without it: the whole
-  // value of letting a main agency configure its own sub-agencies is that it
-  // cannot thereby grant itself more.
+  const realModels = await prisma.carModel.findMany({
+    where: { id: { in: wantedModels }, isActive: true },
+    select: { id: true, brandId: true },
+  });
+  if (realModels.length !== wantedModels.length) {
+    throw new BadRequestError('مدل نامعتبر انتخاب شده است');
+  }
+
+  // A model row under a granted brand is dropped, not stored. The brand grant
+  // already says yes to it — and to every model the brand gains later, which
+  // is what the duplicate row would quietly stop meaning.
+  const brandSet = new Set(wantedBrands);
+  const modelRows = realModels.filter((m) => !brandSet.has(m.brandId));
+  wantedModels = modelRows.map((m) => m.id);
+
+  // A parent may only hand out what it holds: a whole brand only if it holds
+  // the brand; a single model if it holds the brand or that very model.
+  // Checked here rather than in the route so no future caller can reach the
+  // write without it.
   if (limitTo) {
-    const ceiling = new Set(limitTo);
-    const over = wanted.filter((id) => !ceiling.has(id));
-    if (over.length) {
-      throw new ForbiddenError('فقط می‌توانید از برندهای خودتان به زیرنمایندگی بدهید');
+    const ceilingBrands = new Set(limitTo.brandIds || []);
+    const ceilingModels = new Set(limitTo.modelIds || []);
+
+    const overBrand = wantedBrands.some((id) => !ceilingBrands.has(id));
+    const overModel = modelRows.some(
+      (m) => !ceilingBrands.has(m.brandId) && !ceilingModels.has(m.id)
+    );
+    if (overBrand || overModel) {
+      throw new ForbiddenError('فقط می‌توانید از برندها و مدل‌های خودتان به زیرنمایندگی بدهید');
     }
   }
 
   await prisma.$transaction([
     prisma.brandAccess.deleteMany({ where: { userId } }),
+    prisma.modelAccess.deleteMany({ where: { userId } }),
     prisma.brandAccess.createMany({
-      data: wanted.map((brandId) => ({ userId, brandId })),
+      data: wantedBrands.map((brandId) => ({ userId, brandId })),
+      skipDuplicates: true,
+    }),
+    prisma.modelAccess.createMany({
+      data: wantedModels.map((carModelId) => ({ userId, carModelId })),
       skipDuplicates: true,
     }),
   ]);
 
-  return wanted.length;
+  return wantedBrands.length + wantedModels.length;
 }
 
 /**
- * The check the listing form makes.
- *
- * Asked with the model rather than the brand, because that is what a listing
- * carries — resolving it here means no caller has to remember that a model
- * implies a brand.
+ * The check the listing form makes: a whole-brand grant, or this very model.
  */
 async function assertMayPost({ userId, carModelId }) {
   const model = await prisma.carModel.findUnique({
     where: { id: carModelId },
-    select: { brandId: true, brand: { select: { name: true } } },
+    select: { id: true, brandId: true, brand: { select: { name: true } } },
   });
   if (!model) return; // The catalogue check upstream reports this properly.
 
-  const allowed = await prisma.brandAccess.count({
-    where: { userId, brandId: model.brandId },
-  });
+  const [brandGrant, modelGrant] = await Promise.all([
+    prisma.brandAccess.count({ where: { userId, brandId: model.brandId } }),
+    prisma.modelAccess.count({ where: { userId, carModelId: model.id } }),
+  ]);
 
-  if (!allowed) {
+  if (!brandGrant && !modelGrant) {
     // Names the brand, because "you may not post this" without saying which
-    // brand sends the reader to support to ask a question the message could
-    // have answered.
+    // sends the reader to support to ask a question the message could answer.
     throw new ForbiddenError(
       `حساب شما اجازه‌ی ثبت آگهی برای «${model.brand.name}» را ندارد. برای درخواست خرید محدودیتی نیست.`
     );
   }
 }
 
-module.exports = { allowedBrandIds, brandChoices, setBrands, assertMayPost };
+module.exports = { allowedSets, allowedBrandIds, brandChoices, setBrands, assertMayPost };

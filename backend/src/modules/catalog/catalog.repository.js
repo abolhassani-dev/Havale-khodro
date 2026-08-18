@@ -15,6 +15,10 @@ const catalogRepository = {
    * picker, never required for anything to work.
    */
   listBrands() {
+    // Brands only — the 2044 models used to ride along and made this the
+    // heaviest response in the product, fetched by the search page and both
+    // listing forms on every visit. One brand's models are a request of their
+    // own (`listActiveModelsOfBrand`), made when a brand is actually chosen.
     return prisma.carBrand.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -24,12 +28,17 @@ const catalogRepository = {
         slug: true,
         logo: true,
         company: { select: { id: true, name: true } },
-        models: {
-          where: { isActive: true },
-          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-          select: { id: true, name: true },
-        },
+        _count: { select: { models: { where: { isActive: true } } } },
       },
+    });
+  },
+
+  /** One brand's postable models, for the forms and the picker. */
+  listActiveModelsOfBrand(brandId) {
+    return prisma.carModel.findMany({
+      where: { brandId, isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true },
     });
   },
 

@@ -200,6 +200,7 @@ model User {
   errors              ErrorLog[]    @relation("UserErrors")
   smsMessages         SmsMessage[]
   brandAccess         BrandAccess[]
+  modelAccess         ModelAccess[]
 
   @@index([role, status])
   @@index([parentId])
@@ -232,6 +233,26 @@ model BrandAccess {
   createdAt DateTime @default(now())
 
   @@unique([userId, brandId])
+  @@index([userId])
+}
+
+/// اجازه‌ی ثبت آگهی روی «یک مدل مشخص»، وقتی کل برندش داده نشده.
+///
+/// مکمل BrandAccess است، نه جایگزینش: ردیف برند یعنی «همه‌ی مدل‌های این برند،
+/// حالا و در آینده»، و ردیف مدل یعنی «فقط همین یکی». حسابی که کل برند را دارد
+/// ردیف مدل لازم ندارد و ذخیره هم نمی‌شود — همان قاعده‌ی «فقط تفاوت‌ها» که
+/// دسترسی ادمین‌ها دارد: سیاست برند عوض شود، دارنده‌هایش با هم عوض می‌شوند.
+model ModelAccess {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  carModelId String
+  carModel   CarModel @relation(fields: [carModelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, carModelId])
   @@index([userId])
 }
 
@@ -643,7 +664,8 @@ model CarModel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  havales Havale[]
+  havales     Havale[]
+  modelAccess ModelAccess[]
 
   @@unique([brandId, name])
   @@index([isActive, sortOrder])

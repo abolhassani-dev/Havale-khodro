@@ -105,11 +105,13 @@ const subagentService = {
     //
     // Defaults to everything the parent has, which is the sensible answer for a
     // sub-agency that is simply an extra desk rather than a specialised one.
-    const parentBrands = await brandAccess.allowedBrandIds(user.id);
+    const mine = await brandAccess.allowedSets(user.id);
+    const mineModelIds = mine.modelGrants.map((g) => g.id);
     await brandAccess.setBrands({
       userId: child.id,
-      brandIds: payload.brandIds ?? parentBrands,
-      limitTo: parentBrands,
+      brandIds: payload.brandIds ?? mine.brandIds,
+      modelIds: payload.modelIds ?? (payload.brandIds ? [] : mineModelIds),
+      limitTo: { brandIds: mine.brandIds, modelIds: mineModelIds },
     });
 
     // The seat subscription carries no meaningful expiry of its own — it always

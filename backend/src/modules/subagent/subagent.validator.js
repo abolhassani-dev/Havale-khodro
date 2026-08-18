@@ -40,9 +40,8 @@ const createBody = Joi.object({
   // the right answer for a sub-agency that is another desk rather than a
   // specialised one. Narrowing it is the interesting case, and that is what
   // sending the field does. The ceiling is the parent's own list either way.
-  brandIds: Joi.array().items(Joi.string().trim().max(40)).min(1).messages({
-    'array.min': 'اگر برند انتخاب می‌کنید، حداقل یکی لازم است',
-  }),
+  brandIds: Joi.array().items(Joi.string().trim().max(40)),
+  modelIds: Joi.array().items(Joi.string().trim().max(40)),
 });
 
 const resetPasswordBody = Joi.object({

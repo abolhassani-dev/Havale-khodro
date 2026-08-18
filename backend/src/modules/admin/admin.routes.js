@@ -17,6 +17,7 @@ const {
   requirePermission,
 } = require('../../middlewares/auth');
 const { MESSAGES } = require('../../constants/messages');
+const { BadRequestError } = require('../../errors/AppError');
 
 const router = Router();
 
@@ -217,15 +218,25 @@ router.post(
       // agency is made rather than restricted afterwards: an account somebody
       // forgot to configure would otherwise be one that can post anything, and
       // the safe direction to be wrong in is the other one.
-      brandIds: Joi.array().items(Joi.string().trim().max(40)).min(1).required().messages({
-        'array.min': 'حداقل یک برند برای این نمایندگی انتخاب کنید',
+      brandIds: Joi.array().items(Joi.string().trim().max(40)).required().messages({
         'any.required': 'انتخاب برند الزامی است',
       }),
+      modelIds: Joi.array().items(Joi.string().trim().max(40)).default([]),
     }),
   }),
   asyncHandler(async (req, res) => {
+    // Required to add up to something: a whole brand, or at least one model.
+    // (Either grain counts — an agency that handles one Fownix model is real.)
+    if (!req.body.brandIds.length && !req.body.modelIds.length) {
+      throw new BadRequestError('حداقل یک برند یا مدل برای این نمایندگی انتخاب کنید');
+    }
+
     const agent = await agentService.create({ actor: req.user, payload: req.body });
-    await brandAccess.setBrands({ userId: agent.id, brandIds: req.body.brandIds });
+    await brandAccess.setBrands({
+      userId: agent.id,
+      brandIds: req.body.brandIds,
+      modelIds: req.body.modelIds,
+    });
     // Echoed once, deliberately: it is the only moment anyone can read it, and
     // it is not stored anywhere in plain text.
     return created(res, { ...agent, initialPassword: req.body.password }, MESSAGES.USER.CREATED);
@@ -260,8 +271,7 @@ router.get(
   '/agents/:id/brands',
   requirePermission('agents'),
   validate({ params: idParam }),
-  asyncHandler(async (req, res) =>
-    success(res, { brands: await brandAccess.brandChoices(req.params.id) }))
+  asyncHandler(async (req, res) => success(res, await brandAccess.brandChoices(req.params.id)))
 );
 
 /**
@@ -286,12 +296,15 @@ router.put(
       // they stop being able to post — whereas a *new* account with none is
       // usually somebody who skipped the field.
       brandIds: Joi.array().items(Joi.string().trim().max(40)).required(),
+      // Single-model grants, for the agency whose whole job is one car.
+      modelIds: Joi.array().items(Joi.string().trim().max(40)).default([]),
     }),
   }),
   asyncHandler(async (req, res) => {
     const count = await brandAccess.setBrands({
       userId: req.params.id,
       brandIds: req.body.brandIds,
+      modelIds: req.body.modelIds,
     });
     await authRepository.recordActivity({
       userId: req.user.id,

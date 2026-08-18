@@ -18,7 +18,7 @@ import { resolve } from '../../router.js';
  */
 
 export async function loadSearch(params) {
-  const [tree, list, usage] = await Promise.all([
+  const [tree, list, usage, brandModels] = await Promise.all([
     catalog.get(),
     havale.list({
       kind: params.kind,
@@ -36,9 +36,11 @@ export async function loadSearch(params) {
       limit: 12,
     }),
     havale.usage().catch(() => null),
+    // The model filter's options, when the URL already names a brand.
+    params.brandId ? catalog.brandModels(params.brandId).catch(() => ({ models: [] })) : { models: [] },
   ]);
 
-  return { tree, list, usage };
+  return { tree, list, usage, searchModels: brandModels.models };
 }
 
 export function searchPage() {
@@ -47,7 +49,11 @@ export function searchPage() {
   const items = list?.items || [];
 
   const brands = tree?.brands || [];
-  const models = brands.flatMap((b) => b.models);
+  // Only the chosen brand's models — a flat list of all 2044 was unusable as a
+  // dropdown and heavy as a payload. Loaded by the route when the URL already
+  // names a brand, and swapped in place by `onSearchBrandChange` when one is
+  // picked in the form.
+  const models = data.searchModels || [];
 
   return html`
   <div class="card">
@@ -134,6 +140,38 @@ function kindParams(params, kind) {
   if (kind) rest.kind = kind;
   else delete rest.kind;
   return new URLSearchParams(rest).toString();
+}
+
+/**
+ * Picking a brand in the filter form swaps the model options in place.
+ *
+ * DOM only — the filters are a form the reader is half-way through, and a
+ * store update would re-render the page and empty every other filter box.
+ */
+export async function onSearchBrandChange(form) {
+  const select = form.carModelId;
+  const brandId = form.brandId.value;
+
+  select.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = '';
+  all.textContent = brandId ? 'در حال بارگذاری…' : 'همه';
+  select.appendChild(all);
+  if (!brandId) return;
+
+  try {
+    const { models } = await catalog.brandModels(brandId);
+    if (form.brandId.value !== brandId) return;
+    all.textContent = 'همه';
+    models.forEach((m) => {
+      const option = document.createElement('option');
+      option.value = m.id;
+      option.textContent = m.name;
+      select.appendChild(option);
+    });
+  } catch {
+    all.textContent = 'همه';
+  }
 }
 
 function select(name, label, options, current) {
