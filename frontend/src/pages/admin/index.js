@@ -235,61 +235,135 @@ function agentsPage() {
   </div>`;
 }
 
+/** One labelled fact in the agent file: small icon, quiet label, bold value. */
+function infoCell(iconName, label, value, num = false) {
+  return html`<div class="af-cell">
+    <span class="af-ci">${icon(iconName, 15)}</span>
+    <div class="af-ct">
+      <div class="af-cl">${label}</div>
+      <div class="af-cv ${num ? 'num' : ''}">${value || '—'}</div>
+    </div>
+  </div>`;
+}
+
 function agentPage() {
   const { data } = getState();
   const a = data.agent;
   if (!a) return emptyBox('نمایندگی پیدا نشد.');
 
+  const s = a.stats || {};
+  const active = a.status === 'ACTIVE';
+  const strikes = (a.fakeStrikes || 0) + (a.falseReportStrikes || 0);
+
   return html`
-  <div class="cols">
-    <div class="card">
-      <div class="card-h">
-        <div><h2>${a.agencyName}</h2><div class="crumb num">${a.agencyCode}</div></div>
-        <span class="tag ${a.status === 'ACTIVE' ? 'g' : 'r'}">
-          ${a.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
+  <div class="af">
+    <div class="card af-hero">
+      <div class="af-id">
+        <span class="agent-av af-av" style="--h:${hueOf(a.agencyCode)}">
+          ${(a.agencyName || '؟').slice(0, 1)}
         </span>
+        <div class="af-who">
+          <div class="af-name">
+            <h2>${a.agencyName}</h2>
+            <span class="tag ${active ? 'g' : 'r'}">${active ? 'فعال' : 'تعلیق‌شده'}</span>
+            ${a.isReseller ? html`<span class="tag c">ماژول زیرنمایندگی</span>` : ''}
+            ${strikes ? html`<span class="tag o">${faDigits(strikes)} اخطار</span>` : ''}
+          </div>
+          <div class="af-sub">
+            <span class="num">${a.agencyCode}</span> · ${a.city} ·
+            عضو از <span class="num">${date(a.createdAt)}</span>
+            ${!active && a.suspendedAt ? html` · تعلیق از <span class="num">${date(a.suspendedAt)}</span>` : ''}
+          </div>
+        </div>
+        <div class="af-cta">
+          <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
+          ${can('subscriptions') ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>` : ''}
+        </div>
       </div>
-      <div style="padding:12px 14px">
-        <div class="drow"><span>مسئول</span><b>${a.fullName}</b></div>
-        <div class="drow"><span>موبایل</span><b class="num">${a.phone}</b></div>
-        <div class="drow"><span>شهر</span><b>${a.city}</b></div>
-        <div class="drow"><span>مسئول هماهنگی</span><b>${a.coordinatorName}</b></div>
-        <div class="drow"><span>شماره‌ی هماهنگی</span><b class="num">${a.coordinatorPhone}</b></div>
-        <div class="drow"><span>عضویت</span><b>${date(a.createdAt)}</b></div>
-        <div class="drow"><span>آخرین ورود</span><b>${a.lastLoginAt ? dateTime(a.lastLoginAt) : 'هرگز'}</b></div>
-        <div class="drow"><span>اخطار آگهی جعلی</span><b class="num">${faDigits(a.fakeStrikes)}</b></div>
-        <div class="drow"><span>اخطار گزارش بی‌مورد</span><b class="num">${faDigits(a.falseReportStrikes)}</b></div>
-      </div>
+      ${
+        can('contactEdit') || can('agents')
+          ? html`<div class="af-tools">
+              ${
+                can('agents')
+                  ? html`
+                    <button class="btn sm" data-agent-brands="${a.id}">برندهای مجاز</button>
+                    <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>`
+                  : ''
+              }
+              ${can('contactEdit') ? html`<button class="btn sm" data-edit-agent="${a.id}">ویرایش تماس</button>` : ''}
+              ${
+                can('agents')
+                  ? html`
+                    <span class="af-gap"></span>
+                    <button class="btn sm" data-agent-password="${a.id}">تغییر رمز</button>
+                    <button class="btn sm" data-agent-logout="${a.id}">خروج اجباری</button>
+                    <button class="btn sm ${active ? 'danger' : 'primary'}" data-agent-status="${a.id}"
+                            data-status="${active ? 'SUSPENDED' : 'ACTIVE'}">
+                      ${active ? 'تعلیق حساب' : 'فعال‌سازی حساب'}
+                    </button>`
+                  : ''
+              }
+            </div>`
+          : ''
+      }
     </div>
 
-    <div class="card">
-      <div class="card-h"><h2>آمار</h2></div>
-      <div class="stats" style="padding:12px 14px">
-        ${stat('حواله', faDigits(a.stats?.havales ?? 0), `${faDigits(a.stats?.activeHavales ?? 0)} فعال`)}
-        ${stat('بازدید انجام‌شده', faDigits(a.stats?.reveals ?? 0), '')}
-        ${stat('گزارش داده', faDigits(a.stats?.reportsFiled ?? 0), '')}
-        ${stat('تخلف تأییدشده', faDigits(a.stats?.reportsAgainst ?? 0), 'علیه او')}
+    <div class="stats af-stats">
+      ${stat('حواله', faDigits(s.havales ?? 0), `${faDigits(s.activeHavales ?? 0)} فعال`, 'car')}
+      ${stat('بازدید انجام‌شده', faDigits(s.reveals ?? 0), 'مشخصات تماس باز کرده', 'eye')}
+      ${stat('گزارش داده', faDigits(s.reportsFiled ?? 0), 'روی آگهی دیگران', 'flag')}
+      ${stat(
+        'تخلف تأییدشده',
+        faDigits(s.reportsAgainst ?? 0),
+        'علیه او',
+        'shield',
+        (s.reportsAgainst ?? 0) > 0 ? 'bad' : 'ok'
+      )}
+    </div>
+
+    <div class="cols c2">
+      <div class="card">
+        <div class="card-h"><h2>تماس و مشخصات</h2></div>
+        <div class="af-grid">
+          ${infoCell('user', 'مسئول', a.fullName)}
+          ${infoCell('phone', 'موبایل', a.phone, true)}
+          ${infoCell('users', 'مسئول هماهنگی', a.coordinatorName)}
+          ${infoCell('phone', 'شماره‌ی هماهنگی', a.coordinatorPhone, true)}
+          ${infoCell('pin', 'شهر', a.city)}
+          ${infoCell('clipboard', 'نام کاربری', a.username, true)}
+        </div>
       </div>
-      <div style="padding:0 14px 14px;display:flex;gap:8px;flex-wrap:wrap">
-        ${can('contactEdit') ? html`<button class="btn sm" data-edit-agent="${a.id}">ویرایش تماس</button>` : ''}
-        ${
-          can('agents')
-            ? html`
-              <button class="btn sm" data-agent-status="${a.id}"
-                      data-status="${a.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'}">
-                ${a.status === 'ACTIVE' ? 'تعلیق حساب' : 'فعال‌سازی'}
-              </button>
-              <button class="btn sm" data-agent-password="${a.id}">تغییر رمز</button>
-              <button class="btn sm" data-agent-logout="${a.id}">خروج اجباری</button>
-              <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>
-              <button class="btn sm" data-agent-brands="${a.id}">برندهای مجاز</button>`
-            : ''
-        }
-        ${can('subscriptions') ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>` : ''}
-      </div>
-      <div class="hint" style="padding:0 14px 12px">
-        برای دیدن اینکه این نمایندگی چه مشخصاتی را باز کرده،
-        <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
+
+      <div class="card">
+        <div class="card-h"><h2>سلامت حساب</h2></div>
+        <div class="af-grid">
+          ${infoCell('clock', 'آخرین ورود', a.lastLoginAt ? dateTime(a.lastLoginAt) : 'هرگز', !!a.lastLoginAt)}
+          ${infoCell(
+            'shield',
+            'اخطار آگهی جعلی',
+            a.fakeStrikes
+              ? html`<span class="tag o">${faDigits(a.fakeStrikes)} اخطار</span>`
+              : html`<span class="tag g">ندارد</span>`
+          )}
+          ${infoCell(
+            'flag',
+            'اخطار گزارش بی‌مورد',
+            a.falseReportStrikes
+              ? html`<span class="tag o">${faDigits(a.falseReportStrikes)} اخطار</span>`
+              : html`<span class="tag g">ندارد</span>`
+          )}
+          ${infoCell(
+            'settings',
+            'وضعیت رمز',
+            a.mustChangePassword ? html`<span class="tag n">در انتظار تغییر رمز اول</span>` : 'تغییر داده'
+          )}
+        </div>
+        ${a.adminNote ? html`<div class="af-note"><b>یادداشت داخلی:</b> ${a.adminNote}</div>` : ''}
+        <div class="hint" style="padding:10px 16px 13px">
+          آنچه این نمایندگی باز کرده و انجام داده، در
+          <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
+          ثبت است.
+        </div>
       </div>
     </div>
   </div>`;

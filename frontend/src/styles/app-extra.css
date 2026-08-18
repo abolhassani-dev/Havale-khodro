@@ -1128,3 +1128,70 @@ a[data-go],
 }
 .swatch-x:hover { color: var(--danger); }
 .swatch.dim { opacity: .5; }
+
+/* ================================================================
+   پرونده‌ی نمایندگی — سربرگ پروفایل، آمار، شبکه‌ی مشخصات
+   ================================================================ */
+
+.af { display: grid; gap: 14px; }
+
+/* سربرگ: هویت در یک ردیف، ابزارها در نوار زیرش. اکشن‌های خطرناک — تعلیق و
+   خروج اجباری — با یک فاصله‌ی کشسان از بقیه جدا می‌ایستند تا دستِ عجول
+   اشتباهی رویشان نرود. */
+.af-id { display: flex; align-items: center; gap: 13px; padding: 16px; flex-wrap: wrap; }
+.af-av { width: 52px; height: 52px; border-radius: 14px; font-size: 22px; }
+.af-who { min-width: 0; }
+.af-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.af-name h2 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.af-sub { color: var(--ink-3); font-size: 12.5px; margin-top: 3px; }
+.af-cta { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.af-tools {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line-2);
+  background: var(--paper-2);
+}
+.af-gap { flex: 1; }
+
+/* .stats خودش margin پایین دارد؛ این‌جا فاصله را شبکه‌ی .af می‌دهد. */
+.af-stats { margin-bottom: 0; }
+.stat.is-bad .s-i { background: var(--danger-08); color: var(--danger); border-color: #9d2b2126; }
+
+/* شبکه‌ی مشخصات: خانه‌های سفید روی زمینه‌ی خط، تا مرز سلول‌ها بدون کشیدن
+   border در هر چهار جهت، مویی و یکدست دربیاید. */
+.af-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: 1px;
+  background: var(--line-2);
+  border-top: 1px solid var(--line-2);
+}
+.af-cell { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; background: var(--card); }
+.af-ci {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  background: var(--paper-2); color: var(--ink-3);
+  border: 1px solid var(--line-2);
+}
+.af-ct { min-width: 0; }
+.af-cl { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.af-cv { font-size: 13.5px; font-weight: 700; margin-top: 3px; overflow-wrap: anywhere; }
+
+.af-note {
+  margin: 12px 16px 2px;
+  padding: 10px 12px;
+  background: var(--paper-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-sm);
+  font-size: 12.5px; color: var(--ink-2);
+}
+
+@media (max-width: 640px) {
+  .af-id { padding: 14px; }
+  .af-cta { margin-inline-start: 0; width: 100%; }
+  .af-cta .btn { flex: 1; }
+  /* روی گوشی فاصله‌ی کشسان معنایی ندارد — دکمه‌ها پشت هم می‌شکنند. */
+  .af-gap { display: none; }
+}
