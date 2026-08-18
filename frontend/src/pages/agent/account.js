@@ -1,8 +1,9 @@
 import { html, raw } from '../../ui/html.js';
+import { icon } from '../../ui/icons.js';
 import { subscription, subAgents, tickets, reports, catalog } from '../../api/index.js';
-import { getState, setState } from '../../state/store.js';
+import { getState, setState, isAdmin } from '../../state/store.js';
 import {
-  money, faDigits, date, dateTime, relative, enDigits,
+  money, faDigits, date, dateTime, timeOnly, relative, enDigits,
   TICKET_STATUS_LABEL, REPORT_REASON_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -407,6 +408,41 @@ export async function loadTicket(params) {
   return { ticket: await tickets.get(params.id) };
 }
 
+export const TICKET_PRIORITY_LABEL = { HIGH: 'فوری', NORMAL: 'عادی', LOW: 'کم' };
+
+export function ticketTag(status) {
+  const tone = { OPEN: 'w', ANSWERED: 'g', CLOSED: 'n' }[status] || '';
+  return html`<span class="tag ${tone}">${TICKET_STATUS_LABEL[status]}</span>`;
+}
+
+/**
+ * One conversation in a list — subject, who and when, status at a glance.
+ *
+ * Shared by both panels; the admin's list passes `withAgency` so the row also
+ * says whose conversation it is. `highlight` marks the status that means "your
+ * move" — OPEN for staff, ANSWERED for the agency — so the eye lands on what
+ * needs doing first.
+ */
+export function ticketItem(t, { go, withAgency = false, highlight } = {}) {
+  return html`<div class="tk-item ${t.status === highlight ? 'is-hot' : ''} ${t.status === 'CLOSED' ? 'dim' : ''}"
+       data-go="${go}" data-go-params="id=${t.id}">
+    <span class="tk-i ${{ OPEN: 'is-warn', ANSWERED: 'is-ok' }[t.status] || ''}">${icon('mail', 16)}</span>
+    <div class="tk-m">
+      <div class="tk-s">
+        <b>${t.subject}</b>
+        <span class="num tk-serial">#${faDigits(t.serial)}</span>
+        ${t.priority === 'HIGH' ? html`<span class="tag r">فوری</span>` : ''}
+      </div>
+      <div class="tk-sub">
+        ${withAgency && t.agency ? html`${t.agency.name} <span class="num">(${t.agency.code})</span> · ` : ''}
+        آخرین پیام ${relative(t.lastReplyAt)}
+      </div>
+    </div>
+    ${ticketTag(t.status)}
+    <span class="tk-chev">${icon('chevron', 14)}</span>
+  </div>`;
+}
+
 export function ticketsPage() {
   const { data } = getState();
   const items = data.list || [];
@@ -419,68 +455,111 @@ export function ticketsPage() {
     </div>
     ${
       items.length
-        ? html`<table>
-            <thead><tr><th>شماره</th><th>موضوع</th><th>وضعیت</th><th>آخرین پاسخ</th></tr></thead>
-            <tbody>
-              ${items.map(
-                (t) => html`<tr data-go="ticket" data-go-params="id=${t.id}" style="cursor:pointer">
-                  <td class="num">${faDigits(t.serial)}</td>
-                  <td>${t.subject}</td>
-                  <td>${ticketTag(t.status)}</td>
-                  <td>${relative(t.lastReplyAt)}</td>
-                </tr>`
-              )}
-            </tbody>
-          </table>`
-        : emptyBox('تیکتی ندارید.')
+        ? html`<div class="tk-list">
+            ${items.map((t) => ticketItem(t, { go: 'ticket', highlight: 'ANSWERED' }))}
+          </div>`
+        : html`<div class="tk-empty">
+            ${icon('mail', 30)}
+            <b>هنوز گفتگویی ندارید</b>
+            <span>سؤال، مشکل یا درخواست تمدید — تیم پشتیبانی همین‌جا جواب می‌دهد.</span>
+            <button class="btn primary sm" data-new-ticket="">شروع اولین گفتگو</button>
+          </div>`
     }
-    <div class="hint" style="padding:10px 14px">
+    <div class="hint" style="padding:10px 16px">
       تیکت با اشتراک منقضی هم باز می‌شود — برای هماهنگی تمدید از همین‌جا اقدام کنید.
     </div>
   </div>`;
 }
 
-function ticketTag(status) {
-  const tone = { OPEN: 'w', ANSWERED: 'g', CLOSED: '' }[status] || '';
-  return html`<span class="tag ${tone}">${TICKET_STATUS_LABEL[status]}</span>`;
-}
-
+/**
+ * The conversation. One page for both panels — who is "me" depends on who is
+ * looking: the agency's own messages sit on one side, پشتیبانی on the other,
+ * and in the admin panel the sides swap, the way every messenger works.
+ */
 export function ticketPage() {
   const { data } = getState();
   const t = data.ticket;
   if (!t) return emptyBox('تیکت پیدا نشد.');
 
-  return html`
-  <div class="card">
-    <div class="card-h">
-      <div>
-        <h2>${t.subject}</h2>
-        <div class="crumb">تیکت ${faDigits(t.serial)} · ${dateTime(t.createdAt)}</div>
+  const admin = isAdmin();
+  const back = admin ? 'adm-tickets' : 'tickets';
+
+  // Date once per day; bubbles carry only the clock.
+  const feed = [];
+  let lastDay = null;
+  for (const m of t.messages) {
+    const day = date(m.createdAt);
+    if (day !== lastDay) {
+      lastDay = day;
+      feed.push(html`<div class="tl-day"><span class="num">${day}</span></div>`);
+    }
+    const mine = admin ? m.isStaff : !m.isStaff;
+    feed.push(html`<div class="tkb ${mine ? 'mine' : ''}">
+      <span class="tkb-av ${m.isStaff ? 'staff' : ''}">
+        ${m.isStaff ? icon('shield', 14) : (m.author || 'ش').slice(0, 1)}
+      </span>
+      <div class="tkb-c">
+        <div class="tkb-h">
+          <b>${m.isStaff ? 'پشتیبانی فرانوکار' : m.author || 'شما'}</b>
+          <span class="num">${timeOnly(m.createdAt)}</span>
+        </div>
+        <div class="tkb-b">${m.body}</div>
       </div>
-      ${ticketTag(t.status)}
+    </div>`);
+  }
+
+  return html`
+  <div class="card tk-page">
+    <div class="tk-head">
+      <button class="btn sm tk-back" data-go="${back}">همه‌ی تیکت‌ها</button>
+      <div class="tk-title">
+        <h2>${t.subject}</h2>
+        <div class="tk-meta">
+          تیکت <span class="num">#${faDigits(t.serial)}</span>
+          · باز شده <span class="num">${date(t.createdAt)}</span>
+          ${admin && t.agency ? html` · ${t.agency.name} <span class="num">(${t.agency.code})</span>` : ''}
+        </div>
+      </div>
+      <div class="tk-flags">
+        ${t.priority !== 'NORMAL' ? html`<span class="tag ${t.priority === 'HIGH' ? 'r' : 'n'}">${TICKET_PRIORITY_LABEL[t.priority]}</span>` : ''}
+        ${ticketTag(t.status)}
+      </div>
     </div>
 
-    <div class="thread">
-      ${t.messages.map(
-        (m) => html`<div class="msg ${m.isStaff ? 'staff' : ''}">
-          <div class="msg-h"><b>${m.author || 'شما'}</b><span>${dateTime(m.createdAt)}</span></div>
-          <div class="msg-b">${m.body}</div>
-        </div>`
-      )}
-    </div>
+    <div class="tk-thread">${feed}</div>
 
     ${
       t.status === 'CLOSED'
-        ? html`<div class="hint" style="padding:12px 14px">
-            این تیکت بسته شده است. برای ادامه، تیکت تازه باز کنید.
+        ? html`<div class="tk-closed">
+            <span>این گفتگو بسته شده است.</span>
+            ${
+              admin
+                ? html`<button class="btn sm" data-reopen-ticket="${t.id}">بازکردن دوباره</button>`
+                : html`<button class="btn sm" data-new-ticket="${t.subject}">تیکت جدید در همین موضوع</button>`
+            }
           </div>`
-        : html`<form class="reply" data-form="ticket-reply" data-id="${t.id}">
+        : html`<form class="tk-reply" data-form="ticket-reply" data-id="${t.id}">
             ${formErrorSlot()}
-            <textarea class="in" name="body" rows="3" minlength="5" maxlength="4000"
-                      placeholder="پاسخ شما…" required></textarea>
-            <div class="reply-foot">
-              <button class="btn" type="button" data-close-ticket="${t.id}">بستن تیکت</button>
+            <div class="tk-box">
+              <textarea class="in" name="body" rows="2" minlength="5" maxlength="4000"
+                        placeholder="پیام خود را بنویسید…" required></textarea>
               <button class="btn primary" type="submit">ارسال</button>
+            </div>
+            <div class="tk-actions">
+              <button class="btn sm" type="button" data-close-ticket="${t.id}">بستن گفتگو</button>
+              ${
+                admin
+                  ? html`<span class="tk-prio">
+                      اولویت:
+                      ${['LOW', 'NORMAL', 'HIGH'].map(
+                        (p) => html`<button class="btn sm ${t.priority === p ? 'primary' : ''}"
+                                type="button" data-ticket-priority="${t.id}" data-priority="${p}">
+                          ${TICKET_PRIORITY_LABEL[p]}
+                        </button>`
+                      )}
+                    </span>`
+                  : ''
+              }
             </div>
           </form>`
     }

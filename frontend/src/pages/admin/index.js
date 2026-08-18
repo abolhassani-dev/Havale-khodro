@@ -10,6 +10,9 @@ import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, show
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
+// The conversation row is one component for both panels — the admin's list
+// only adds whose conversation it is.
+import { ticketItem } from '../agent/account.js';
 import {
   loadStaff, staffPage, newStaffModal, editStaffModal, staffPasswordModal,
   setStaffStatus, onStaffFormChange, toggleGroup,
@@ -606,7 +609,7 @@ function adminTicketsPage() {
     <div class="card-h">
       <h2>تیکت‌ها ${qtip('پیام‌های پشتیبانی نمایندگی‌ها: سؤال، مشکل و درخواست تمدید اشتراک. پاسخ شما در پنل خودشان زیر همان تیکت می‌آید.')}</h2>
       <div class="tabs">
-        ${[['', 'همه'], ['OPEN', 'باز'], ['ANSWERED', 'پاسخ داده'], ['CLOSED', 'بسته']].map(
+        ${[['', 'همه'], ['OPEN', 'در انتظار پاسخ'], ['ANSWERED', 'پاسخ داده'], ['CLOSED', 'بسته']].map(
           ([value, label]) => html`<button class="tab ${(params.status || '') === value ? 'on' : ''}"
             data-go="adm-tickets" data-go-params="${value ? `status=${value}` : ''}">${label}</button>`
         )}
@@ -614,20 +617,9 @@ function adminTicketsPage() {
     </div>
     ${
       items.length
-        ? html`<table>
-            <thead><tr><th>#</th><th>نمایندگی</th><th>موضوع</th><th>وضعیت</th><th>آخرین پاسخ</th></tr></thead>
-            <tbody>
-              ${items.map(
-                (t) => html`<tr data-go="ticket" data-go-params="id=${t.id}" style="cursor:pointer">
-                  <td class="num">${faDigits(t.serial)}</td>
-                  <td>${t.agency?.name || '—'}</td>
-                  <td>${t.subject}</td>
-                  <td><span class="tag">${TICKET_STATUS_LABEL[t.status]}</span></td>
-                  <td>${relative(t.lastReplyAt)}</td>
-                </tr>`
-              )}
-            </tbody>
-          </table>`
+        ? html`<div class="tk-list">
+            ${items.map((t) => ticketItem(t, { go: 'ticket', withAgency: true, highlight: 'OPEN' }))}
+          </div>`
         : emptyBox('تیکتی نیست.')
     }
   </div>`;

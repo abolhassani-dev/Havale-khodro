@@ -208,7 +208,7 @@ const CLICK_KEYS = new Set([
   'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
-  'newTicket', 'closeTicket',
+  'newTicket', 'closeTicket', 'reopenTicket', 'ticketPriority',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
   'grant', 'editSetting',
@@ -264,6 +264,8 @@ function onClick(event) {
   if (d.subagentBrands) return subAgentBrandsModal(d.subagentBrands);
   if (d.newTicket !== undefined) return newTicketModal(d.newTicket);
   if (d.closeTicket) return closeTicket(d.closeTicket);
+  if (d.reopenTicket) return reopenTicket(d.reopenTicket);
+  if (d.ticketPriority) return setTicketPriority(d.ticketPriority, d.priority);
 
   // The brand picker appears on admin pages and inside the agent's sub-agency
   // modal alike, so its buttons are dispatched here rather than per page.
@@ -285,6 +287,26 @@ async function setSubAgentStatus(id, status) {
 async function closeTicket(id) {
   try {
     await tickets.setStatus(id, 'CLOSED');
+    await resolve();
+  } catch (err) {
+    toast(err.message, 'danger');
+  }
+}
+
+// Staff-side ticket controls. The server enforces who may do what — an agent
+// calling reopen gets a refusal, not a surprise.
+async function reopenTicket(id) {
+  try {
+    await tickets.setStatus(id, 'OPEN');
+    await resolve();
+  } catch (err) {
+    toast(err.message, 'danger');
+  }
+}
+
+async function setTicketPriority(id, priority) {
+  try {
+    await tickets.setPriority(id, priority);
     await resolve();
   } catch (err) {
     toast(err.message, 'danger');
