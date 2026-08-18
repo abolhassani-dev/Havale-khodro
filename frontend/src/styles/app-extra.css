@@ -1196,7 +1196,7 @@ a[data-go],
   .af-gap { display: none; }
 }
 
-/* ── زیرشاخه‌ها زیر نمایندگی مادر، در جدول نمایندگی‌ها ── */
+/* ── زیرشاخه‌ها زیر نمایندگی مرکزی، در جدول نمایندگی‌ها ── */
 .agent-av.sm { width: 28px; height: 28px; border-radius: 8px; font-size: 12.5px; }
 .child-row td { background: var(--paper-2); }
 .child-row td:first-child { padding-inline-start: 26px; }

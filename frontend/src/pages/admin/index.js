@@ -297,7 +297,7 @@ function agentPage() {
             ${
               a.parent
                 ? html`<button class="tag b af-parent" data-go="adm-agent" data-go-params="id=${a.parent.id}"
-                          title="پرونده‌ی نمایندگی مادر">
+                          title="پرونده‌ی نمایندگی مرکزی">
                     زیرمجموعه‌ی ${a.parent.agencyName}
                   </button>`
                 : ''
