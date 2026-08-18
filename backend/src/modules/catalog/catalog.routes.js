@@ -14,7 +14,7 @@ router.use(authenticate, requirePasswordChanged);
  * /catalog:
  *   get:
  *     tags: [Catalog]
- *     summary: Companies, brands, models and colours for the listing form
+ *     summary: Brands, models and colours for the listing form
  *     description: >
  *       Open to expired subscriptions: the form is not the thing being sold, and
  *       an agency about to renew should be able to see what it will be able to
@@ -23,11 +23,11 @@ router.use(authenticate, requirePasswordChanged);
 router.get(
   '/',
   asyncHandler(async (_req, res) => {
-    const [companies, colors] = await Promise.all([
-      catalogRepository.listCompanies(),
+    const [brands, colors] = await Promise.all([
+      catalogRepository.listBrands(),
       catalogRepository.listColors(),
     ]);
-    return success(res, { companies, colors });
+    return success(res, { brands, colors });
   })
 );
 

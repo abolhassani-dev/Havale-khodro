@@ -205,12 +205,16 @@ model User {
   @@index([parentId])
 }
 
-/// اجازه‌ی ثبت آگهی روی یک شرکت یا یک برند.
+/// اجازه‌ی ثبت آگهی روی یک برند.
 ///
-/// هر ردیف یا `companyId` دارد یا `brandId` — نه هر دو. تیک روی شرکت یعنی
-/// «همه‌ی برندهای این شرکت، حالا و در آینده»، که همان معنای «دسترسی به
-/// محصولات ایران خودرو» است؛ اگر به‌جایش برندهای همان لحظه ذخیره می‌شد،
-/// برندی که فردا زیر آن شرکت اضافه شود جا می‌ماند و هیچ‌کس نمی‌فهمید چرا.
+/// همیشه برند، هیچ‌وقت شرکت — و این تصمیم عمدی است. تیک زدن شرکت در پنل
+/// میان‌بُر است و همان لحظه به برندهایش باز می‌شود؛ چیزی که ذخیره می‌شود
+/// فهرست برندهاست.
+///
+/// دلیلش این است که دسته‌بندی شرکت‌ها قطعاً جاهایی اشتباه یا ناقص خواهد بود.
+/// اگر مجوز روی شرکت ذخیره می‌شد، تصحیحِ یک دسته‌بندی — جابه‌جا کردن یک برند
+/// از شرکتی به شرکت دیگر — بی‌صدا دسترسی چند نمایندگی را عوض می‌کرد، و کسی
+/// ربطش را نمی‌فهمید. این‌طوری اصلاح دسته‌بندی هیچ‌وقت به مجوزها دست نمی‌زند.
 ///
 /// نبودِ ردیف یعنی «هیچ». پیش‌فرض عمداً بسته است: حسابی که کسی یادش برود
 /// تنظیمش کند نباید به همه‌چیز دسترسی داشته باشد.
@@ -222,14 +226,11 @@ model BrandAccess {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  companyId String?
-  company   CarCompany? @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  brandId   String?
-  brand     CarBrand?   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId String
+  brand   CarBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([userId, companyId])
   @@unique([userId, brandId])
   @@index([userId])
 }
@@ -580,6 +581,10 @@ model Setting {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// شرکت خودروساز / واردکننده — مثل «مدیران خودرو»
+///
+/// فقط برای دسته‌بندی است، نه برای مجوز. هیچ برندی خودکار زیر شرکتی نمی‌رود:
+/// تا وقتی کسی در پنل تعیین نکند، برند بدون شرکت می‌ماند. حدس زدن این‌که کدام
+/// شرکت کدام برند را عرضه می‌کند، درختی می‌سازد که هر روز جلوی چشم غلط است.
 model CarCompany {
   id        String  @id @default(cuid())
   name      String  @unique
@@ -590,22 +595,28 @@ model CarCompany {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  brands      CarBrand[]
-  brandAccess BrandAccess[]
+  brands CarBrand[]
 
   @@index([isActive, sortOrder])
 }
 
 /// برند زیرمجموعه — مثل ام‌وی‌ام، فونیکس، اکستریم
 model CarBrand {
-  id        String     @id @default(cuid())
-  companyId String
-  company   CarCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// اختیاری. برندی که شرکتش معلوم نیست زیر «دسته‌بندی‌نشده» می‌ماند و کار
+  /// می‌کند — نه حدس زده می‌شود و نه اشتباه جایی گذاشته می‌شود.
+  id        String      @id @default(cuid())
+  companyId String?
+  company   CarCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   name      String
   slug      String  @unique
   isActive  Boolean @default(true)
   sortOrder Int     @default(0)
+
+  /// نام فایل لوگو در ‎frontend/assets/brands‎ — مثل ‎peugeot.png‎.
+  /// نشانی کامل ذخیره نمی‌شود: لوگو روی سرور خودمان می‌نشیند، وگرنه هر بار که
+  /// کسی فهرست برندها را باز کند ۱۸۶ درخواست به دامنه‌ی دیگری می‌رود.
+  logo String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

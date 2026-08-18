@@ -1,28 +1,33 @@
 const { prisma } = require('../../config/database');
 
 const catalogRepository = {
-  /** The whole tree, active entries only, in display order. */
-  listCompanies() {
-    return prisma.carCompany.findMany({
+  /**
+   * The whole tree, active entries only, in display order.
+   *
+   * Rooted at the brand, not at the company. The tree used to hang off the
+   * company, which stopped working the moment a brand was allowed to have none
+   * — and most of them have none, because the market list this is built from
+   * has no manufacturer level and guessing one would be worse than leaving it
+   * blank. A company-rooted tree would simply have omitted every ungrouped
+   * brand, and the listing form would have offered nothing.
+   *
+   * The company survives as a label on the brand: useful for grouping the
+   * picker, never required for anything to work.
+   */
+  listBrands() {
+    return prisma.carBrand.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
         name: true,
         slug: true,
-        brands: {
+        logo: true,
+        company: { select: { id: true, name: true } },
+        models: {
           where: { isActive: true },
           orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            models: {
-              where: { isActive: true },
-              orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-              select: { id: true, name: true },
-            },
-          },
+          select: { id: true, name: true },
         },
       },
     });
@@ -66,15 +71,40 @@ const catalogRepository = {
   listAllCompanies() {
     return prisma.carCompany.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: {
-        brands: {
-          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-          include: {
-            models: { orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] },
-            _count: { select: { models: true } },
-          },
-        },
+      select: { id: true, name: true, slug: true, isActive: true, sortOrder: true },
+    });
+  },
+
+  /**
+   * Every brand with a count of its models, and no models.
+   *
+   * The count, not the rows. This screen used to send the entire catalogue in
+   * one response — every model of every brand — which was fine for the twenty-six
+   * models it started with and is not fine for two thousand. The models of one
+   * brand are fetched when somebody opens that brand, which is the only time
+   * anybody looks at them.
+   */
+  listAllBrands() {
+    return prisma.carBrand.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logo: true,
+        isActive: true,
+        sortOrder: true,
+        companyId: true,
+        _count: { select: { models: true } },
       },
+    });
+  },
+
+  listModelsOfBrand(brandId) {
+    return prisma.carModel.findMany({
+      where: { brandId },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, isActive: true, sortOrder: true },
     });
   },
 

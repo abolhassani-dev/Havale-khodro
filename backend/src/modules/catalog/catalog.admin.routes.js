@@ -58,12 +58,31 @@ async function log(actor, summary) {
 router.get(
   '/',
   asyncHandler(async (_req, res) => {
-    const [companies, colors] = await Promise.all([
+    const [companies, brands, colors] = await Promise.all([
       catalogRepository.listAllCompanies(),
+      catalogRepository.listAllBrands(),
       catalogRepository.listAllColors(),
     ]);
-    return success(res, { companies, colors });
+    return success(res, { companies, brands, colors });
   })
+);
+
+/**
+ * @openapi
+ * /admin/catalog/brands/{id}/models:
+ *   get:
+ *     tags: [Catalog]
+ *     summary: The models of one brand, including deactivated ones
+ *     description: >
+ *       Fetched when a brand is opened rather than sent with the catalogue.
+ *       Two thousand models in one response is a page nobody can use and a
+ *       payload nobody should pay for.
+ */
+router.get(
+  '/brands/:id/models',
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) =>
+    success(res, { models: await catalogRepository.listModelsOfBrand(req.params.id) }))
 );
 
 /**
@@ -117,15 +136,22 @@ router.post(
   '/brands',
   validate({
     body: Joi.object({
-      companyId: Joi.string().trim().max(40).required(),
+      // Optional, because most brands have no company and never will. Insisting
+      // on one would mean inventing an answer for برندی که شرکتش را نمی‌دانیم,
+      // which is exactly the guess this design avoids.
+      companyId: Joi.string().trim().max(40).allow(null, ''),
       name: name.required(),
       slug: slug.required(),
       sortOrder: sortOrder.default(0),
     }),
   }),
   asyncHandler(async (req, res) => {
-    const company = await catalogRepository.findCompany(req.body.companyId);
-    if (!company) throw new NotFoundError('شرکت');
+    if (req.body.companyId) {
+      const company = await catalogRepository.findCompany(req.body.companyId);
+      if (!company) throw new NotFoundError('شرکت');
+    } else {
+      req.body.companyId = null;
+    }
 
     const brand = await catalogRepository.createBrand(req.body);
     await log(req.user, `brand:${brand.name}`);
@@ -135,8 +161,30 @@ router.post(
 
 router.patch(
   '/brands/:id',
-  validate({ params: idParam, body: Joi.object({ name, sortOrder, isActive }).min(1) }),
+  validate({
+    params: idParam,
+    // `companyId` is here so a grouping can be corrected in one click. It will
+    // be wrong sometimes — nobody knows which company builds all 186 brands —
+    // and a wrong grouping that cannot be fixed is the thing to avoid. Empty
+    // string means «دسته‌بندی‌نشده», which is a legitimate destination and not
+    // a failure to answer.
+    body: Joi.object({
+      name,
+      sortOrder,
+      isActive,
+      companyId: Joi.string().trim().max(40).allow(null, ''),
+    }).min(1),
+  }),
   asyncHandler(async (req, res) => {
+    if (req.body.companyId !== undefined) {
+      if (req.body.companyId) {
+        const company = await catalogRepository.findCompany(req.body.companyId);
+        if (!company) throw new NotFoundError('شرکت');
+      } else {
+        req.body.companyId = null;
+      }
+    }
+
     const brand = await catalogRepository.updateBrand(req.params.id, req.body);
     await log(req.user, `brand:${brand.name}`);
     return success(res, brand);

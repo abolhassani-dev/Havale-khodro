@@ -872,3 +872,12 @@ a[data-go],
 @media (max-width: 700px) {
   .perms { grid-template-columns: 1fr; }
 }
+
+/* لوگوی برند در کاتالوگ.
+   ارتفاع ثابت و عرض خودکار: لوگوها نسبت ابعاد یکسانی ندارند و جا زدنشان در یک
+   مربع، پهن‌ها را له می‌کند. object-fit جای بریدن، کوچک می‌کند. */
+.brand-logo {
+  height: 20px; width: auto; max-width: 44px;
+  object-fit: contain; vertical-align: middle;
+  margin-inline-end: 7px;
+}

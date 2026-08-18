@@ -24,6 +24,7 @@ import { soonPage } from './pages/agent/soon.js';
 import { profilePage, submitProfilePassword } from './pages/agent/profile.js';
 import {
   registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit, onStaffFormChange,
+  setCatalogQuery,
 } from './pages/admin/index.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
@@ -211,7 +212,7 @@ const CLICK_KEYS = new Set([
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
-  'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
+  'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor', 'openBrand',
 ]);
 
 function findTarget(node) {
@@ -312,6 +313,31 @@ function applyFilters(form) {
   go('search', params);
 }
 
+/**
+ * Typing in the catalogue's brand filter.
+ *
+ * `input` rather than `change`, because a filter that only reacts when you
+ * click away is a filter you stop using. It filters the brands already in
+ * memory — no request per keystroke, and 186 rows is nothing to a browser.
+ *
+ * The caret has to be put back by hand: every render replaces the page, so the
+ * input the reader is typing into is a different element by the time the next
+ * character arrives.
+ */
+function onCatalogSearch(event) {
+  const input = event.target;
+  if (!input.matches?.('[data-catalog-search]')) return;
+
+  const at = input.selectionStart;
+  setCatalogQuery(input.value);
+
+  const again = document.querySelector('[data-catalog-search]');
+  if (again) {
+    again.focus();
+    again.setSelectionRange(at, at);
+  }
+}
+
 function onChange(event) {
   if (event.target.name === 'brand') {
     onBrandChange(event.target.form);
@@ -340,6 +366,7 @@ async function start() {
   document.addEventListener('click', onClick);
   document.addEventListener('submit', onSubmit);
   document.addEventListener('change', onChange);
+  document.addEventListener('input', onCatalogSearch);
   document.addEventListener('keydown', onKeydown);
 
   startRouter();

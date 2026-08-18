@@ -31,17 +31,22 @@ maybe('catalog', () => {
     await disconnectDatabase();
   });
 
-  it('serves the company, brand and model tree', async () => {
+  // Rooted at the brand, not at the company. Most brands have no company —
+  // the market list has no manufacturer level and one is not invented — so a
+  // company-rooted response would have omitted nearly the whole catalogue and
+  // the listing form would have had nothing to offer.
+  it('serves the brand and model tree, company or no company', async () => {
     const { cookie } = await agent();
 
     const res = await request(app).get(api('/catalog')).set('Cookie', cookie).expect(200);
 
-    const modiran = res.body.data.companies.find((c) => c.slug === 'modiran-khodro');
-    expect(modiran).toBeDefined();
-    expect(modiran.brands.map((b) => b.slug).sort()).toEqual(['fownix', 'mvm', 'xtrim']);
-
-    const fownix = modiran.brands.find((b) => b.slug === 'fownix');
+    const fownix = res.body.data.brands.find((b) => b.slug === 'fownix');
+    expect(fownix).toBeDefined();
     expect(fownix.models.length).toBeGreaterThan(5);
+
+    // The thing that would break if the tree went back to hanging off the
+    // company: a brand with none still arrives.
+    expect(res.body.data.brands.some((b) => !b.company)).toBe(true);
     expect(res.body.data.colors.length).toBeGreaterThan(5);
   });
 
@@ -58,9 +63,17 @@ maybe('catalog', () => {
       .send({ ...payload, carType: 'هرچه دلم بخواهد', supplierCompany: 'شرکت جعلی' })
       .expect(201);
 
-    const model = await prisma.carModel.findUnique({ where: { id: payload.carModelId } });
+    const model = await prisma.carModel.findUnique({
+      where: { id: payload.carModelId },
+      include: { brand: { include: { company: true } } },
+    });
     expect(res.body.data.carType).toBe(model.name);
-    expect(res.body.data.supplierCompany).toBe('مدیران خودرو');
+
+    // Derived, not hardcoded. The supplier is the brand's company where it has
+    // one and the brand itself where it does not — most brands have none — and
+    // what this asserts is that the client's «شرکت جعلی» was ignored either way.
+    expect(res.body.data.supplierCompany).toBe(model.brand.company?.name || model.brand.name);
+    expect(res.body.data.supplierCompany).not.toBe('شرکت جعلی');
   });
 
   it('refuses a model or colour that is not on the list', async () => {

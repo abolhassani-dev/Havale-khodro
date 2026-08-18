@@ -419,10 +419,7 @@ maybe('admin panel', () => {
       const buyer = await agent();
       const list = await request(app).get(api('/catalog')).set('Cookie', buyer.cookie).expect(200);
 
-      const models = list.body.data.companies
-        .flatMap((c) => c.brands)
-        .flatMap((b) => b.models)
-        .map((m) => m.id);
+      const models = list.body.data.brands.flatMap((b) => b.models).map((m) => m.id);
       expect(models).toContain(model.body.data.id);
 
       await request(app)
@@ -493,12 +490,15 @@ maybe('admin panel', () => {
         .send({ isActive: false })
         .expect(200);
 
+      // Models come from the brand's own endpoint now rather than with the
+      // catalogue: two thousand of them in one response is a page nobody can
+      // read and a payload nobody should pay for.
       const adminView = await request(app)
-        .get(api('/admin/catalog'))
+        .get(api(`/admin/catalog/brands/${brand.id}/models`))
         .set('Cookie', superAdmin.cookie)
         .expect(200);
       // You cannot bring back something you cannot see.
-      expect(JSON.stringify(adminView.body)).toContain(model.body.data.id);
+      expect(adminView.body.data.models.map((m) => m.id)).toContain(model.body.data.id);
 
       const buyer = await agent();
       const agentView = await request(app)

@@ -421,7 +421,13 @@ const havaleService = {
 
       data.carModelId = model.id;
       data.carType = model.name;
-      data.supplierCompany = model.brand.company.name;
+      // The company when the brand has one, otherwise the brand itself. Most
+      // brands have no company — the market list has no manufacturer level and
+      // guessing one would file cars under makers that do not build them — and
+      // reading `.company.name` through that blank threw, turning every listing
+      // on such a brand into a 500. The brand name is also the better answer:
+      // «شرکت: پژو» tells a reader something, «شرکت: —» does not.
+      data.supplierCompany = model.brand.company?.name || model.brand.name;
     }
 
     if (carColor !== undefined && carColor !== null) {

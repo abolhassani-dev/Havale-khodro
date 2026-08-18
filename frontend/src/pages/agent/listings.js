@@ -32,9 +32,7 @@ export function havaleFormPage(kind) {
   const tree = data.tree;
   const offer = kind === 'OFFER';
 
-  const brands = (tree?.companies || []).flatMap((c) =>
-    c.brands.map((b) => ({ ...b, company: c.name }))
-  );
+  const brands = tree?.brands || [];
 
   return html`
   <form class="card form" data-form="havale" data-kind="${kind}">
@@ -49,7 +47,15 @@ export function havaleFormPage(kind) {
         <label for="brand">برند</label>
         <select class="in" id="brand" name="brand" required>
           <option value="">انتخاب کنید</option>
-          ${brands.map((b) => html`<option value="${b.id}">${b.company} — ${b.name}</option>`)}
+          <!-- The company is a suffix, not a prefix, and is dropped when the
+               brand has none. Leading with it sorted «ایران خودرو — پژو» under
+               «الف» rather than «پ», so somebody looking for پژو had to know
+               who makes it first. Most brands have no company at all. -->
+          ${brands.map(
+            (b) => html`<option value="${b.id}">
+              ${b.name}${b.company ? ` — ${b.company.name}` : ''}
+            </option>`
+          )}
         </select>
       </div>
 
@@ -153,7 +159,7 @@ function numberField(name, label, required, placeholder = '') {
 export function onBrandChange(form) {
   const { data } = getState();
   const brandId = form.brand.value;
-  const brand = (data.tree?.companies || []).flatMap((c) => c.brands).find((b) => b.id === brandId);
+  const brand = (data.tree?.brands || []).find((b) => b.id === brandId);
 
   const select = form.carModelId;
   select.innerHTML = '';

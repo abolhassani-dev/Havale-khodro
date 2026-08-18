@@ -46,7 +46,7 @@ export function searchPage() {
   const { tree, list, usage } = data;
   const items = list?.items || [];
 
-  const brands = (tree?.companies || []).flatMap((c) => c.brands);
+  const brands = tree?.brands || [];
   const models = brands.flatMap((b) => b.models);
 
   return html`

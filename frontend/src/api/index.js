@@ -99,6 +99,7 @@ export const admin = {
 
   catalog: () => api.get('/admin/catalog'),
   modelUsage: (id) => api.get(`/admin/catalog/models/${id}/usage`),
+  brandModels: (id) => api.get(`/admin/catalog/brands/${id}/models`),
   createCompany: (payload) => api.post('/admin/catalog/companies', payload),
   updateCompany: (id, payload) => api.patch(`/admin/catalog/companies/${id}`, payload),
   createBrand: (payload) => api.post('/admin/catalog/brands', payload),

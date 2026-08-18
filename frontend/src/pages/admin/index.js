@@ -690,6 +690,7 @@ export function handleAdminClick(d, el) {
 }
 
 export { onStaffFormChange };
+export { setCatalogQuery } from './catalog.js';
 
 export function handleAdminSubmit(form) {
   switch (form.dataset.form) {
