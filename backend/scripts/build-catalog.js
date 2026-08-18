@@ -46,6 +46,34 @@ const path = require('path');
 
 const SOURCE = 'https://bama.ir/gen/api/filters/vehicle?vehicleCategory=car';
 const OUT = path.join(__dirname, '..', 'src', 'constants', 'carCatalog.data.json');
+const LOGOS = path.join(__dirname, '..', '..', 'frontend', 'assets', 'brands');
+
+/**
+ * Which brands have a logo, decided by looking rather than by the source.
+ *
+ * The source claims all 186 do. Eight actually exist — the featured brands on
+ * the site's own filter — and the address it gives for the rest answers
+ * AccessDenied. Trusting the claim wrote a file name for every brand, and the
+ * panel then asked for 178 images that are not there: 178 failed requests on
+ * every visit, and a broken-image mark beside most of the list.
+ *
+ * So the file on disk is the authority. Fetch the logos, rebuild, and the two
+ * agree by construction.
+ */
+function haveLogo() {
+  try {
+    return new Set(
+      fs
+        .readdirSync(LOGOS)
+        .filter((f) => /\.(png|svg|webp|jpg)$/i.test(f))
+        .map((f) => f.replace(/\.[^.]+$/, ''))
+    );
+  } catch {
+    // The directory is absent before anybody has run the fetcher, which is a
+    // normal state and not an error: it means no brand has a logo yet.
+    return new Set();
+  }
+}
 
 /** The real children of a node: everything except the "all of X" shortcut. */
 const realItems = (node) => (node.items || []).filter((item) => !item.select_all);
@@ -90,20 +118,24 @@ function main() {
     return;
   }
 
+  const logos = haveLogo();
+
   const brands = source
     .filter((b) => b.type === 'brand' && b.title && b.value)
     .map((b, index) => ({
       name: b.title.replace(/\s+/g, ' ').trim(),
       slug: b.value,
-      // Only the file name. The logo is served from this project, so the
-      // remote address is of no use past the one-off download.
-      logo: b.icon ? `${b.value}.png` : null,
+      // Only the file name, and only when the file is there. The logo is served
+      // from this project, so the remote address is of no use past the one-off
+      // download — and the source's claim that every brand has one is wrong.
+      logo: logos.has(b.value) ? `${b.value}.png` : null,
       sortOrder: index,
       models: modelsOf(b),
     }))
     .filter((b) => b.models.length);
 
   const totals = brands.reduce((n, b) => n + b.models.length, 0);
+  const withLogo = brands.filter((b) => b.logo).length;
 
   fs.writeFileSync(
     OUT,
@@ -119,11 +151,16 @@ function main() {
     'utf8'
   );
 
-  console.log(`✓ ${brands.length} برند · ${totals} مدل`);
+  console.log(`✓ ${brands.length} برند · ${totals} مدل · ${withLogo} لوگو`);
   console.log(`  ${path.relative(process.cwd(), OUT)}`);
 
   const dropped = source.length - brands.length;
   if (dropped) console.log(`  ${dropped} برند بدون مدل کنار گذاشته شد`);
+
+  if (!withLogo) {
+    console.log('  لوگویی پیدا نشد — اول ./deploy/fetch-brand-logos.sh را اجرا کنید،');
+    console.log('  بعد دوباره این را بزنید تا فایل کاتالوگ با آنچه روی دیسک هست بخواند.');
+  }
 }
 
 main();
