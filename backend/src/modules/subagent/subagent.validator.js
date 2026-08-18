@@ -32,6 +32,17 @@ const createBody = Joi.object({
   city: Joi.string().trim().min(2).max(60).required(),
   coordinatorName: Joi.string().trim().min(3).max(120).required(),
   coordinatorPhone: iranMobile.required(),
+
+  // Optional here, unlike on the admin's create form, and the difference is
+  // deliberate. An admin creating an agency has no idea what it deals in, so
+  // the question has to be asked. A parent creating a sub-agency already holds
+  // a set of brands, and leaving this out means "the same as mine" — which is
+  // the right answer for a sub-agency that is another desk rather than a
+  // specialised one. Narrowing it is the interesting case, and that is what
+  // sending the field does. The ceiling is the parent's own list either way.
+  brandIds: Joi.array().items(Joi.string().trim().max(40)).min(1).messages({
+    'array.min': 'اگر برند انتخاب می‌کنید، حداقل یکی لازم است',
+  }),
 });
 
 const resetPasswordBody = Joi.object({

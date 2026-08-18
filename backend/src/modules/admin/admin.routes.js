@@ -5,6 +5,8 @@ const agentService = require('./agent.service');
 const monitoringService = require('./monitoring.service');
 const catalogAdminRoutes = require('../catalog/catalog.admin.routes');
 const staffRoutes = require('./staff.routes');
+const brandAccess = require('../catalog/brandAccess.service');
+const authRepository = require('../auth/auth.repository');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -211,10 +213,19 @@ router.post(
       coordinatorPhone: iranMobile.required(),
       isReseller: Joi.boolean().default(false),
       adminNote: Joi.string().trim().max(1000).allow('', null),
+      // Required, and required to be non-empty. Brand access is chosen when the
+      // agency is made rather than restricted afterwards: an account somebody
+      // forgot to configure would otherwise be one that can post anything, and
+      // the safe direction to be wrong in is the other one.
+      brandIds: Joi.array().items(Joi.string().trim().max(40)).min(1).required().messages({
+        'array.min': 'حداقل یک برند برای این نمایندگی انتخاب کنید',
+        'any.required': 'انتخاب برند الزامی است',
+      }),
     }),
   }),
   asyncHandler(async (req, res) => {
     const agent = await agentService.create({ actor: req.user, payload: req.body });
+    await brandAccess.setBrands({ userId: agent.id, brandIds: req.body.brandIds });
     // Echoed once, deliberately: it is the only moment anyone can read it, and
     // it is not stored anywhere in plain text.
     return created(res, { ...agent, initialPassword: req.body.password }, MESSAGES.USER.CREATED);
@@ -233,6 +244,64 @@ router.get(
   requirePermission('agents'),
   validate({ params: idParam }),
   asyncHandler(async (req, res) => success(res, await agentService.get(req.params.id)))
+);
+
+/**
+ * @openapi
+ * /admin/agents/{id}/brands:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Every brand, flagged with whether this agency may post under it
+ *     description: >
+ *       All of them, not only the allowed ones — the picker has to show what is
+ *       unticked as much as what is ticked.
+ */
+router.get(
+  '/agents/:id/brands',
+  requirePermission('agents'),
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) =>
+    success(res, { brands: await brandAccess.brandChoices(req.params.id) }))
+);
+
+/**
+ * @openapi
+ * /admin/agents/{id}/brands:
+ *   put:
+ *     tags: [Admin]
+ *     summary: Replace the brands an agency may post under
+ *     description: >
+ *       PUT rather than PATCH because it replaces the whole set — which is what
+ *       a screen full of checkboxes submits, and what makes "untick this one"
+ *       expressible at all.
+ */
+router.put(
+  '/agents/:id/brands',
+  requirePermission('agents'),
+  validate({
+    params: idParam,
+    body: Joi.object({
+      // Allowed to be empty here, unlike on create: taking every brand away
+      // from an existing agency is a deliberate act with a visible effect —
+      // they stop being able to post — whereas a *new* account with none is
+      // usually somebody who skipped the field.
+      brandIds: Joi.array().items(Joi.string().trim().max(40)).required(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const count = await brandAccess.setBrands({
+      userId: req.params.id,
+      brandIds: req.body.brandIds,
+    });
+    await authRepository.recordActivity({
+      userId: req.user.id,
+      action: 'AGENT_UPDATED',
+      targetType: 'USER',
+      targetId: req.params.id,
+      summary: `brands:${count}`,
+    });
+    return success(res, { count });
+  })
 );
 
 /**

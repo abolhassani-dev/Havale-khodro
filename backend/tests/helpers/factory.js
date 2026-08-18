@@ -20,9 +20,19 @@ const api = (path) => `${config.apiPrefix}${path}`;
 let counter = 0;
 const unique = () => `${Date.now()}${(counter += 1)}`;
 
-async function createAgent(overrides = {}) {
+/**
+ * An agency, allowed to post under every brand unless told otherwise.
+ *
+ * Real accounts start with no brands — that is the product rule, and it is why
+ * brand access is a required field when an agency is created. A fixture is the
+ * one place that default is unhelpful: almost every test is about something
+ * else, and making each one grant brands first would bury what it is actually
+ * checking. `brands: []` opts back into the real default, and `brands: [id]`
+ * narrows it, for the tests that are about this rule.
+ */
+async function createAgent({ brands, ...overrides } = {}) {
   const tag = unique();
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       username: `test_${tag}`,
       passwordHash: await bcrypt.hash(PASSWORD, 4),
@@ -38,6 +48,22 @@ async function createAgent(overrides = {}) {
       ...overrides,
     },
   });
+
+  const ids =
+    brands === undefined
+      ? (await prisma.carBrand.findMany({ where: { isActive: true }, select: { id: true } })).map(
+          (b) => b.id
+        )
+      : brands;
+
+  if (ids.length) {
+    await prisma.brandAccess.createMany({
+      data: ids.map((brandId) => ({ userId: user.id, brandId })),
+      skipDuplicates: true,
+    });
+  }
+
+  return user;
 }
 
 async function ensurePlan() {

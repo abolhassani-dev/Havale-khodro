@@ -4,6 +4,7 @@ const config = require('../../config');
 const { subagentRepository } = require('./subagent.repository');
 const subscriptionService = require('../subscription/subscription.service');
 const authRepository = require('../auth/auth.repository');
+const brandAccess = require('../catalog/brandAccess.service');
 const { MESSAGES } = require('../../constants/messages');
 const { ERROR_CODES } = require('../../constants/errorCodes');
 const {
@@ -92,6 +93,23 @@ const subagentService = {
       parentId: user.id,
       // The parent chose this password and therefore knows it.
       mustChangePassword: true,
+    });
+
+    // The brands this sub-agency may post under, capped by the parent's own.
+    //
+    // This is the point of the whole feature: a main agency with twenty
+    // sub-agencies, one per marque, configures them itself instead of opening
+    // twenty tickets. `limitTo` is what keeps that safe — a parent can divide
+    // what it holds and can never mint more, and the ceiling is enforced in the
+    // service rather than the route so no later caller can route around it.
+    //
+    // Defaults to everything the parent has, which is the sensible answer for a
+    // sub-agency that is simply an extra desk rather than a specialised one.
+    const parentBrands = await brandAccess.allowedBrandIds(user.id);
+    await brandAccess.setBrands({
+      userId: child.id,
+      brandIds: payload.brandIds ?? parentBrands,
+      limitTo: parentBrands,
     });
 
     // The seat subscription carries no meaningful expiry of its own — it always

@@ -1,6 +1,7 @@
 const { Router } = require('express');
 
 const catalogRepository = require('./catalog.repository');
+const brandAccess = require('./brandAccess.service');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success } = require('../../responses/apiResponse');
 const { authenticate, requirePasswordChanged } = require('../../middlewares/auth');
@@ -22,12 +23,22 @@ router.use(authenticate, requirePasswordChanged);
  */
 router.get(
   '/',
-  asyncHandler(async (_req, res) => {
-    const [brands, colors] = await Promise.all([
+  asyncHandler(async (req, res) => {
+    const [brands, colors, allowed] = await Promise.all([
       catalogRepository.listBrands(),
       catalogRepository.listColors(),
+      brandAccess.allowedBrandIds(req.user.id),
     ]);
-    return success(res, { brands, colors });
+
+    // Every brand, each marked. Not a filtered list: the search filters use
+    // this same catalogue, and an agency must be able to search the whole
+    // market even though it may only post under part of it. The listing form
+    // is what narrows itself, using `canPost`.
+    const on = new Set(allowed);
+    return success(
+      res,
+      { brands: brands.map((b) => ({ ...b, canPost: on.has(b.id) })), colors }
+    );
   })
 );
 

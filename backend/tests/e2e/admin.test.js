@@ -43,7 +43,12 @@ maybe('admin panel', () => {
     return { user, cookie: await signIn(user) };
   };
 
-  const agencyPayload = () => {
+  // Read once in beforeAll. Brand access is a required field on creation, so a
+  // payload without it is not a valid agency — which is the point of the rule,
+  // and is asserted directly in brandAccess.test.js.
+  let anyBrandId = null;
+
+  const agencyPayload = (brandIds = anyBrandId ? [anyBrandId] : []) => {
     const tag = `${Date.now()}${Math.floor(Math.random() * 9999)}`;
     return {
       username: `test_ag_${tag}`,
@@ -55,12 +60,18 @@ maybe('admin panel', () => {
       city: 'شیراز',
       coordinatorName: 'مسئول هماهنگی',
       coordinatorPhone: '09210000000',
+      brandIds,
     };
   };
 
   beforeAll(async () => {
     await connectDatabase();
     await catalog();
+    const brand = await prisma.carBrand.findFirst({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    anyBrandId = brand?.id || null;
   });
 
   afterAll(async () => {
