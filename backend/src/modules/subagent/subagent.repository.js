@@ -54,6 +54,13 @@ const subagentRepository = {
     return prisma.user.create({ data });
   },
 
+  // Matched via the phone's blind index — the client middleware rewrites
+  // `where: { phone }` to the indexed column, so this finds the number no
+  // matter which account type holds it.
+  findByPhone(phone) {
+    return prisma.user.findUnique({ where: { phone }, select: { id: true } });
+  },
+
   setStatus(id, status) {
     return prisma.user.update({
       where: { id },

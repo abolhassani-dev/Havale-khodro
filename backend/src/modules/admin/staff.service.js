@@ -122,6 +122,14 @@ const staffService = {
     });
     if (taken) throw new ValidationError('این نام کاربری قبلاً استفاده شده است');
 
+    // The phone is unique across every account, agencies included. Left to the
+    // database it fails as a 500; asked here it is an answer.
+    const phoneTaken = await prisma.user.findFirst({
+      where: { phone: payload.phone },
+      select: { id: true },
+    });
+    if (phoneTaken) throw new ValidationError('این شماره موبایل قبلاً ثبت شده است');
+
     const user = await prisma.user.create({
       data: {
         username: payload.username,
@@ -157,7 +165,14 @@ const staffService = {
 
     const data = {};
     if (payload.fullName !== undefined) data.fullName = payload.fullName;
-    if (payload.phone !== undefined) data.phone = payload.phone;
+    if (payload.phone !== undefined) {
+      const clash = await prisma.user.findFirst({
+        where: { phone: payload.phone, NOT: { id } },
+        select: { id: true },
+      });
+      if (clash) throw new ValidationError('این شماره موبایل قبلاً ثبت شده است');
+      data.phone = payload.phone;
+    }
     if (payload.status !== undefined) data.status = payload.status;
 
     const role = payload.role !== undefined ? payload.role : target.role;

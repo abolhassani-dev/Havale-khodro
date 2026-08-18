@@ -47,6 +47,34 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // A unique-constraint violation is a fact about the request — the value is
+  // already taken — not a bug. The services pre-check the common cases with
+  // their own messages, but any path that forgets (or loses a race between the
+  // check and the insert) lands here, and used to land in the 500 branch: on
+  // production, an unactionable «Something went wrong». That is exactly how a
+  // duplicate phone number on the sub-agency form reached a user as a mystery.
+  if (err.code === 'P2002') {
+    const target = String(err.meta?.target ?? '');
+    const message = target.includes('phoneIndex')
+      ? 'این شماره موبایل قبلاً ثبت شده است'
+      : target.includes('username')
+        ? 'این نام کاربری قبلاً استفاده شده است'
+        : target.includes('agencyCode')
+          ? 'این کد نمایندگی قبلاً ثبت شده است'
+          : 'این مقدار قبلاً ثبت شده است';
+    logger.warn('Unique constraint hit without a pre-check', {
+      target,
+      path: req.originalUrl,
+      requestId: req.id,
+    });
+    return failure(res, {
+      message,
+      code: ERROR_CODES.CONFLICT,
+      statusCode: 409,
+      requestId: req.id,
+    });
+  }
+
   logger.error('Unhandled error', {
     message: err.message,
     stack: err.stack,

@@ -361,6 +361,33 @@ maybe('brand access', () => {
       });
       expect(rows.map((r) => r.brandId).sort()).toEqual([brands[0].id, brands[1].id].sort());
     });
+
+    // The phone is unique across every account. Before the pre-check this died
+    // on the database's constraint — a 500 that production renders as
+    // «Something went wrong», which is how a real parent actually met it.
+    it('refuses a phone number another account already holds, by name', async () => {
+      const parent = await parentOf([brands[0].id]);
+      const body = subAgencyBody();
+
+      const first = await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send(body)
+        .expect(201);
+      created.push(first.body.data.id);
+
+      const res = await request(app)
+        .post(api('/sub-agents'))
+        .set('Cookie', parent.cookie)
+        .send({ ...subAgencyBody(), username: `test_dup${Date.now()}`, phone: body.phone })
+        .expect(409);
+      expect(res.body.error.message).toContain('شماره موبایل');
+
+      // And no half-made account: the refusal happened before the insert.
+      expect(
+        await prisma.user.count({ where: { username: { startsWith: 'test_dup' } } })
+      ).toBe(0);
+    });
   });
 
   // A stale picker, or a hand-made request, must not be able to write rows that

@@ -79,6 +79,14 @@ const subagentService = {
     const existing = await authRepository.findByUsername(payload.username);
     if (existing) throw new ConflictError(MESSAGES.SEAT.USERNAME_TAKEN);
 
+    // The phone identifies an account, so it is unique across the whole
+    // system — parents, sub-agencies, staff, all of it. Unchecked, a duplicate
+    // died on the database's constraint as a bare 500 («Something went wrong»
+    // on production, with the parent none the wiser). Asked first, it is an
+    // answer the parent can act on.
+    const phoneTaken = await subagentRepository.findByPhone(payload.phone);
+    if (phoneTaken) throw new ConflictError(MESSAGES.ADMIN.PHONE_TAKEN);
+
     const child = await subagentRepository.create({
       username: payload.username,
       passwordHash: await bcrypt.hash(payload.password, config.security.bcryptRounds),
