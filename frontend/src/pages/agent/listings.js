@@ -32,7 +32,12 @@ export function havaleFormPage(kind) {
   const tree = data.tree;
   const offer = kind === 'OFFER';
 
-  const brands = tree?.brands || [];
+  // A sale may only be posted under a brand this account holds; a purchase
+  // request may name any brand at all. So the same form offers two different
+  // lists, and the difference is the product rule rather than a convenience:
+  // wanting a car is not the same as dealing in it.
+  const all = tree?.brands || [];
+  const brands = offer ? all.filter((b) => b.canPost) : all;
 
   return html`
   <form class="card form" data-form="havale" data-kind="${kind}">
@@ -41,6 +46,24 @@ export function havaleFormPage(kind) {
     </div>
 
     <div style="padding:0 14px">${formErrorSlot()}</div>
+
+    ${
+      // An empty brand list on a sale means nobody has given this account any
+      // brands. Without saying so, the form is a dropdown with one blank option
+      // and no explanation — which reads as a broken page rather than a
+      // deliberate setting, and sends the reader to support to find out.
+      offer && !brands.length
+        ? html`<div class="banner warn" style="margin:0 14px 12px">
+            <span class="b-ico">⚠</span>
+            <div class="b-txt">
+              <b>هنوز برندی برای حساب شما تعیین نشده است</b>
+              تا وقتی مشخص نشود کدام برندها را می‌توانید آگهی کنید، امکان ثبت حواله فروش
+              ندارید. <b>ثبت درخواست خرید محدودیتی ندارد.</b>
+              از نمایندگی مادر یا پشتیبانی بخواهید برندهایتان را فعال کنند.
+            </div>
+          </div>`
+        : ''
+    }
 
     <div class="fields">
       <div class="field">

@@ -1,5 +1,5 @@
 import { html, raw } from '../../ui/html.js';
-import { subscription, subAgents, tickets, reports } from '../../api/index.js';
+import { subscription, subAgents, tickets, reports, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import {
   money, faDigits, date, dateTime, relative, enDigits,
@@ -8,6 +8,7 @@ import {
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
+import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
 
 /** Subscription, capacity, sub-agencies, and support tickets. */
 
@@ -171,7 +172,12 @@ export function orderSeatsModal() {
 // ── sub-agencies ────────────────────────────────────────────────────────────
 
 export async function loadSubAgents() {
-  return { list: await subAgents.list() };
+  // The catalogue rides along for the sub-agency form's brand picker. The
+  // parent divides its own brands, so the picker is narrowed to `canPost`
+  // before it ever renders — «همه» must mean "all of mine", never "all that
+  // exist", or it would tick brands the server is about to refuse.
+  const [list, tree] = await Promise.all([subAgents.list(), catalog.get()]);
+  return { list, parentBrands: (tree.brands || []).filter((b) => b.canPost) };
 }
 
 export function subAgentsPage() {
@@ -235,6 +241,8 @@ export function subAgentsPage() {
 }
 
 export function newSubAgentModal() {
+  const parentBrands = getState().data.parentBrands || [];
+
   openModal({
     type: 'form',
     title: 'ساخت زیرنماینده',
@@ -250,6 +258,12 @@ export function newSubAgentModal() {
         ${modalField('coordinatorName', 'نام مسئول هماهنگی', 'text', true)}
         ${modalField('coordinatorPhone', 'موبایل مسئول هماهنگی', 'tel', true, 'ltr')}
       </div>
+      <div style="margin-top:10px">
+        ${brandPicker(parentBrands, {
+          selected: parentBrands.map((b) => b.id),
+          note: 'فقط برندهای خودتان قابل واگذاری‌اند. پیش‌فرض همه‌ی آن‌هاست — برای زیرنماینده‌ی تخصصی، فقط برند خودش را بگذارید.',
+        })}
+      </div>
       <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
         کد نمایندگی خودکار از کد شما ساخته می‌شود. رمز اولیه را به او بدهید؛ در اولین ورود
         مجبور است عوضش کند.
@@ -261,6 +275,14 @@ export function newSubAgentModal() {
         'coordinatorName', 'coordinatorPhone'].forEach((key) => {
         payload[key] = key.includes('hone') ? enDigits(form[key].value.trim()) : form[key].value.trim();
       });
+      payload.brandIds = brandPickValue(form);
+      // Refused here as well as on the server: an empty set is expressible in
+      // the picker, but a sub-agency that can post nothing is almost never what
+      // was meant, and the server would reject the empty list anyway.
+      if (!payload.brandIds.length) {
+        throw new Error('حداقل یک برند برای زیرنماینده انتخاب کنید');
+      }
+
       const child = await subAgents.create(payload);
       toast(`زیرنماینده ساخته شد — کد ${child.agencyCode}`);
       await resolve();

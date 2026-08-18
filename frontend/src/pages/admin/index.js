@@ -8,6 +8,7 @@ import {
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
+import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
 import {
   loadStaff, staffPage, newStaffModal, editStaffModal, staffPasswordModal,
   setStaffStatus, onStaffFormChange, toggleGroup,
@@ -36,7 +37,10 @@ export function registerAdminRoutes(route) {
     plans: await subscription.plans().catch(() => []),
   }));
 
-  route('adm-new-agent', async () => ({}));
+  // The brand picker needs the catalogue, and this form cannot be submitted
+  // without a brand — so it is loaded with the page rather than fetched when
+  // somebody scrolls to the picker.
+  route('adm-new-agent', async () => ({ catalog: await admin.catalog() }));
 
   route('adm-reports', async (params) => ({
     queue: await reports.queue({ status: params.status || 'PENDING' }),
@@ -250,7 +254,8 @@ function agentPage() {
               </button>
               <button class="btn sm" data-agent-password="${a.id}">تغییر رمز</button>
               <button class="btn sm" data-agent-logout="${a.id}">خروج اجباری</button>
-              <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>`
+              <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>
+              <button class="btn sm" data-agent-brands="${a.id}">برندهای مجاز</button>`
             : ''
         }
         ${can('subscriptions') ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>` : ''}
@@ -264,11 +269,11 @@ function agentPage() {
 }
 
 function newAgentPage() {
-
+  const { data } = getState();
 
   return html`
   <form class="card form" data-form="new-agent">
-    <div class="card-h"><h2>ساخت حساب نمایندگی ${qtip('حساب تازه برای یک نمایندگی. رمز اولیه فقط همین یک بار نمایش داده می‌شود و نماینده در اولین ورود باید عوضش کند.')}</h2></div>
+    <div class="card-h"><h2>ساخت حساب نمایندگی ${qtip('حساب تازه برای یک نمایندگی. رمز اولیه فقط همین یک بار نمایش داده می‌شود و نماینده در اولین ورود باید عوضش کند. انتخاب برند الزامی است — بدون آن حساب نمی‌تواند آگهی ثبت کند.')}</h2></div>
     <div style="padding:0 14px">${formErrorSlot()}</div>
     <div class="fields">
       ${field('username', 'نام کاربری', 'text', 'ltr')}
@@ -292,6 +297,11 @@ function newAgentPage() {
         <textarea class="in" id="adminNote" name="adminNote" rows="2"></textarea>
       </div>
     </div>
+
+    <div style="padding:0 14px 14px">
+      ${brandPicker(data.catalog?.brands || [])}
+    </div>
+
     <div class="form-foot">
       <div class="hint">رمز اولیه یک‌بار نمایش داده می‌شود و در اولین ورود باید عوض شود.</div>
       <button class="btn primary" type="submit">بساز</button>
@@ -669,6 +679,7 @@ function settingsPage() {
 // ── event handling ──────────────────────────────────────────────────────────
 
 export function handleAdminClick(d, el) {
+
   if (d.newStaff !== undefined) return newStaffModal();
   if (d.editStaff) return editStaffModal(d.editStaff);
   if (d.staffPassword) return staffPasswordModal(d.staffPassword);
@@ -683,6 +694,7 @@ export function handleAdminClick(d, el) {
   if (d.agentPassword) return agentPasswordModal(d.agentPassword);
   if (d.agentLogout) return forceLogout(d.agentLogout);
   if (d.agentLimits) return agentLimitsModal(d.agentLimits);
+  if (d.agentBrands) return agentBrandsModal(d.agentBrands);
   if (d.editAgent) return editAgentModal(d.editAgent);
   if (d.grant) return grantModal(d.grant);
   if (d.editSetting) return editSettingModal(d.editSetting, d.type, d.value);
@@ -717,6 +729,16 @@ async function submitNewAgent(form) {
     if (value) payload[key] = key.includes('hone') ? enDigits(value) : value;
   });
   payload.isReseller = form.isReseller.value === 'true';
+  payload.brandIds = brandPickValue(form);
+
+  // Refused here rather than on the server, because the server's refusal costs
+  // a round trip and arrives after the reader has scrolled past the picker.
+  // The server checks regardless — this is the courtesy, not the rule.
+  if (!payload.brandIds.length) {
+    showFormError(form, new Error('حداقل یک برند برای این نمایندگی انتخاب کنید'));
+    document.querySelector('.bpick')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   try {
     const created = await admin.createAgent(payload);
@@ -815,6 +837,40 @@ async function forceLogout(id) {
   } catch (err) {
     toast(err.message, 'danger');
   }
+}
+
+/**
+ * Editing an existing agency's brands.
+ *
+ * The choices arrive flagged from the server — the same call the picker uses
+ * everywhere — so what is ticked on open is what is true, not what some cached
+ * page remembers. Saving replaces the whole set; that is what a checkbox
+ * screen means, and it is what makes "untick this one" expressible.
+ */
+async function agentBrandsModal(id) {
+  let choices;
+  try {
+    choices = (await admin.agentBrands(id)).brands;
+  } catch (err) {
+    return toast(err.message, 'danger');
+  }
+
+  return openModal({
+    type: 'form',
+    title: 'برندهای مجاز این نمایندگی',
+    wide: true,
+    body: html`
+      ${brandPicker(choices, { selected: choices.filter((b) => b.allowed).map((b) => b.id) })}
+      <p style="color:var(--ink-3);font-size:12px;margin-top:8px">
+        تغییر فوراً اعمال می‌شود. آگهی‌های قبلی سر جایشان می‌مانند — محدودیت فقط جلوی
+        ثبتِ جدید را می‌گیرد.
+      </p>`,
+    confirmLabel: 'ذخیره',
+    onSubmit: async (form) => {
+      await admin.setAgentBrands(id, brandPickValue(form));
+      toast('برندها به‌روز شد');
+    },
+  });
 }
 
 function agentLimitsModal(id) {

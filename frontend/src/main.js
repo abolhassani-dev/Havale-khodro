@@ -26,6 +26,9 @@ import {
   registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit, onStaffFormChange,
   setCatalogQuery,
 } from './pages/admin/index.js';
+import {
+  handleBrandPickClick, handleBrandPickChange, handleBrandPickSearch,
+} from './ui/brandPicker.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets } from './api/index.js';
@@ -207,12 +210,13 @@ const CLICK_KEYS = new Set([
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword',
   'newTicket', 'closeTicket',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
-  'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'editAgent',
+  'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
   'grant', 'editSetting',
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor', 'openBrand',
+  'brandAll', 'brandNone',
 ]);
 
 function findTarget(node) {
@@ -259,6 +263,10 @@ function onClick(event) {
   if (d.subagentPassword) return subAgentPasswordModal(d.subagentPassword);
   if (d.newTicket !== undefined) return newTicketModal(d.newTicket);
   if (d.closeTicket) return closeTicket(d.closeTicket);
+
+  // The brand picker appears on admin pages and inside the agent's sub-agency
+  // modal alike, so its buttons are dispatched here rather than per page.
+  if (handleBrandPickClick(d)) return undefined;
 
   return handleAdminClick(d, el);
 }
@@ -326,6 +334,11 @@ function applyFilters(form) {
  */
 function onCatalogSearch(event) {
   const input = event.target;
+
+  // The brand picker filters by hiding rows in place — no re-render, so the
+  // input keeps its own caret and the ticked boxes keep themselves.
+  if (handleBrandPickSearch(input)) return;
+
   if (!input.matches?.('[data-catalog-search]')) return;
 
   const at = input.selectionStart;
@@ -339,6 +352,11 @@ function onCatalogSearch(event) {
 }
 
 function onChange(event) {
+  // Ticking a brand, or a whole company at once. Handled entirely in the DOM —
+  // the picker sits inside a form, and anything that re-rendered the page here
+  // would wipe every field the reader had typed.
+  if (handleBrandPickChange(event.target)) return;
+
   if (event.target.name === 'brand') {
     onBrandChange(event.target.form);
   }
