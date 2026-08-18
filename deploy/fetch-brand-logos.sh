@@ -82,6 +82,27 @@ fi
 # detail to get casual about: nginx types a file by its extension, so an SVG
 # saved under a .png name is served as image/png and shows as broken.
 
+# Names the other sites use for the same brand.
+#
+# Our slugs came from Bama; the other site transliterates the same names its
+# own way, and the two disagree on roughly a third of them — `alfaromeo` there
+# is `alfa_romeo`, `landrover` is `land_rover`. There is no rule to derive one
+# from the other, because there is no rule behind either: they are two people's
+# spellings of a Persian name.
+#
+# So it is a lookup table, kept as data next to this script rather than as a
+# list inside it. Each line is `ourslug theirslug`, `#` starts a comment, and a
+# brand with no line just uses its own slug.
+ALIASES="$ROOT/deploy/brand-logo-aliases.txt"
+
+alias_for() {
+  [ -f "$ALIASES" ] || { printf '%s' "$1"; return; }
+  # The first field matched exactly, so `mg` never matches `mgt`. Falls back to
+  # the slug itself when there is no line for it.
+  awk -v s="$1" '$1 == s && $1 !~ /^#/ { print $2; found = 1; exit }
+                 END { if (!found) print s }' "$ALIASES"
+}
+
 ok=0; skipped=0; failed=""
 for slug in $slugs; do
   dest="$OUT/$slug.png"
@@ -90,6 +111,9 @@ for slug in $slugs; do
     skipped=$((skipped + 1))
     continue
   fi
+
+  # The file is always named for *our* slug; only the address uses theirs.
+  remote="$(alias_for "$slug")"
 
   # Every candidate is tried for every brand.
   #
@@ -100,7 +124,7 @@ for slug in $slugs; do
   # few extra requests are cheaper than a result that is quietly wrong.
   got=""
   for template in $SOURCES; do
-    url="$(printf '%s' "$template" | sed "s|{slug}|$slug|g")"
+    url="$(printf '%s' "$template" | sed "s|{slug}|$remote|g")"
 
     # --fail so an HTML or XML error page is never saved as if it were an
     # image, and a short timeout so one dead entry cannot stall the run.
