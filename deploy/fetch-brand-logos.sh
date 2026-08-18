@@ -23,10 +23,16 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA="$ROOT/backend/src/constants/carCatalog.data.json"
 OUT="$ROOT/frontend/assets/brands"
-# Overridable so the script itself can be tested against a local server. A
-# fetcher that has only ever been run against the real thing is a fetcher whose
-# failure path nobody has seen.
-BASE="${LOGO_BASE:-https://cdn-sth1.bama.ir/assets/filter/car-brand-logo}"
+# Not the address in the catalogue data. That field points at
+# `/assets/filter/car-brand-logo/<slug>`, which answers AccessDenied — it is
+# stale, and following it got three logos out of 186. The address the site
+# itself requests is this one, read off the browser's network tab, which is the
+# only place the truth was written down.
+#
+# Overridable so the script can be tested against a local server. A fetcher
+# that has only ever been run against the real thing is a fetcher whose failure
+# path nobody has seen.
+BASE="${LOGO_BASE:-https://cdn-sth1.bama.ir/evonex/filters/brand/car}"
 
 G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; D=$'\e[2m'; N=$'\e[0m'
 
@@ -52,12 +58,8 @@ for b in d["brands"]:
 total="$(printf '%s\n' "$slugs" | wc -l | tr -d ' ')"
 printf '\n%s▌ دریافت لوگوی %s برند%s\n\n' "$Y" "$total" "$N"
 
-# Candidate addresses, most likely first. The catalogue records the address
-# without a suffix — that is what the site's own data contains — and that
-# address answers AccessDenied. The browser's network tab shows the files
-# arriving as `peugeot.png`, so the suffix is the missing piece; these are the
-# shapes it could take. If the site changes, add a line rather than rewrite
-# the loop.
+# Candidate addresses, most likely first. `.png` is what the site asks for;
+# the others are there because a handful of brands may not have one.
 #
 # Assigned in two steps rather than with `${LOGO_PATTERNS:-…}`: a default
 # containing `}` ends the parameter expansion at the first one, so the list
@@ -65,9 +67,8 @@ printf '\n%s▌ دریافت لوگوی %s برند%s\n\n' "$Y" "$total" "$N"
 # nothing unusual.
 PATTERNS="${LOGO_PATTERNS:-}"
 if [ -z "$PATTERNS" ]; then
-  PATTERNS='{base}/{slug}.png {base}/{slug}.svg {base}/{slug}/2.png {base}/v2/{slug}.png {base}/{slug}'
+  PATTERNS='{base}/{slug}.png {base}/{slug}.svg {base}/{slug}.webp {base}/{slug}.jpg'
 fi
-WORKING=""
 
 ok=0; skipped=0; failed=""
 for slug in $slugs; do
@@ -78,12 +79,13 @@ for slug in $slugs; do
     continue
   fi
 
-  # The address in the catalogue is the one the site's own data gives, and it
-  # is not the address of the image: opened directly it answers AccessDenied,
-  # because the file underneath has an extension the data leaves off. Rather
-  # than guess which suffix is the right one, try the candidates and keep
-  # whichever actually returns an image. The first hit is remembered, so this
-  # costs one extra request in total, not one per brand.
+  # Every candidate is tried for every brand.
+  #
+  # An earlier version pinned the first pattern that worked and used only that
+  # one afterwards, on the theory that the source is consistent. It is not:
+  # three brands answered on a pattern the other 183 do not have, so the run
+  # locked onto it and reported 183 failures that were never really tried. A
+  # few extra requests are cheaper than a result that is quietly wrong.
   got=""
   for pattern in $PATTERNS; do
     url="$(printf '%s' "$pattern" | sed "s|{base}|$BASE|; s|{slug}|$slug|g")"
@@ -104,13 +106,6 @@ for slug in $slugs; do
   if [ -n "$got" ]; then
     mv "$dest.part" "$dest"
     ok=$((ok + 1))
-    if [ -z "$WORKING" ]; then
-      WORKING="$got"
-      # Pin it for the rest of the run: the first brand pays for the search,
-      # the other 185 do not.
-      PATTERNS="$got"
-      printf '%s  الگوی نشانی: %s%s\n' "$D" "$got" "$N"
-    fi
     printf '%s  ✓ %s%s\n' "$G" "$slug" "$N"
   else
     rm -f "$dest.part"
@@ -126,6 +121,8 @@ if [ -n "$failed" ]; then
   printf '  %sدوباره اجرا کنید — فقط همین‌ها را می‌گیرد.%s\n' "$D" "$N"
 fi
 
+# tar rather than zip: tar is on every Ubuntu, zip is not — and «Command 'zip'
+# not found» at the end of a successful download is a poor reward.
 printf '\n%sبرای فرستادن به مخزن:%s\n' "$D" "$N"
-printf '  cd %s && zip -qr /tmp/brand-logos.zip brands && ls -lh /tmp/brand-logos.zip\n\n' \
+printf '  tar -czf /tmp/brand-logos.tgz -C %s brands && ls -lh /tmp/brand-logos.tgz\n\n' \
   "$ROOT/frontend/assets"
