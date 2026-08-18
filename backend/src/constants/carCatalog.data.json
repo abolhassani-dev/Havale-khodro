@@ -5,7 +5,7 @@
     {
       "name": "آئودی",
       "slug": "audi",
-      "logo": null,
+      "logo": "audi.svg",
       "sortOrder": 0,
       "models": [
         "آئودی 100",
@@ -35,7 +35,7 @@
     {
       "name": "آرتابان (ای ام جی)",
       "slug": "amg",
-      "logo": null,
+      "logo": "amg.svg",
       "sortOrder": 1,
       "models": [
         "آرتابان (ای ام جی) آرتان 1.5 لیتر",
@@ -46,7 +46,7 @@
     {
       "name": "آریا",
       "slug": "arya",
-      "logo": null,
+      "logo": "arya.svg",
       "sortOrder": 2,
       "models": [
         "آریا اتوماتیک 2.0 لیتر"
@@ -55,7 +55,7 @@
     {
       "name": "آریا کلاسیک",
       "slug": "aria",
-      "logo": null,
+      "logo": "aria.svg",
       "sortOrder": 3,
       "models": [
         "آریا کلاسیک گوناگون"
@@ -64,7 +64,7 @@
     {
       "name": "آریسان",
       "slug": "arisun",
-      "logo": null,
+      "logo": "arisun.svg",
       "sortOrder": 4,
       "models": [
         "آریسان 2",
@@ -75,7 +75,7 @@
     {
       "name": "آلفارومئو",
       "slug": "alfaromeo",
-      "logo": null,
+      "logo": "alfaromeo.svg",
       "sortOrder": 5,
       "models": [
         "آلفارومئو 156",
@@ -90,7 +90,7 @@
     {
       "name": "آمیکو",
       "slug": "amico",
-      "logo": null,
+      "logo": "amico.svg",
       "sortOrder": 6,
       "models": [
         "آمیکو تک کابین آراز تک دیفرانسیل",
@@ -103,7 +103,7 @@
     {
       "name": "آی ام موتورز",
       "slug": "immotors",
-      "logo": null,
+      "logo": "immotors.svg",
       "sortOrder": 7,
       "models": [
         "آی ام موتورز LS7 لاکچری"
@@ -112,7 +112,7 @@
     {
       "name": "اپل",
       "slug": "opel",
-      "logo": null,
+      "logo": "opel.svg",
       "sortOrder": 8,
       "models": [
         "اپل آسترا سدان 1.4 لیتر",
@@ -142,7 +142,7 @@
     {
       "name": "اتوبیانکی",
       "slug": "autobianchi",
-      "logo": null,
+      "logo": "autobianchi.svg",
       "sortOrder": 9,
       "models": [
         "اتوبیانکی A 112"
@@ -151,7 +151,7 @@
     {
       "name": "اس دبلیو ام",
       "slug": "swm",
-      "logo": null,
+      "logo": "swm.svg",
       "sortOrder": 10,
       "models": [
         "اس دبلیو ام G01",
@@ -161,7 +161,7 @@
     {
       "name": "استین",
       "slug": "austin",
-      "logo": null,
+      "logo": "austin.svg",
       "sortOrder": 11,
       "models": [
         "استین چمپ",
@@ -174,7 +174,7 @@
     {
       "name": "اسکای ول",
       "slug": "skywell",
-      "logo": null,
+      "logo": "skywell.svg",
       "sortOrder": 12,
       "models": [
         "اسکای ول نبکا هیبرید (HTi) 1.5 لیتر",
@@ -184,7 +184,7 @@
     {
       "name": "اسمارت",
       "slug": "smart",
-      "logo": null,
+      "logo": "smart.svg",
       "sortOrder": 13,
       "models": [
         "اسمارت رودستر",
@@ -195,7 +195,7 @@
     {
       "name": "اشکودا",
       "slug": "skoda",
-      "logo": null,
+      "logo": "skoda.svg",
       "sortOrder": 14,
       "models": [
         "اشکودا اوکتاویا پرو 1.4 لیتر توربو پرمیوم",
@@ -207,7 +207,7 @@
     {
       "name": "اطلس",
       "slug": "atlas",
-      "logo": null,
+      "logo": "atlas.svg",
       "sortOrder": 15,
       "models": [
         "اطلس اتوماتیک E پلاس",
@@ -219,7 +219,7 @@
     {
       "name": "اکستریم",
       "slug": "xtrim",
-      "logo": null,
+      "logo": "xtrim.svg",
       "sortOrder": 16,
       "models": [
         "اکستریم LX (SX) 1.6 لیتر توربو",
@@ -230,7 +230,7 @@
     {
       "name": "الدزمبیل",
       "slug": "oldsmobile",
-      "logo": null,
+      "logo": "oldsmobile.svg",
       "sortOrder": 17,
       "models": [
         "الدزمبیل ریجنسی",
@@ -242,7 +242,7 @@
     {
       "name": "ام جی",
       "slug": "mg",
-      "logo": null,
+      "logo": "mg.svg",
       "sortOrder": 18,
       "models": [
         "ام جی 3",
@@ -267,7 +267,7 @@
     {
       "name": "ام وی ام",
       "slug": "mvm",
-      "logo": null,
+      "logo": "mvm.svg",
       "sortOrder": 19,
       "models": [
         "ام وی ام 110 3 سیلندر",
@@ -320,7 +320,7 @@
     {
       "name": "اوتار",
       "slug": "avatr",
-      "logo": null,
+      "logo": "avatr.svg",
       "sortOrder": 20,
       "models": [
         "اوتار 07 اولترا",
@@ -332,7 +332,7 @@
     {
       "name": "اوشان",
       "slug": "oshan",
-      "logo": null,
+      "logo": "oshan.svg",
       "sortOrder": 21,
       "models": [
         "اوشان E2 پرو 160 کیلووات",
@@ -342,7 +342,7 @@
     {
       "name": "اونترا",
       "slug": "aventra",
-      "logo": null,
+      "logo": "aventra.svg",
       "sortOrder": 22,
       "models": [
         "اونترا U75 Plus 2.0 لیتر توربو"
@@ -351,7 +351,7 @@
     {
       "name": "ایرس",
       "slug": "eres",
-      "logo": null,
+      "logo": "eres.svg",
       "sortOrder": 23,
       "models": [
         "ایرس HM5 EREV 1.5 لیتر توربو"
@@ -360,7 +360,7 @@
     {
       "name": "ایسوزو",
       "slug": "isuzu",
-      "logo": null,
+      "logo": "isuzu.svg",
       "sortOrder": 24,
       "models": [
         "ایسوزو تروپر",
@@ -374,7 +374,7 @@
     {
       "name": "ایکس پنگ",
       "slug": "xpeng",
-      "logo": null,
+      "logo": "xpeng.svg",
       "sortOrder": 25,
       "models": [
         "ایکس پنگ مونا M03 620 Plus",
@@ -386,7 +386,7 @@
     {
       "name": "اینرودز",
       "slug": "inroads",
-      "logo": null,
+      "logo": "inroads.svg",
       "sortOrder": 26,
       "models": [
         "اینرودز C35"
@@ -395,7 +395,7 @@
     {
       "name": "اینفینیت",
       "slug": "infinite",
-      "logo": null,
+      "logo": "infinite.svg",
       "sortOrder": 27,
       "models": [
         "اینفینیت اکسپلورر 2.0 لیتر توربو"
@@ -404,7 +404,7 @@
     {
       "name": "اینفینیتی",
       "slug": "infiniti",
-      "logo": null,
+      "logo": "infiniti.svg",
       "sortOrder": 28,
       "models": [
         "اینفینیتی EX",
@@ -424,7 +424,7 @@
     {
       "name": "اینوی",
       "slug": "envoy",
-      "logo": null,
+      "logo": "envoy.svg",
       "sortOrder": 29,
       "models": [
         "اینوی هیبرید 1.5 لیتر"
@@ -433,7 +433,7 @@
     {
       "name": "ایویکو",
       "slug": "iveco",
-      "logo": null,
+      "logo": "iveco.svg",
       "sortOrder": 30,
       "models": [
         "ایویکو ون آراد (A36)",
@@ -443,7 +443,7 @@
     {
       "name": "ب ام و",
       "slug": "bmw",
-      "logo": null,
+      "logo": "bmw.svg",
       "sortOrder": 31,
       "models": [
         "ب ام و 2002",
@@ -590,7 +590,7 @@
     {
       "name": "بایک",
       "slug": "baic",
-      "logo": null,
+      "logo": "baic.svg",
       "sortOrder": 32,
       "models": [
         "بایک سابرینا هاچ بک",
@@ -604,7 +604,7 @@
     {
       "name": "برلیانس",
       "slug": "brilliance",
-      "logo": null,
+      "logo": "brilliance.svg",
       "sortOrder": 33,
       "models": [
         "برلیانس کراس 1.5 لیتر",
@@ -628,7 +628,7 @@
     {
       "name": "بسترن",
       "slug": "besturn",
-      "logo": null,
+      "logo": "besturn.svg",
       "sortOrder": 34,
       "models": [
         "بسترن B30 اتوماتیک",
@@ -640,7 +640,7 @@
     {
       "name": "بستیون",
       "slug": "bestune",
-      "logo": null,
+      "logo": "bestune.svg",
       "sortOrder": 35,
       "models": [
         "بستیون نات 120 کیلووات",
@@ -650,7 +650,7 @@
     {
       "name": "بنتلی",
       "slug": "bentley",
-      "logo": null,
+      "logo": "bentley.svg",
       "sortOrder": 36,
       "models": [
         "بنتلی کنتینانتال",
@@ -661,7 +661,7 @@
     {
       "name": "بنز",
       "slug": "mercedesbenz",
-      "logo": null,
+      "logo": "mercedesbenz.svg",
       "sortOrder": 37,
       "models": [
         "بنز کلاس A سدان A180L",
@@ -849,7 +849,7 @@
     {
       "name": "بورگوارد",
       "slug": "borgward",
-      "logo": null,
+      "logo": "borgward.svg",
       "sortOrder": 38,
       "models": [
         "بورگوارد BX5 آلتیمیت",
@@ -859,7 +859,7 @@
     {
       "name": "بوفوری",
       "slug": "bufori",
-      "logo": null,
+      "logo": "bufori.svg",
       "sortOrder": 39,
       "models": [
         "بوفوری لاهویا"
@@ -868,7 +868,7 @@
     {
       "name": "بوگاتی",
       "slug": "bugatti",
-      "logo": null,
+      "logo": "bugatti.svg",
       "sortOrder": 40,
       "models": [
         "بوگاتی گرند اسپرت",
@@ -878,7 +878,7 @@
     {
       "name": "بی ای دبلیو (BAW)",
       "slug": "baw",
-      "logo": null,
+      "logo": "baw.svg",
       "sortOrder": 41,
       "models": [
         "بی ای دبلیو (BAW) 212 2.0 لیتر توربو لجند"
@@ -887,7 +887,7 @@
     {
       "name": "بی ای سی",
       "slug": "bac",
-      "logo": null,
+      "logo": "bac.svg",
       "sortOrder": 42,
       "models": [
         "بی ای سی X3 PRO 1.5 لیتر"
@@ -896,7 +896,7 @@
     {
       "name": "بی وای دی",
       "slug": "byd",
-      "logo": null,
+      "logo": "byd.svg",
       "sortOrder": 43,
       "models": [
         "بی وای دی چین ال DMi 1.5 لیتر",
@@ -915,7 +915,7 @@
     {
       "name": "بیجینگ",
       "slug": "beijing",
-      "logo": null,
+      "logo": "beijing.svg",
       "sortOrder": 44,
       "models": [
         "بیجینگ U5 پلاس 1.5 لیتر",
@@ -926,7 +926,7 @@
     {
       "name": "بیسو",
       "slug": "bisu",
-      "logo": null,
+      "logo": "bisu.svg",
       "sortOrder": 45,
       "models": [
         "بیسو T3 EX",
@@ -937,7 +937,7 @@
     {
       "name": "بیوک",
       "slug": "buick",
-      "logo": null,
+      "logo": "buick.svg",
       "sortOrder": 46,
       "models": [
         "بیوک آپولو",
@@ -962,7 +962,7 @@
     {
       "name": "پادرا موتور",
       "slug": "padramotors",
-      "logo": null,
+      "logo": "padramotors.svg",
       "sortOrder": 47,
       "models": [
         "پادرا موتور تاگا H استاندارد",
@@ -972,7 +972,7 @@
     {
       "name": "پارس نوآ",
       "slug": "parsnoa",
-      "logo": null,
+      "logo": "parsnoa.svg",
       "sortOrder": 48,
       "models": [
         "پارس نوآ 1.6 لیتر دنده ای"
@@ -981,7 +981,7 @@
     {
       "name": "پاژن",
       "slug": "pazhan",
-      "logo": null,
+      "logo": "pazhan.svg",
       "sortOrder": 49,
       "models": [
         "پاژن چهار در",
@@ -994,7 +994,7 @@
     {
       "name": "پراید",
       "slug": "pride",
-      "logo": null,
+      "logo": "pride.svg",
       "sortOrder": 50,
       "models": [
         "پراید 111 EX",
@@ -1037,7 +1037,7 @@
     {
       "name": "پروتون",
       "slug": "proton",
-      "logo": null,
+      "logo": "proton.svg",
       "sortOrder": 51,
       "models": [
         "پروتون ایمپین",
@@ -1049,7 +1049,7 @@
     {
       "name": "پژو",
       "slug": "peugeot",
-      "logo": null,
+      "logo": "peugeot.svg",
       "sortOrder": 52,
       "models": [
         "پژو 2008",
@@ -1128,7 +1128,7 @@
     {
       "name": "پلیموت",
       "slug": "plymouth",
-      "logo": null,
+      "logo": "plymouth.svg",
       "sortOrder": 53,
       "models": [
         "پلیموت گوناگون",
@@ -1138,7 +1138,7 @@
     {
       "name": "پورشه",
       "slug": "porsche",
-      "logo": null,
+      "logo": "porsche.svg",
       "sortOrder": 54,
       "models": [
         "پورشه 911 توربو",
@@ -1166,7 +1166,7 @@
     {
       "name": "پونتیاک",
       "slug": "pontiac",
-      "logo": null,
+      "logo": "pontiac.svg",
       "sortOrder": 55,
       "models": [
         "پونتیاک استر",
@@ -1183,7 +1183,7 @@
     {
       "name": "پیکان",
       "slug": "peykan",
-      "logo": null,
+      "logo": "peykan.svg",
       "sortOrder": 56,
       "models": [
         "پیکان سدان بنزین",
@@ -1195,7 +1195,7 @@
     {
       "name": "تارا",
       "slug": "tara",
-      "logo": null,
+      "logo": "tara.svg",
       "sortOrder": 57,
       "models": [
         "تارا اتوماتیک V2",
@@ -1208,7 +1208,7 @@
     {
       "name": "تانک",
       "slug": "tank",
-      "logo": null,
+      "logo": "tank.svg",
       "sortOrder": 58,
       "models": [
         "تانک 300 2.0 لیتر توربو",
@@ -1221,7 +1221,7 @@
     {
       "name": "تریومف",
       "slug": "triumph",
-      "logo": null,
+      "logo": "triumph.svg",
       "sortOrder": 59,
       "models": [
         "تریومف استگ کروک",
@@ -1233,7 +1233,7 @@
     {
       "name": "تویوتا",
       "slug": "toyota",
-      "logo": null,
+      "logo": "toyota.svg",
       "sortOrder": 60,
       "models": [
         "تویوتا 86 GT",
@@ -1375,7 +1375,7 @@
     {
       "name": "تیبا",
       "slug": "tiba",
-      "logo": null,
+      "logo": "tiba.svg",
       "sortOrder": 61,
       "models": [
         "تیبا صندوق دار پلاس",
@@ -1392,7 +1392,7 @@
     {
       "name": "تیگارد",
       "slug": "tigardmotor",
-      "logo": null,
+      "logo": "tigardmotor.svg",
       "sortOrder": 62,
       "models": [
         "تیگارد تیسان S05 1.5 لیتر توربو",
@@ -1404,7 +1404,7 @@
     {
       "name": "جتا",
       "slug": "jetta",
-      "logo": null,
+      "logo": "jetta.svg",
       "sortOrder": 63,
       "models": [
         "جتا VA3 1.5 لیتر",
@@ -1415,7 +1415,7 @@
     {
       "name": "جک",
       "slug": "jac",
-      "logo": null,
+      "logo": "jac.svg",
       "sortOrder": 64,
       "models": [
         "جک جی 3 سدان",
@@ -1435,7 +1435,7 @@
     {
       "name": "جگوار",
       "slug": "jaguar",
-      "logo": null,
+      "logo": "jaguar.svg",
       "sortOrder": 65,
       "models": [
         "جگوار گوناگون",
@@ -1452,7 +1452,7 @@
     {
       "name": "جنسیس",
       "slug": "genesis",
-      "logo": null,
+      "logo": "genesis.svg",
       "sortOrder": 66,
       "models": [
         "جنسیس G80 2.5 لیتر توربو",
@@ -1462,7 +1462,7 @@
     {
       "name": "جوی لانگ",
       "slug": "joylong",
-      "logo": null,
+      "logo": "joylong.svg",
       "sortOrder": 67,
       "models": [
         "جوی لانگ ون اسنا"
@@ -1471,7 +1471,7 @@
     {
       "name": "جی ام سی (GMC)",
       "slug": "gmc",
-      "logo": null,
+      "logo": "gmc.svg",
       "sortOrder": 68,
       "models": [
         "جی ام سی (GMC) آکادیا",
@@ -1488,7 +1488,7 @@
     {
       "name": "جِی ام سی (JMC)",
       "slug": "jmc",
-      "logo": null,
+      "logo": "jmc.svg",
       "sortOrder": 69,
       "models": [
         "جِی ام سی (JMC) S350"
@@ -1497,7 +1497,7 @@
     {
       "name": "جی ای سی",
       "slug": "gacgonow",
-      "logo": null,
+      "logo": "gacgonow.svg",
       "sortOrder": 70,
       "models": [
         "جی ای سی امپو 1.5 لیتر توربو",
@@ -1530,7 +1530,7 @@
     {
       "name": "جیپ",
       "slug": "jeep",
-      "logo": null,
+      "logo": "jeep.svg",
       "sortOrder": 71,
       "models": [
         "جیپ آهو",
@@ -1555,7 +1555,7 @@
     {
       "name": "جیلی",
       "slug": "geely",
-      "logo": null,
+      "logo": "geely.svg",
       "sortOrder": 72,
       "models": [
         "جیلی آزکارا هیبرید 1.5 لیتر توربو",
@@ -1573,7 +1573,7 @@
     {
       "name": "جین بی",
       "slug": "jinbei",
-      "logo": null,
+      "logo": "jinbei.svg",
       "sortOrder": 73,
       "models": [
         "جین بی هایس"
@@ -1582,7 +1582,7 @@
     {
       "name": "چانگان",
       "slug": "changan",
-      "logo": null,
+      "logo": "changan.svg",
       "sortOrder": 74,
       "models": [
         "چانگان ایدو",
@@ -1600,7 +1600,7 @@
     {
       "name": "چانگهه",
       "slug": "changhe",
-      "logo": null,
+      "logo": "changhe.svg",
       "sortOrder": 75,
       "models": [
         "چانگهه کارو تک کابین",
@@ -1610,7 +1610,7 @@
     {
       "name": "چری",
       "slug": "chery",
-      "logo": null,
+      "logo": "chery.svg",
       "sortOrder": 76,
       "models": [
         "چری آریزو 5 اتوماتیک اکسلنت",
@@ -1635,7 +1635,7 @@
     {
       "name": "داتسون",
       "slug": "datsun",
-      "logo": null,
+      "logo": "datsun.svg",
       "sortOrder": 77,
       "models": [
         "داتسون گوناگون",
@@ -1645,7 +1645,7 @@
     {
       "name": "داچیا",
       "slug": "dacia",
-      "logo": null,
+      "logo": "dacia.svg",
       "sortOrder": 78,
       "models": [
         "داچیا داستر هیبرید 1.6 لیتر",
@@ -1655,7 +1655,7 @@
     {
       "name": "دامای",
       "slug": "domy",
-      "logo": null,
+      "logo": "domy.svg",
       "sortOrder": 79,
       "models": [
         "دامای X5",
@@ -1665,7 +1665,7 @@
     {
       "name": "دانگ فنگ",
       "slug": "dongfeng",
-      "logo": null,
+      "logo": "dongfeng.svg",
       "sortOrder": 80,
       "models": [
         "دانگ فنگ شاین مکس 1.5 لیتر توربو",
@@ -1680,7 +1680,7 @@
     {
       "name": "دایون",
       "slug": "dayun",
-      "logo": null,
+      "logo": "dayun.svg",
       "sortOrder": 81,
       "models": [
         "دایون Y5",
@@ -1691,7 +1691,7 @@
     {
       "name": "دایهاتسو",
       "slug": "daihatsu",
-      "logo": null,
+      "logo": "daihatsu.svg",
       "sortOrder": 82,
       "models": [
         "دایهاتسو گوناگون"
@@ -1700,7 +1700,7 @@
     {
       "name": "دنا",
       "slug": "dena",
-      "logo": null,
+      "logo": "dena.svg",
       "sortOrder": 83,
       "models": [
         "دنا پلاس EF7 5 دنده توربو",
@@ -1715,7 +1715,7 @@
     {
       "name": "دوج",
       "slug": "dodge",
-      "logo": null,
+      "logo": "dodge.svg",
       "sortOrder": 84,
       "models": [
         "دوج اسپریت",
@@ -1745,7 +1745,7 @@
     {
       "name": "دوو",
       "slug": "daewoo",
-      "logo": null,
+      "logo": "daewoo.svg",
       "sortOrder": 85,
       "models": [
         "دوو اسپرو",
@@ -1760,7 +1760,7 @@
     {
       "name": "دی اس",
       "slug": "ds",
-      "logo": null,
+      "logo": "ds.svg",
       "sortOrder": 86,
       "models": [
         "دی اس 3",
@@ -1775,7 +1775,7 @@
     {
       "name": "دیگنیتی",
       "slug": "dignity",
-      "logo": null,
+      "logo": "dignity.svg",
       "sortOrder": 87,
       "models": [
         "دیگنیتی پرایم",
@@ -1785,7 +1785,7 @@
     {
       "name": "رامبلر",
       "slug": "rambler",
-      "logo": null,
+      "logo": "rambler.svg",
       "sortOrder": 88,
       "models": [
         "رامبلر آمباسادور",
@@ -1795,7 +1795,7 @@
     {
       "name": "رانا",
       "slug": "runna",
-      "logo": null,
+      "logo": "runna.svg",
       "sortOrder": 89,
       "models": [
         "رانا پلاس موتور TU5",
@@ -1808,7 +1808,7 @@
     {
       "name": "راین",
       "slug": "rayen",
-      "logo": null,
+      "logo": "rayen.svg",
       "sortOrder": 90,
       "models": [
         "راین R3",
@@ -1819,7 +1819,7 @@
     {
       "name": "رنو",
       "slug": "renault",
-      "logo": null,
+      "logo": "renault.svg",
       "sortOrder": 91,
       "models": [
         "رنو 21",
@@ -1885,7 +1885,7 @@
     {
       "name": "روئوه",
       "slug": "roewe",
-      "logo": null,
+      "logo": "roewe.svg",
       "sortOrder": 92,
       "models": [
         "روئوه eRX5 1.5 لیتر توربو"
@@ -1894,7 +1894,7 @@
     {
       "name": "رولز رویس",
       "slug": "rollsroyce",
-      "logo": null,
+      "logo": "rollsroyce.svg",
       "sortOrder": 93,
       "models": [
         "رولز رویس ریث",
@@ -1907,7 +1907,7 @@
     {
       "name": "روور",
       "slug": "rover",
-      "logo": null,
+      "logo": "rover.svg",
       "sortOrder": 94,
       "models": [
         "روور 75",
@@ -1917,7 +1917,7 @@
     {
       "name": "ری را",
       "slug": "reera",
-      "logo": null,
+      "logo": "reera.svg",
       "sortOrder": 95,
       "models": [
         "ری را 1.7 لیتر توربو 6 سرعته اتوماتیک"
@@ -1926,7 +1926,7 @@
     {
       "name": "ریسپکت",
       "slug": "respect",
-      "logo": null,
+      "logo": "respect.svg",
       "sortOrder": 96,
       "models": [
         "ریسپکت پرایم تیپ 1",
@@ -1937,7 +1937,7 @@
     {
       "name": "ریگان",
       "slug": "rigan",
-      "logo": null,
+      "logo": "rigan.svg",
       "sortOrder": 97,
       "models": [
         "ریگان کوپا اکسکلوسیو",
@@ -1948,7 +1948,7 @@
     {
       "name": "زامیاد",
       "slug": "zamyad",
-      "logo": null,
+      "logo": "zamyad.svg",
       "sortOrder": 98,
       "models": [
         "زامیاد اکستند EX بنزینی",
@@ -1970,7 +1970,7 @@
     {
       "name": "زد ایکس اتو",
       "slug": "zxauto",
-      "logo": null,
+      "logo": "zxauto.svg",
       "sortOrder": 99,
       "models": [
         "زد ایکس اتو G9 2 لیتر توربو"
@@ -1979,7 +1979,7 @@
     {
       "name": "زوتی",
       "slug": "zotye",
-      "logo": null,
+      "logo": "zotye.svg",
       "sortOrder": 100,
       "models": [
         "زوتی آریو 1.5 لیتر دنده ای",
@@ -1993,7 +1993,7 @@
     {
       "name": "ساب",
       "slug": "saab",
-      "logo": null,
+      "logo": "saab.svg",
       "sortOrder": 101,
       "models": [
         "ساب گوناگون"
@@ -2002,7 +2002,7 @@
     {
       "name": "سانگ یانگ (KGM)",
       "slug": "ssangyong",
-      "logo": null,
+      "logo": "ssangyong.svg",
       "sortOrder": 102,
       "models": [
         "سانگ یانگ (KGM) اکتیون",
@@ -2044,7 +2044,7 @@
     {
       "name": "ساینا",
       "slug": "saina",
-      "logo": null,
+      "logo": "saina.svg",
       "sortOrder": 103,
       "models": [
         "ساینا اتوماتیک",
@@ -2061,7 +2061,7 @@
     {
       "name": "سئات",
       "slug": "seat",
-      "logo": null,
+      "logo": "seat.svg",
       "sortOrder": 104,
       "models": [
         "سئات آتکا (مونتاژ) 2.0 لیتر توربو",
@@ -2073,7 +2073,7 @@
     {
       "name": "سمند",
       "slug": "samand",
-      "logo": null,
+      "logo": "samand.svg",
       "sortOrder": 105,
       "models": [
         "سمند سریر",
@@ -2096,7 +2096,7 @@
     {
       "name": "سوئیست",
       "slug": "soueast",
-      "logo": null,
+      "logo": "soueast.svg",
       "sortOrder": 106,
       "models": [
         "سوئیست ون دلیکا",
@@ -2106,7 +2106,7 @@
     {
       "name": "سوبارو",
       "slug": "subaru",
-      "logo": null,
+      "logo": "subaru.svg",
       "sortOrder": 107,
       "models": [
         "سوبارو فارستر",
@@ -2120,7 +2120,7 @@
     {
       "name": "سوزوکی",
       "slug": "suzuki",
-      "logo": null,
+      "logo": "suzuki.svg",
       "sortOrder": 108,
       "models": [
         "سوزوکی بالنو 1.5 لیتر",
@@ -2147,7 +2147,7 @@
     {
       "name": "سهند",
       "slug": "sahand",
-      "logo": null,
+      "logo": "sahand.svg",
       "sortOrder": 109,
       "models": [
         "سهند پلاس اتوماتیک E تیپ 3",
@@ -2158,7 +2158,7 @@
     {
       "name": "سی ام سی",
       "slug": "cmc",
-      "logo": null,
+      "logo": "cmc.svg",
       "sortOrder": 110,
       "models": [
         "سی ام سی چکر"
@@ -2167,7 +2167,7 @@
     {
       "name": "سیتروئن",
       "slug": "citroen",
-      "logo": null,
+      "logo": "citroen.svg",
       "sortOrder": 111,
       "models": [
         "سیتروئن دی اس 21",
@@ -2188,7 +2188,7 @@
     {
       "name": "سیمرغ",
       "slug": "seemorgh",
-      "logo": null,
+      "logo": "seemorgh.svg",
       "sortOrder": 112,
       "models": [
         "سیمرغ وانت"
@@ -2197,7 +2197,7 @@
     {
       "name": "سیناد",
       "slug": "sinad",
-      "logo": null,
+      "logo": "sinad.svg",
       "sortOrder": 113,
       "models": [
         "سیناد I",
@@ -2207,7 +2207,7 @@
     {
       "name": "شاهین",
       "slug": "shahin",
-      "logo": null,
+      "logo": "shahin.svg",
       "sortOrder": 114,
       "models": [
         "شاهین اتوماتیک CVT تیپ G",
@@ -2222,7 +2222,7 @@
     {
       "name": "شوال",
       "slug": "cheval",
-      "logo": null,
+      "logo": "cheval.svg",
       "sortOrder": 115,
       "models": [
         "شوال 6HEV 1.5 لیتر توربو"
@@ -2231,7 +2231,7 @@
     {
       "name": "شورولت",
       "slug": "chevrolet",
-      "logo": null,
+      "logo": "chevrolet.svg",
       "sortOrder": 116,
       "models": [
         "شورولت اپترا",
@@ -2276,7 +2276,7 @@
     {
       "name": "فانگ چنگ بائو",
       "slug": "fangchengbao",
-      "logo": null,
+      "logo": "fangchengbao.svg",
       "sortOrder": 117,
       "models": [
         "فانگ چنگ بائو لئوپارد 5 1.5 لیتر توربو"
@@ -2285,7 +2285,7 @@
     {
       "name": "فاو",
       "slug": "faw",
-      "logo": null,
+      "logo": "faw.svg",
       "sortOrder": 118,
       "models": [
         "فاو ون سیبا"
@@ -2294,7 +2294,7 @@
     {
       "name": "فراری",
       "slug": "ferrari",
-      "logo": null,
+      "logo": "ferrari.svg",
       "sortOrder": 119,
       "models": [
         "فراری 458 اسپایدر",
@@ -2308,7 +2308,7 @@
     {
       "name": "فردا",
       "slug": "farda",
-      "logo": null,
+      "logo": "farda.svg",
       "sortOrder": 120,
       "models": [
         "فردا 511",
@@ -2322,7 +2322,7 @@
     {
       "name": "فوتون",
       "slug": "foton",
-      "logo": null,
+      "logo": "foton.svg",
       "sortOrder": 121,
       "models": [
         "فوتون تونلند 2.0 لیتر",
@@ -2340,7 +2340,7 @@
     {
       "name": "فورد",
       "slug": "ford",
-      "logo": null,
+      "logo": "ford.svg",
       "sortOrder": 122,
       "models": [
         "فورد 500",
@@ -2385,7 +2385,7 @@
     {
       "name": "فولکس",
       "slug": "volkswagen",
-      "logo": null,
+      "logo": "volkswagen.svg",
       "sortOrder": 123,
       "models": [
         "فولکس آی دی یونیکس اولترا",
@@ -2432,7 +2432,7 @@
     {
       "name": "فونیکس",
       "slug": "fownix",
-      "logo": null,
+      "logo": "fownix.svg",
       "sortOrder": 124,
       "models": [
         "فونیکس آریزو 6 پرو",
@@ -2459,7 +2459,7 @@
     {
       "name": "فیات",
       "slug": "fiat",
-      "logo": null,
+      "logo": "fiat.svg",
       "sortOrder": 125,
       "models": [
         "فیات 500 1.2 لیتر",
@@ -2476,7 +2476,7 @@
     {
       "name": "فیدلیتی",
       "slug": "fidelity",
-      "logo": null,
+      "logo": "fidelity.svg",
       "sortOrder": 126,
       "models": [
         "فیدلیتی الیت تیپ 1 پنج نفره",
@@ -2490,7 +2490,7 @@
     {
       "name": "کاپرا",
       "slug": "capra",
-      "logo": null,
+      "logo": "capra.svg",
       "sortOrder": 127,
       "models": [
         "کاپرا 2 دو دیفرانسیل",
@@ -2506,7 +2506,7 @@
     {
       "name": "کادیلاک",
       "slug": "cadillac",
-      "logo": null,
+      "logo": "cadillac.svg",
       "sortOrder": 128,
       "models": [
         "کادیلاک اسکلید",
@@ -2526,7 +2526,7 @@
     {
       "name": "کارا",
       "slug": "cara",
-      "logo": null,
+      "logo": "cara.svg",
       "sortOrder": 129,
       "models": [
         "کارا تک کابین 1.7 لیتر",
@@ -2538,7 +2538,7 @@
     {
       "name": "کاکی",
       "slug": "caky",
-      "logo": null,
+      "logo": "caky.svg",
       "sortOrder": 130,
       "models": [
         "کاکی KY5"
@@ -2547,7 +2547,7 @@
     {
       "name": "کرایسلر",
       "slug": "chrysler",
-      "logo": null,
+      "logo": "chrysler.svg",
       "sortOrder": 131,
       "models": [
         "کرایسلر 300C",
@@ -2561,7 +2561,7 @@
     {
       "name": "کونیگزگ",
       "slug": "koenigsegg",
-      "logo": null,
+      "logo": "koenigsegg.svg",
       "sortOrder": 132,
       "models": [
         "کونیگزگ اگرا"
@@ -2570,7 +2570,7 @@
     {
       "name": "کوییک",
       "slug": "quick",
-      "logo": null,
+      "logo": "quick.svg",
       "sortOrder": 133,
       "models": [
         "کوییک اتوماتیک",
@@ -2590,7 +2590,7 @@
     {
       "name": "کی ام سی",
       "slug": "kmc",
-      "logo": null,
+      "logo": "kmc.svg",
       "sortOrder": 134,
       "models": [
         "کی ام سی ایگل 1.5 لیتر",
@@ -2609,7 +2609,7 @@
     {
       "name": "کی وای سی",
       "slug": "kyc",
-      "logo": null,
+      "logo": "kyc.svg",
       "sortOrder": 135,
       "models": [
         "کی وای سی T3 پلاس"
@@ -2618,7 +2618,7 @@
     {
       "name": "کیا",
       "slug": "kia",
-      "logo": null,
+      "logo": "kia.svg",
       "sortOrder": 136,
       "models": [
         "کیا اپتیما 4 سیلندر ساده",
@@ -2678,7 +2678,7 @@
     {
       "name": "کینگ لانگ",
       "slug": "kinglong",
-      "logo": null,
+      "logo": "kinglong.svg",
       "sortOrder": 137,
       "models": [
         "کینگ لانگ ون نارون"
@@ -2687,7 +2687,7 @@
     {
       "name": "گاز",
       "slug": "gaz",
-      "logo": null,
+      "logo": "gaz.svg",
       "sortOrder": 138,
       "models": [
         "گاز ون غزال ایران خودرو"
@@ -2696,7 +2696,7 @@
     {
       "name": "گریت وال",
       "slug": "greatwall",
-      "logo": null,
+      "logo": "greatwall.svg",
       "sortOrder": 139,
       "models": [
         "گریت وال وانت دییر",
@@ -2717,7 +2717,7 @@
     {
       "name": "لادا",
       "slug": "lada",
-      "logo": null,
+      "logo": "lada.svg",
       "sortOrder": 140,
       "models": [
         "لادا گوناگون",
@@ -2727,7 +2727,7 @@
     {
       "name": "لاماری",
       "slug": "lamari",
-      "logo": null,
+      "logo": "lamari.svg",
       "sortOrder": 141,
       "models": [
         "لاماری اکو 1.5 لیتر توربو",
@@ -2739,7 +2739,7 @@
     {
       "name": "لاماکو",
       "slug": "lamaco",
-      "logo": null,
+      "logo": "lamaco.svg",
       "sortOrder": 142,
       "models": [
         "لاماکو فلو 1.5 لیتر توربو"
@@ -2748,7 +2748,7 @@
     {
       "name": "لامبورگینی",
       "slug": "lamborghini",
-      "logo": null,
+      "logo": "lamborghini.svg",
       "sortOrder": 143,
       "models": [
         "لامبورگینی اونتادور رودستر",
@@ -2765,7 +2765,7 @@
     {
       "name": "لانچیا",
       "slug": "lancia",
-      "logo": null,
+      "logo": "lancia.svg",
       "sortOrder": 144,
       "models": [
         "لانچیا اسپایدر",
@@ -2777,7 +2777,7 @@
     {
       "name": "لئوپارد",
       "slug": "leopard",
-      "logo": null,
+      "logo": "leopard.svg",
       "sortOrder": 145,
       "models": [
         "لئوپارد CS10 2.0 لیتر توربو"
@@ -2786,7 +2786,7 @@
     {
       "name": "لکسوس",
       "slug": "lexus",
-      "logo": null,
+      "logo": "lexus.svg",
       "sortOrder": 146,
       "models": [
         "لکسوس CT 200h",
@@ -2841,7 +2841,7 @@
     {
       "name": "لندرور",
       "slug": "landrover",
-      "logo": null,
+      "logo": "landrover.svg",
       "sortOrder": 147,
       "models": [
         "لندرور دیسکاوری اسپرت 2.0 لیتر توربو",
@@ -2862,7 +2862,7 @@
     {
       "name": "لندمارک",
       "slug": "landmark",
-      "logo": null,
+      "logo": "landmark.svg",
       "sortOrder": 148,
       "models": [
         "لندمارک V7"
@@ -2871,7 +2871,7 @@
     {
       "name": "لوبو",
       "slug": "lobo",
-      "logo": null,
+      "logo": "lobo.svg",
       "sortOrder": 149,
       "models": [
         "لوبو گوناگون"
@@ -2880,7 +2880,7 @@
     {
       "name": "لوتوس",
       "slug": "lotus",
-      "logo": null,
+      "logo": "lotus.svg",
       "sortOrder": 150,
       "models": [
         "لوتوس الیزه 220 کاپ",
@@ -2890,7 +2890,7 @@
     {
       "name": "لوکانو",
       "slug": "lucano",
-      "logo": null,
+      "logo": "lucano.svg",
       "sortOrder": 151,
       "models": [
         "لوکانو L7 1.6 لیتر توربو",
@@ -2900,7 +2900,7 @@
     {
       "name": "لوکسژن",
       "slug": "luxgen",
-      "logo": null,
+      "logo": "luxgen.svg",
       "sortOrder": 152,
       "models": [
         "لوکسژن U6"
@@ -2909,7 +2909,7 @@
     {
       "name": "لونا",
       "slug": "luna",
-      "logo": null,
+      "logo": "luna.svg",
       "sortOrder": 153,
       "models": [
         "لونا GRE 110 کیلو وات"
@@ -2918,7 +2918,7 @@
     {
       "name": "لیپ موتور",
       "slug": "leapmotor",
-      "logo": null,
+      "logo": "leapmotor.svg",
       "sortOrder": 154,
       "models": [
         "لیپ موتور C01 EV 625 Exclusive",
@@ -2929,7 +2929,7 @@
     {
       "name": "لیفان",
       "slug": "lifan",
-      "logo": null,
+      "logo": "lifan.svg",
       "sortOrder": 155,
       "models": [
         "لیفان 520",
@@ -2947,7 +2947,7 @@
     {
       "name": "لینکلن",
       "slug": "lincoln",
-      "logo": null,
+      "logo": "lincoln.svg",
       "sortOrder": 156,
       "models": [
         "لینکلن کنتینانتال",
@@ -2959,7 +2959,7 @@
     {
       "name": "مارس",
       "slug": "mars",
-      "logo": null,
+      "logo": "mars.svg",
       "sortOrder": 157,
       "models": [
         "مارس C300 پرو",
@@ -2969,7 +2969,7 @@
     {
       "name": "مازراتی",
       "slug": "maserati",
-      "logo": null,
+      "logo": "maserati.svg",
       "sortOrder": 158,
       "models": [
         "مازراتی اسپایدر",
@@ -2991,7 +2991,7 @@
     {
       "name": "مرکوری",
       "slug": "mercury",
-      "logo": null,
+      "logo": "mercury.svg",
       "sortOrder": 159,
       "models": [
         "مرکوری کوگر",
@@ -3001,7 +3001,7 @@
     {
       "name": "مزدا",
       "slug": "mazda",
-      "logo": null,
+      "logo": "mazda.svg",
       "sortOrder": 160,
       "models": [
         "مزدا 2 صندوقدار",
@@ -3046,7 +3046,7 @@
     {
       "name": "مک لارن",
       "slug": "maclaren",
-      "logo": null,
+      "logo": "maclaren.svg",
       "sortOrder": 161,
       "models": [
         "مک لارن MP4",
@@ -3056,7 +3056,7 @@
     {
       "name": "مکث موتور",
       "slug": "maxmotor",
-      "logo": null,
+      "logo": "maxmotor.svg",
       "sortOrder": 162,
       "models": [
         "مکث موتور تیارا",
@@ -3070,7 +3070,7 @@
     {
       "name": "مکسوس",
       "slug": "maxus",
-      "logo": null,
+      "logo": "maxus.svg",
       "sortOrder": 163,
       "models": [
         "مکسوس استار H 2.0 لیتر توربو",
@@ -3080,7 +3080,7 @@
     {
       "name": "مورگان",
       "slug": "morgan",
-      "logo": null,
+      "logo": "morgan.svg",
       "sortOrder": 164,
       "models": [
         "مورگان پلاس 4"
@@ -3089,7 +3089,7 @@
     {
       "name": "میتسوبیشی",
       "slug": "mitsubishi",
-      "logo": null,
+      "logo": "mitsubishi.svg",
       "sortOrder": 165,
       "models": [
         "میتسوبیشی اکلیپس",
@@ -3134,7 +3134,7 @@
     {
       "name": "مینی",
       "slug": "mini",
-      "logo": null,
+      "logo": "mini.svg",
       "sortOrder": 166,
       "models": [
         "مینی کانتری من 1.5 لیتر توربو",
@@ -3149,7 +3149,7 @@
     {
       "name": "نامی",
       "slug": "nammi",
-      "logo": null,
+      "logo": "nammi.svg",
       "sortOrder": 167,
       "models": [
         "نامی E2 پلاس 70 کیلووات"
@@ -3158,7 +3158,7 @@
     {
       "name": "نوو",
       "slug": "nevo",
-      "logo": null,
+      "logo": "nevo.svg",
       "sortOrder": 168,
       "models": [
         "نوو A05 1.5 لیتر"
@@ -3167,7 +3167,7 @@
     {
       "name": "نیسان",
       "slug": "nissan",
-      "logo": null,
+      "logo": "nissan.svg",
       "sortOrder": 169,
       "models": [
         "نیسان 180K",
@@ -3247,7 +3247,7 @@
     {
       "name": "واکس هال",
       "slug": "vauxhall",
-      "logo": null,
+      "logo": "vauxhall.svg",
       "sortOrder": 170,
       "models": [
         "واکس هال گوناگون"
@@ -3256,7 +3256,7 @@
     {
       "name": "وست فیلد",
       "slug": "westfield",
-      "logo": null,
+      "logo": "westfield.svg",
       "sortOrder": 171,
       "models": [
         "وست فیلد 1800SEI"
@@ -3265,7 +3265,7 @@
     {
       "name": "ولوو",
       "slug": "volvo",
-      "logo": null,
+      "logo": "volvo.svg",
       "sortOrder": 172,
       "models": [
         "ولوو 240",
@@ -3302,7 +3302,7 @@
     {
       "name": "ونوسیا",
       "slug": "venucia",
-      "logo": null,
+      "logo": "venucia.svg",
       "sortOrder": 173,
       "models": [
         "ونوسیا استار 1.5 لیتر توربو",
@@ -3314,7 +3314,7 @@
     {
       "name": "وویا",
       "slug": "voyah",
-      "logo": null,
+      "logo": "voyah.svg",
       "sortOrder": 174,
       "models": [
         "وویا فری 1.5 لیتر توربو"
@@ -3323,7 +3323,7 @@
     {
       "name": "هامر",
       "slug": "hummer",
-      "logo": null,
+      "logo": "hummer.svg",
       "sortOrder": 175,
       "models": [
         "هامر H1",
@@ -3334,7 +3334,7 @@
     {
       "name": "هاوال",
       "slug": "haval",
-      "logo": null,
+      "logo": "haval.svg",
       "sortOrder": 176,
       "models": [
         "هاوال H2 مونتاژی",
@@ -3348,7 +3348,7 @@
     {
       "name": "هایما",
       "slug": "haima",
-      "logo": null,
+      "logo": "haima.svg",
       "sortOrder": 177,
       "models": [
         "هایما 7X 1.6 لیتر توربو",
@@ -3365,7 +3365,7 @@
     {
       "name": "هن تنگ",
       "slug": "hanteng",
-      "logo": null,
+      "logo": "hanteng.svg",
       "sortOrder": 178,
       "models": [
         "هن تنگ X5 (مونتاژ)",
@@ -3375,7 +3375,7 @@
     {
       "name": "هولدن",
       "slug": "holden",
-      "logo": null,
+      "logo": "holden.svg",
       "sortOrder": 179,
       "models": [
         "هولدن گوناگون"
@@ -3384,7 +3384,7 @@
     {
       "name": "هوندا",
       "slug": "honda",
-      "logo": null,
+      "logo": "honda.svg",
       "sortOrder": 180,
       "models": [
         "هوندا آکورد 2.4 لیتر",
@@ -3428,7 +3428,7 @@
     {
       "name": "هونگچی",
       "slug": "hongqi",
-      "logo": null,
+      "logo": "hongqi.svg",
       "sortOrder": 181,
       "models": [
         "هونگچی E-QM5 140 کیلووات",
@@ -3438,7 +3438,7 @@
     {
       "name": "هیلمن",
       "slug": "hillman",
-      "logo": null,
+      "logo": "hillman.svg",
       "sortOrder": 182,
       "models": [
         "هیلمن اونجر"
@@ -3447,7 +3447,7 @@
     {
       "name": "هیوسو",
       "slug": "hyosow",
-      "logo": null,
+      "logo": "hyosow.svg",
       "sortOrder": 183,
       "models": [
         "هیوسو H6",
@@ -3457,7 +3457,7 @@
     {
       "name": "هیوندای",
       "slug": "hyundai",
-      "logo": null,
+      "logo": "hyundai.svg",
       "sortOrder": 184,
       "models": [
         "هیوندای آزرا (گرنجور) 4 سیلندر",
@@ -3525,7 +3525,7 @@
     {
       "name": "یوآز",
       "slug": "uaz",
-      "logo": null,
+      "logo": "uaz.svg",
       "sortOrder": 185,
       "models": [
         "یوآز پاتریوت اتوماتیک",

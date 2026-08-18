@@ -61,18 +61,30 @@ const LOGOS = path.join(__dirname, '..', '..', 'frontend', 'assets', 'brands');
  * agree by construction.
  */
 function haveLogo() {
+  const found = new Map();
+  let files;
   try {
-    return new Set(
-      fs
-        .readdirSync(LOGOS)
-        .filter((f) => /\.(png|svg|webp|jpg)$/i.test(f))
-        .map((f) => f.replace(/\.[^.]+$/, ''))
-    );
+    files = fs.readdirSync(LOGOS);
   } catch {
     // The directory is absent before anybody has run the fetcher, which is a
     // normal state and not an error: it means no brand has a logo yet.
-    return new Set();
+    return found;
   }
+
+  // The real filename, not a guessed one. A real logo arrives as .png and a
+  // drawn tile as .svg, so writing `${slug}.png` for both pointed half the
+  // catalogue at files that are not there.
+  //
+  // Ordered so a real logo beats a drawn one when a brand has both: whoever
+  // fetched a genuine mark meant it to be used.
+  for (const ext of ['.png', '.webp', '.jpg', '.svg']) {
+    for (const file of files) {
+      if (!file.endsWith(ext)) continue;
+      const slug = file.slice(0, -ext.length);
+      if (!found.has(slug)) found.set(slug, file);
+    }
+  }
+  return found;
 }
 
 /** The real children of a node: everything except the "all of X" shortcut. */
@@ -128,7 +140,7 @@ function main() {
       // Only the file name, and only when the file is there. The logo is served
       // from this project, so the remote address is of no use past the one-off
       // download — and the source's claim that every brand has one is wrong.
-      logo: logos.has(b.value) ? `${b.value}.png` : null,
+      logo: logos.get(b.value) || null,
       sortOrder: index,
       models: modelsOf(b),
     }))
