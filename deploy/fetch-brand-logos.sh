@@ -23,16 +23,6 @@ set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA="$ROOT/backend/src/constants/carCatalog.data.json"
 OUT="$ROOT/frontend/assets/brands"
-# Not the address in the catalogue data. That field points at
-# `/assets/filter/car-brand-logo/<slug>`, which answers AccessDenied — it is
-# stale, and following it got three logos out of 186. The address the site
-# itself requests is this one, read off the browser's network tab, which is the
-# only place the truth was written down.
-#
-# Overridable so the script can be tested against a local server. A fetcher
-# that has only ever been run against the real thing is a fetcher whose failure
-# path nobody has seen.
-BASE="${LOGO_BASE:-https://cdn-sth1.bama.ir/evonex/filters/brand/car}"
 
 G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; D=$'\e[2m'; N=$'\e[0m'
 
@@ -44,31 +34,53 @@ mkdir -p "$OUT"
 # The slug list comes from the catalogue file rather than from a list kept here,
 # so a brand added to the catalogue is a brand this fetches — with no second
 # place to remember to edit.
+# Every brand, not only the ones the catalogue already records a logo for.
+#
+# It used to filter on that field, which is backwards: the field is written by
+# the build step *from what this script downloads*. With no logos yet recorded
+# — the normal starting state — it selected nothing and exited saying no brand
+# had a logo, which was true and completely useless.
 slugs="$(
   python3 -c '
 import json,sys
 d=json.load(open(sys.argv[1]))
-for b in d["brands"]:
-    if b.get("logo"): print(b["slug"])
+for b in d["brands"]: print(b["slug"])
 ' "$DATA" 2>/dev/null
 )"
 
-[ -n "$slugs" ] || { printf '%s✗ هیچ برندی با لوگو در کاتالوگ نبود%s\n' "$R" "$N"; exit 1; }
+[ -n "$slugs" ] || { printf '%s✗ برندی در فایل کاتالوگ نبود%s\n' "$R" "$N"; exit 1; }
 
 total="$(printf '%s\n' "$slugs" | wc -l | tr -d ' ')"
 printf '\n%s▌ دریافت لوگوی %s برند%s\n\n' "$Y" "$total" "$N"
 
-# Candidate addresses, most likely first. `.png` is what the site asks for;
-# the others are there because a handful of brands may not have one.
+# Where to look, in order.
 #
-# Assigned in two steps rather than with `${LOGO_PATTERNS:-…}`: a default
+# Two sites, because neither has all of them. Bama publishes logos only for the
+# eight brands in its own featured row; Divar has them for ordinary brands too,
+# which is where the rest have to come from.
+#
+# Both are full address templates rather than a shared base with suffixes: the
+# two sites agree on nothing about their paths, and pretending otherwise is how
+# the earlier version ended up appending guessed extensions to a base that was
+# never right.
+#
+# The slug is ours, which came from Bama. Divar's own slugs mostly match — both
+# are Latin transliterations of the same names — and where they do not, the
+# brand lands in the failure list at the end rather than silently going without.
+#
+# Assigned in two steps rather than with `${LOGO_SOURCES:-…}`: a default
 # containing `}` ends the parameter expansion at the first one, so the list
 # came out truncated and every download failed while the script reported
 # nothing unusual.
-PATTERNS="${LOGO_PATTERNS:-}"
-if [ -z "$PATTERNS" ]; then
-  PATTERNS='{base}/{slug}.png {base}/{slug}.svg {base}/{slug}.webp {base}/{slug}.jpg'
+SOURCES="${LOGO_SOURCES:-}"
+if [ -z "$SOURCES" ]; then
+  SOURCES='https://s100.divarcdn.com/static/imgs/widget-icons/light/icon_secondary/v1/brand_{slug}.png
+https://cdn-sth1.bama.ir/evonex/filters/brand/car/{slug}.png'
 fi
+
+# Every candidate ends in .png and every file is saved as .png, which is not a
+# detail to get casual about: nginx types a file by its extension, so an SVG
+# saved under a .png name is served as image/png and shows as broken.
 
 ok=0; skipped=0; failed=""
 for slug in $slugs; do
@@ -87,8 +99,8 @@ for slug in $slugs; do
   # locked onto it and reported 183 failures that were never really tried. A
   # few extra requests are cheaper than a result that is quietly wrong.
   got=""
-  for pattern in $PATTERNS; do
-    url="$(printf '%s' "$pattern" | sed "s|{base}|$BASE|; s|{slug}|$slug|g")"
+  for template in $SOURCES; do
+    url="$(printf '%s' "$template" | sed "s|{slug}|$slug|g")"
 
     # --fail so an HTML or XML error page is never saved as if it were an
     # image, and a short timeout so one dead entry cannot stall the run.
@@ -97,7 +109,7 @@ for slug in $slugs; do
     # Downloaded is not the same as usable: a zero-byte or non-image reply is a
     # failure that looks like a success until somebody opens the page.
     if [ -s "$dest.part" ] && file -b --mime-type "$dest.part" 2>/dev/null | grep -q '^image/'; then
-      got="$pattern"
+      got="$url"
       break
     fi
     rm -f "$dest.part"
