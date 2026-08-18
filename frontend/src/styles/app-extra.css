@@ -939,3 +939,72 @@ a[data-go],
 /* جای خالی هم‌اندازه‌ی لوگو، تا اسم برندهای بدون لوگو با بقیه هم‌تراز بماند. */
 .bpick-nologo { width: 22px; height: 22px; flex: none; }
 .bpick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ================================================================
+   کاتالوگ خودرو — شبکه‌ی برندها و صفحه‌ی برند
+   ================================================================ */
+
+/* سرفصل هر شرکت در شبکه */
+.cat-sec {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 14px 4px;
+}
+.cat-sec h3 { font-size: 14.5px; font-weight: 800; }
+.cat-sec .spacer { flex: 1; }
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 8px 14px 14px;
+}
+
+/* هر برند یک کاشی، و کل کاشی راه ورود — نه یک ردیف پر از دکمه.
+   button است تا با کیبورد هم باز شود؛ ظاهرش کارت است. */
+.cat-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 13px 8px 11px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s, transform .08s;
+}
+.cat-tile:hover {
+  border-color: var(--primary-3);
+  box-shadow: var(--shadow-1);
+  transform: translateY(-1px);
+}
+.cat-tile img { width: 34px; height: 34px; object-fit: contain; }
+/* برند بدون لوگو: حرف اولش در همان قاب، تا شبکه ناهم‌قد نشود */
+.cat-tile-blank {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  color: var(--ink-3); font-size: 15px;
+}
+.cat-tile-name {
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* سربرگ صفحه‌ی یک برند */
+.cat-head {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.cat-head h2 { font-size: 17px; font-weight: 800; }
+.cat-head .spacer { flex: 1; }
+.cat-head-logo { width: 40px; height: 40px; object-fit: contain; }
+
+/* پنل ثابت اسکرول‌دار برای شبکه‌ی برندها — صفحه با ۱۸۶ برند قد نمی‌کشد و
+   جعبه‌ی جستجو همیشه بالای همان فهرستی می‌ماند که فیلترش می‌کند. */
+.cat-panel {
+  max-height: 62vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--line-2);
+}

@@ -276,9 +276,15 @@ await step('timeline entry explains itself in a sentence', async () => {
 
 await page.click('[data-close-modal]');
 
-await step('catalogue editor lists brands', async () => {
+await step('catalogue editor shows the brand grid', async () => {
   await page.click('[data-go="adm-catalog"]');
-  await page.waitForSelector('.cat-brand', { timeout: 8000 });
+  await page.waitForSelector('.cat-grid .cat-tile', { timeout: 8000 });
+  // A tile opens the brand's own page, models and all — the drill-in is the
+  // whole design, so the smoke walks it once.
+  await page.locator('.cat-tile').first().click();
+  await page.waitForSelector('.cat-head', { timeout: 8000 });
+  await page.click('.cat-head [data-go="adm-catalog"]');
+  await page.waitForSelector('.cat-grid', { timeout: 8000 });
 });
 
 // An ordinary administrator must not learn that the owner account exists. The

@@ -21,37 +21,15 @@ import { faDigits } from './format.js';
  * DOM-only updates for the count and the highlight, and the form reads the
  * boxes back out at submit time, exactly like every other input it owns.
  *
- * ── Why the company is only a heading ───────────────────────────────────────
+ * ── One flat list, no company headings ──────────────────────────────────────
  *
- * Ticking a company ticks its brands, and what gets submitted is always the
- * brands. The company grouping was assembled by hand and will sometimes be
- * wrong; were the grant stored as "this company", correcting a grouping later
- * would silently change who may post what. Stored as brands, a correction is
- * only ever a correction.
+ * There used to be group headers with a tick-the-whole-company box. With most
+ * brands ungrouped, that rendered as one tidy section and a heap under
+ * «دسته‌بندی‌نشده» — a taxonomy that is mostly empty is worse than none, and
+ * the owner said so. The grant is stored per brand regardless, so nothing but
+ * markup was lost; if grouping ever earns its place back, it returns here
+ * without touching what gets saved.
  */
-
-/** Groups the brands for display: named companies first, then the rest. */
-function group(brands) {
-  const byCompany = new Map();
-  const loose = [];
-
-  for (const brand of brands) {
-    if (!brand.company) {
-      loose.push(brand);
-      continue;
-    }
-    if (!byCompany.has(brand.company.id)) {
-      byCompany.set(brand.company.id, { name: brand.company.name, items: [] });
-    }
-    byCompany.get(brand.company.id).items.push(brand);
-  }
-
-  const groups = [...byCompany.values()];
-  // Last, and named — it is where most brands live, and calling it what it is
-  // beats leaving a heap of unlabelled rows below the tidy part.
-  if (loose.length) groups.push({ name: 'دسته‌بندی‌نشده', items: loose });
-  return groups;
-}
 
 /**
  * The picker.
@@ -84,31 +62,20 @@ export function brandPicker(brands, { note = '', selected = [] } = {}) {
            placeholder="جستجوی برند — مثلاً پژو یا peugeot" aria-label="جستجوی برند">
 
     <div class="bpick-body">
-      ${group(brands).map(
-        (g) => html`
-        <div class="bpick-group">
-          <label class="bpick-ghead">
-            <input type="checkbox" data-brand-group
-                   ${raw(g.items.every((b) => on.has(b.id)) ? 'checked' : '')}>
-            <b>${g.name}</b>
-            <span class="sub">${faDigits(g.items.length)}</span>
-          </label>
-          <div class="bpick-items">
-            ${g.items.map(
-              (b) => html`<label class="bpick-item ${on.has(b.id) ? 'on' : ''}"
-                                 data-bname="${b.name} ${b.slug || ''}">
-                <input type="checkbox" data-brand="${b.id}" ${raw(on.has(b.id) ? 'checked' : '')}>
-                ${
-                  b.logo
-                    ? html`<img src="/assets/brands/${b.logo}" alt="" loading="lazy">`
-                    : html`<span class="bpick-nologo"></span>`
-                }
-                <span class="bpick-name">${b.name}</span>
-              </label>`
-            )}
-          </div>
-        </div>`
-      )}
+      <div class="bpick-items">
+        ${brands.map(
+          (b) => html`<label class="bpick-item ${on.has(b.id) ? 'on' : ''}"
+                             data-bname="${b.name} ${b.slug || ''}">
+            <input type="checkbox" data-brand="${b.id}" ${raw(on.has(b.id) ? 'checked' : '')}>
+            ${
+              b.logo
+                ? html`<img src="/assets/brands/${b.logo}" alt="" loading="lazy">`
+                : html`<span class="bpick-nologo"></span>`
+            }
+            <span class="bpick-name">${b.name}</span>
+          </label>`
+        )}
+      </div>
     </div>
   </div>`;
 }
@@ -150,10 +117,6 @@ function sync(el) {
   el.querySelectorAll('.bpick-item').forEach((item) => {
     item.classList.toggle('on', item.querySelector('input').checked);
   });
-  el.querySelectorAll('.bpick-group').forEach((g) => {
-    const boxes = [...g.querySelectorAll('input[data-brand]')];
-    g.querySelector('input[data-brand-group]').checked = boxes.every((b) => b.checked);
-  });
   const count = el.querySelector('[data-brand-count]');
   if (count) count.textContent = countLabel(el.querySelectorAll('input[data-brand]:checked').length);
 }
@@ -182,18 +145,7 @@ export function handleBrandPickChange(target) {
   const el = root();
   if (!el || !el.contains(target)) return false;
 
-  if (target.matches('input[data-brand-group]')) {
-    // The whole group follows its head — the filtered-out members included,
-    // because «همه‌ی مدیران خودرو» means the company, not the search results.
-    target
-      .closest('.bpick-group')
-      .querySelectorAll('input[data-brand]')
-      .forEach((b) => {
-        b.checked = target.checked;
-      });
-  } else if (!target.matches('input[data-brand]')) {
-    return false;
-  }
+  if (!target.matches('input[data-brand]')) return false;
 
   sync(el);
   return true;
@@ -211,14 +163,8 @@ export function handleBrandPickSearch(input) {
   if (!el) return false;
 
   const q = input.value.trim().toLowerCase();
-  el.querySelectorAll('.bpick-group').forEach((g) => {
-    let visible = 0;
-    g.querySelectorAll('.bpick-item').forEach((item) => {
-      const hit = !q || item.dataset.bname.toLowerCase().includes(q);
-      item.style.display = hit ? '' : 'none';
-      if (hit) visible += 1;
-    });
-    g.style.display = visible ? '' : 'none';
+  el.querySelectorAll('.bpick-item').forEach((item) => {
+    item.style.display = !q || item.dataset.bname.toLowerCase().includes(q) ? '' : 'none';
   });
   return true;
 }

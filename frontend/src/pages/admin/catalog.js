@@ -15,8 +15,16 @@ import { resolve } from '../../router.js';
  * exactly as it was.
  */
 
-export async function loadAdminCatalog() {
-  return { catalog: await admin.catalog() };
+export async function loadAdminCatalog(params) {
+  // Two levels, driven by the URL: the grid of brands, and one brand's models
+  // when `?brand=` names it. Route-driven rather than an accordion, because a
+  // toggle or rename triggers a reload — and a reload keeps a URL where it
+  // was, while it wipes whichever accordion happened to be open.
+  const catalog = await admin.catalog();
+  if (!params?.brand) return { catalog };
+
+  const { models } = await admin.brandModels(params.brand);
+  return { catalog, brandModels: models };
 }
 
 /**
@@ -32,8 +40,21 @@ export function setCatalogQuery(q) {
 }
 
 export function catalogPage() {
+  const { params } = getState();
+  return params.brand ? brandDetail(params.brand) : catalogGrid();
+}
+
+/**
+ * Level one: every brand as a tile in a grid.
+ *
+ * The previous layout stacked 186 brands as full-width rows, each carrying its
+ * own row of buttons — several screens of scrolling to reach حرف میم. A tile
+ * is the shape this data actually has (a logo and a name), the grid puts ~30
+ * of them in the first viewport, and everything done *to* a brand lives on its
+ * own page instead of cluttering the list of them.
+ */
+function catalogGrid() {
   const { data } = getState();
-  const companies = data.catalog?.companies || [];
   const brands = data.catalog?.brands || [];
   const colors = data.catalog?.colors || [];
   const query = (data.catalogQuery || '').trim();
@@ -45,22 +66,21 @@ export function catalogPage() {
     ? brands.filter((b) => b.name.includes(query) || b.slug.includes(query.toLowerCase()))
     : brands;
 
-  // Grouped by company, with the ungrouped ones last and named. They are the
-  // majority and that is expected, not a backlog: the market list this came
-  // from has no manufacturer level, and a brand nobody has filed is fully
-  // usable where it stands.
-  const groups = companies
-    .map((c) => ({ company: c, items: shown.filter((b) => b.companyId === c.id) }))
-    .filter((g) => g.items.length);
-
-  const ungrouped = shown.filter((b) => !b.companyId);
-
+  // One flat list, deliberately. There used to be company sections here, and
+  // with most brands ungrouped the page read as a tidy top and a heap below —
+  // a taxonomy that is mostly empty is worse than none. The company field
+  // still exists in the data; the day it is worth showing, this is the one
+  // place to bring it back.
+  //
+  // And the list lives inside a fixed-height panel that scrolls by itself,
+  // مودال برند باما-style: the page stays one screen tall however many brands
+  // the market has, and the search box never scrolls out from over the list
+  // it filters.
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>کاتالوگ خودرو ${qtip('برندها و مدل‌هایی که نمایندگی‌ها موقع ثبت حواله از بینشان انتخاب می‌کنند. شرکت فقط برای دسته‌بندی است و اجباری نیست — برندی که شرکتش را نمی‌دانید زیر «دسته‌بندی‌نشده» می‌ماند و کاملاً کار می‌کند. مدل استفاده‌شده حذف نمی‌شود؛ غیرفعالش کنید تا از فرم ثبت بیفتد و آگهی‌های قبلی سالم بمانند.')}</h2>
+      <h2>کاتالوگ خودرو ${qtip('برندها و مدل‌هایی که نمایندگی‌ها موقع ثبت حواله از بینشان انتخاب می‌کنند. روی هر برند بزنید تا مدل‌هایش را ببینید و ویرایش کنید. مدل استفاده‌شده حذف نمی‌شود؛ غیرفعالش کنید تا از فرم ثبت بیفتد و آگهی‌های قبلی سالم بمانند.')}</h2>
       <div style="display:flex;gap:8px">
-        <button class="btn sm" data-new-company>شرکت جدید</button>
         <button class="btn sm" data-new-brand>برند جدید</button>
         <button class="btn primary sm" data-new-model>مدل جدید</button>
       </div>
@@ -77,47 +97,9 @@ export function catalogPage() {
       </div>
     </div>
 
-    <div class="hint" style="padding:8px 14px">
-      «حذف» وجود ندارد و نباید داشته باشد: مدلی که استفاده شده در آگهی‌ها و گزارش‌های تخلف
-      ارجاع دارد. برای برداشتن یک خودرو، <b>غیرفعالش کنید</b> — آگهی جدید با آن ثبت نمی‌شود
-      و آگهی‌های موجود سالم می‌مانند.
-    </div>
-
     ${
       shown.length
-        ? html`
-          ${groups.map(
-            (g) => html`<div class="cat-company ${g.company.isActive ? '' : 'dim'}">
-              <div class="cat-h">
-                <h3>${g.company.name} <span class="num sub">${g.company.slug}</span></h3>
-                <div class="row-actions">
-                  ${activeTag(g.company.isActive)}
-                  <button class="btn sm" data-edit-company="${g.company.id}"
-                          data-name="${g.company.name}" data-order="${g.company.sortOrder}">ویرایش</button>
-                  <button class="btn sm" data-toggle-company="${g.company.id}"
-                          data-active="${g.company.isActive}">
-                    ${g.company.isActive ? 'غیرفعال' : 'فعال'}
-                  </button>
-                </div>
-              </div>
-              ${g.items.map(brandBlock)}
-            </div>`
-          )}
-
-          ${
-            ungrouped.length
-              ? html`<div class="cat-company">
-                  <div class="cat-h">
-                    <h3>دسته‌بندی‌نشده <span class="sub">${faDigits(ungrouped.length)} برند</span></h3>
-                  </div>
-                  <div class="hint" style="padding:0 14px 8px">
-                    شرکت سازنده‌شان تعیین نشده. لازم هم نیست — با «ویرایش» هر وقت خواستید
-                    شرکتش را مشخص کنید.
-                  </div>
-                  ${ungrouped.map(brandBlock)}
-                </div>`
-              : ''
-          }`
+        ? html`<div class="cat-panel"><div class="cat-grid">${shown.map(brandTile)}</div></div>`
         : emptyBox(query ? 'برندی با این نام پیدا نشد.' : 'کاتالوگ خالی است.')
     }
   </div>
@@ -149,61 +131,94 @@ export function catalogPage() {
   </div>`;
 }
 
+/** One brand in the grid. The whole tile is the way in; actions live inside. */
+function brandTile(brand) {
+  return html`
+  <button class="cat-tile ${brand.isActive ? '' : 'dim'}" data-go="adm-catalog"
+          data-go-params="brand=${brand.id}">
+    ${
+      brand.logo
+        ? html`<img src="/assets/brands/${brand.logo}" alt="" loading="lazy">`
+        : html`<span class="cat-tile-blank">${brand.name.slice(0, 1)}</span>`
+    }
+    <span class="cat-tile-name">${brand.name}</span>
+    <span class="sub num">${faDigits(brand._count?.models ?? 0)} مدل</span>
+    ${brand.isActive ? '' : html`<span class="tag">بازنشسته</span>`}
+  </button>`;
+}
+
 /**
- * One brand, with its models only once somebody asks for them.
+ * Level two: one brand, its models, and everything done to either.
  *
- * Opening a brand fetches its models; until then the row shows a count. The
- * whole catalogue used to arrive in one response, which was reasonable for
- * twenty-six models and is not for two thousand — and nobody reads two
- * thousand rows anyway.
+ * A page rather than an accordion or a modal, so the URL survives the reload
+ * that follows every edit — rename a model and you are still looking at the
+ * brand you were working on, with the browser's back button as the way out.
  */
-function brandBlock(brand) {
+function brandDetail(brandId) {
   const { data } = getState();
-  const open = data.openBrand === brand.id;
-  const models = open ? data.brandModels : null;
+  const brand = (data.catalog?.brands || []).find((b) => b.id === brandId);
+  const models = data.brandModels || [];
+
+  if (!brand) return emptyBox('برند پیدا نشد.');
+
+  const retired = models.filter((m) => !m.isActive).length;
 
   return html`
-  <div class="cat-brand ${brand.isActive ? '' : 'dim'}">
-    <div class="cat-h">
-      <h4>
-        ${brand.logo ? html`<img class="brand-logo" src="/assets/brands/${brand.logo}" alt="" loading="lazy">` : ''}
-        ${brand.name} <span class="sub">${faDigits(brand._count?.models ?? 0)} مدل</span>
-      </h4>
-      <div class="row-actions">
-        ${activeTag(brand.isActive)}
-        <button class="btn sm" data-open-brand="${brand.id}">
-          ${open ? 'بستن' : 'مدل‌ها'}
-        </button>
-        <button class="btn sm" data-edit-brand="${brand.id}" data-name="${brand.name}"
-                data-order="${brand.sortOrder}" data-company="${brand.companyId || ''}">ویرایش</button>
-        <button class="btn sm" data-toggle-brand="${brand.id}" data-active="${brand.isActive}">
-          ${brand.isActive ? 'غیرفعال' : 'فعال'}
-        </button>
+  <div class="card">
+    <div class="cat-head">
+      <button class="btn sm" data-go="adm-catalog">→ همه‌ی برندها</button>
+      ${
+        brand.logo
+          ? html`<img class="cat-head-logo" src="/assets/brands/${brand.logo}" alt="">`
+          : ''
+      }
+      <div>
+        <h2>${brand.name}</h2>
+        <div class="sub">
+          <span class="num">${brand.slug}</span>
+          ${brand.companyId ? ` · ${companyName(brand.companyId)}` : ''}
+          · ${faDigits(models.length)} مدل${retired ? ` (${faDigits(retired)} بازنشسته)` : ''}
+        </div>
       </div>
+      <span class="spacer"></span>
+      ${activeTag(brand.isActive)}
+      <button class="btn sm" data-edit-brand="${brand.id}" data-name="${brand.name}"
+              data-order="${brand.sortOrder}" data-company="${brand.companyId || ''}">ویرایش</button>
+      <button class="btn sm" data-toggle-brand="${brand.id}" data-active="${brand.isActive}">
+        ${brand.isActive ? 'غیرفعال' : 'فعال'}
+      </button>
+      <button class="btn primary sm" data-new-model>مدل جدید</button>
     </div>
 
-    ${!open ? '' : !models ? html`<div class="hint" style="padding:8px 14px">در حال بارگذاری…</div>` : html`
-    <table>
-      <thead><tr><th>مدل</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead>
-      <tbody>
-        ${models.map(
-          (model) => html`<tr class="${model.isActive ? '' : 'dim'}">
-            <td>${model.name}</td>
-            <td class="num">${faDigits(model.sortOrder)}</td>
-            <td>${activeTag(model.isActive)}</td>
-            <td class="row-actions">
-              <button class="btn sm" data-edit-model="${model.id}" data-name="${model.name}"
-                      data-order="${model.sortOrder}">ویرایش</button>
-              <button class="btn sm" data-toggle-model="${model.id}" data-active="${model.isActive}"
-                      data-name="${model.name}">
-                ${model.isActive ? 'غیرفعال' : 'فعال'}
-              </button>
-            </td>
-          </tr>`
-        )}
-      </tbody>
-    </table>`}
+    ${
+      models.length
+        ? html`<table>
+            <thead><tr><th>مدل</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead>
+            <tbody>
+              ${models.map(
+                (model) => html`<tr class="${model.isActive ? '' : 'dim'}">
+                  <td>${model.name}</td>
+                  <td class="num">${faDigits(model.sortOrder)}</td>
+                  <td>${activeTag(model.isActive)}</td>
+                  <td class="row-actions">
+                    <button class="btn sm" data-edit-model="${model.id}" data-name="${model.name}"
+                            data-order="${model.sortOrder}">ویرایش</button>
+                    <button class="btn sm" data-toggle-model="${model.id}"
+                            data-active="${model.isActive}" data-name="${model.name}">
+                      ${model.isActive ? 'غیرفعال' : 'فعال'}
+                    </button>
+                  </td>
+                </tr>`
+              )}
+            </tbody>
+          </table>`
+        : emptyBox('این برند هنوز مدلی ندارد.')
+    }
   </div>`;
+}
+
+function companyName(id) {
+  return (getState().data.catalog?.companies || []).find((c) => c.id === id)?.name || '';
 }
 
 function activeTag(isActive) {
@@ -220,8 +235,6 @@ export function handleCatalogClick(d) {
   if (d.newModel !== undefined) return newModelModal();
   if (d.newColor !== undefined) return newColorModal();
 
-  if (d.openBrand) return openBrand(d.openBrand);
-
   if (d.editCompany) return editModal('company', d.editCompany, d.name, d.order);
   if (d.editBrand) return editModal('brand', d.editBrand, d.name, d.order, d.company || '');
   if (d.editModel) return editModal('model', d.editModel, d.name, d.order);
@@ -237,35 +250,6 @@ export function handleCatalogClick(d) {
 
 export function handleCatalogSubmit() {
   return undefined;
-}
-
-/**
- * Opens a brand and fetches its models, or closes it.
- *
- * One brand at a time, which is both what a person does and what keeps this to
- * one small request instead of the whole catalogue. The open brand lives in the
- * store rather than as a class on the element, because every render replaces
- * the page — read off the markup, it would snap shut on the next keystroke.
- */
-async function openBrand(id) {
-  const { data } = getState();
-
-  if (data.openBrand === id) {
-    setState({ data: { ...data, openBrand: null, brandModels: null } });
-    return;
-  }
-
-  setState({ data: { ...data, openBrand: id, brandModels: null } });
-  try {
-    const { models } = await admin.brandModels(id);
-    // The reader may have moved on while this was in flight; writing the models
-    // of a brand they already closed would reopen it under them.
-    if (getState().data.openBrand !== id) return;
-    setState({ data: { ...getState().data, brandModels: models } });
-  } catch (err) {
-    setState({ data: { ...getState().data, openBrand: null, brandModels: null } });
-    toast(err.message, 'danger');
-  }
 }
 
 const UPDATERS = {
@@ -289,29 +273,6 @@ function editModal(kind, id, name, order, companyId = '') {
         <input class="in" id="c-name" name="name" value="${name}" required>
       </div>
 
-      ${
-        // Only a brand has a company, and it is optional there. This is how a
-        // wrong grouping gets fixed — and it will be wrong sometimes, because
-        // nobody knows which company builds all 186 brands. Moving a brand
-        // never changes anybody's posting permission: those are stored per
-        // brand, so a correction here is only a correction.
-        kind === 'brand'
-          ? html`<div class="field">
-              <label for="c-company">شرکت سازنده <span class="opt">(اختیاری)</span></label>
-              <select class="in" id="c-company" name="companyId">
-                <option value="">دسته‌بندی‌نشده</option>
-                ${companies.map(
-                  (c) => html`<option value="${c.id}"
-                    ${raw(c.id === companyId ? 'selected' : '')}>${c.name}</option>`
-                )}
-              </select>
-              <div class="hint">
-                اگر نمی‌دانید، همان «دسته‌بندی‌نشده» بماند — برند کاملاً کار می‌کند.
-              </div>
-            </div>`
-          : ''
-      }
-
       <div class="field">
         <label for="c-order">ترتیب نمایش</label>
         <input class="in num" id="c-order" name="sortOrder" inputmode="numeric" value="${order}">
@@ -325,7 +286,6 @@ function editModal(kind, id, name, order, companyId = '') {
         name: form.name.value.trim(),
         sortOrder: Number(form.sortOrder.value || 0),
       };
-      if (kind === 'brand') payload.companyId = form.companyId.value;
 
       await UPDATERS[kind](id, payload);
       toast('به‌روز شد');
@@ -393,27 +353,15 @@ function newCompanyModal() {
 }
 
 function newBrandModal() {
-  const { data } = getState();
-  const companies = data.catalog?.companies || [];
-
   openModal({
     type: 'form',
     title: 'برند جدید',
     body: html`
-      <div class="field">
-        <label for="c-company">شرکت سازنده <span class="opt">(اختیاری)</span></label>
-        <select class="in" id="c-company" name="companyId">
-          <option value="">دسته‌بندی‌نشده</option>
-          ${companies.map((c) => html`<option value="${c.id}">${c.name}</option>`)}
-        </select>
-        <div class="hint">اگر نمی‌دانید خالی بگذارید — بعداً از «ویرایش» قابل تعیین است.</div>
-      </div>
       ${nameField()}
       ${slugField()}`,
     confirmLabel: 'بساز',
     onSubmit: async (form) => {
       await admin.createBrand({
-        companyId: form.companyId.value,
         name: form.name.value.trim(),
         slug: form.slug.value.trim(),
       });
@@ -424,8 +372,11 @@ function newBrandModal() {
 }
 
 function newModelModal() {
-  const { data } = getState();
+  const { data, params } = getState();
   const brands = data.catalog?.brands || [];
+  // On a brand's own page, that brand is the answer — asking again would be
+  // the screen forgetting where it is.
+  const current = params.brand || '';
 
   openModal({
     type: 'form',
@@ -434,7 +385,11 @@ function newModelModal() {
       <div class="field">
         <label for="c-brand">برند</label>
         <select class="in" id="c-brand" name="brandId" required>
-          ${brands.map((b) => html`<option value="${b.id}">${b.name}</option>`)}
+          ${brands.map(
+            (b) => html`<option value="${b.id}" ${raw(b.id === current ? 'selected' : '')}>
+              ${b.name}
+            </option>`
+          )}
         </select>
       </div>
       ${nameField('نام کامل مدل، همان‌طور که نماینده می‌بیند')}

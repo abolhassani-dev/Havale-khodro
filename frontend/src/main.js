@@ -215,7 +215,7 @@ const CLICK_KEYS = new Set([
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
-  'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor', 'openBrand',
+  'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone',
 ]);
 
