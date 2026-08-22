@@ -166,7 +166,17 @@ fi
 
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
-docker compose up -d --build
+# A failed build leaves the running containers untouched — the site stays up on
+# the previous image. The usual reason for one here is the route to the npm
+# registry dropping mid-install; the Dockerfile keeps npm's cache between
+# builds, so simply running this script again resumes rather than restarts.
+if ! docker compose up -d --build; then
+  echo
+  echo "✗ ساخت ایمیج تمام نشد — سایت با نسخه‌ی قبلی بالا مانده است." >&2
+  echo "  اگر خطا network/ETIMEDOUT بود، همین دستور را دوباره اجرا کنید:" >&2
+  echo "  دانلودهای انجام‌شده در کش می‌مانند و ادامه از همان‌جا گرفته می‌شود." >&2
+  exit 1
+fi
 
 # `web` is an unchanged stock nginx image, so compose leaves it running and it
 # keeps both its old mounts and its old configuration. Recreating it explicitly

@@ -41,10 +41,29 @@ COPY package*.json ./
 #                of ten minutes rather than the default five: a large package
 #                on a slow link is not a failure, and giving up on it turns a
 #                slow deploy into a failed one (ETIMEDOUT, seen in production).
-RUN npm config set fetch-retries 5 \
+#
+# The cache mount is what makes the retries add up. Without it every failed
+# attempt threw away everything it had downloaded and the next one started from
+# nothing — which is how two builds in a row died at ETIMEDOUT having fetched
+# almost the whole tree twice. The mount keeps npm's cache on the host between
+# builds, so each attempt resumes where the last one stopped and a flaky link
+# only has to be lucky once, spread over several tries.
+#
+# NPM_REGISTRY exists for the day the official registry is unreachable from
+# here for hours rather than minutes: point it at a mirror. Safe to do because
+# package-lock.json pins an integrity hash for every tarball — npm verifies each
+# one and refuses anything that does not match, whoever served it.
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm config set registry "$NPM_REGISTRY" \
+    && npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 120000 \
     && npm config set fetch-timeout 600000 \
-    && npm ci --omit=dev --no-audit --no-fund
+    && for attempt in 1 2 3 4 5; do \
+         echo "npm ci — attempt $attempt/5" \
+         && npm ci --omit=dev --no-audit --no-fund && break \
+         || { [ "$attempt" = 5 ] && exit 1; echo "…retrying in 10s"; sleep 10; }; \
+       done
 
 # ---- runtime ----
 FROM node:20-slim AS runtime
