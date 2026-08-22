@@ -28,7 +28,23 @@ RUN apt-get update \
 COPY package*.json ./
 # The Prisma CLI is a runtime dependency here rather than a dev one, because the
 # container applies its own migrations on start and therefore needs the CLI.
-RUN npm ci --omit=dev
+#
+# The flags are not decoration — this build runs on a server whose route to the
+# npm registry is slow and occasionally drops:
+#
+#   --no-audit   the audit is a second round trip to a *different* endpoint,
+#                after every package is already downloaded. It tells a
+#                production build nothing it can act on, and it is where a
+#                ten-minute install spent its last minute before timing out.
+#   --no-fund    another pointless request on a link nobody clicks.
+#   fetch-*      five attempts with a longer ceiling, and a per-socket timeout
+#                of ten minutes rather than the default five: a large package
+#                on a slow link is not a failure, and giving up on it turns a
+#                slow deploy into a failed one (ETIMEDOUT, seen in production).
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 600000 \
+    && npm ci --omit=dev --no-audit --no-fund
 
 # ---- runtime ----
 FROM node:20-slim AS runtime
