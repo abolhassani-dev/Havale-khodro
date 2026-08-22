@@ -108,6 +108,35 @@ router.get(
   )
 );
 
+/**
+ * @openapi
+ * /subscriptions/seat-orders/alerts:
+ *   get:
+ *     tags: [Subscription]
+ *     summary: Capacity decisions the buyer has not yet dismissed
+ */
+router.get(
+  '/seat-orders/alerts',
+  agentOnly,
+  asyncHandler(async (req, res) => success(res, await subscriptionService.seatOrderAlerts(req.user)))
+);
+
+/**
+ * @openapi
+ * /subscriptions/seat-orders/{id}/ack:
+ *   post:
+ *     tags: [Subscription]
+ *     summary: Dismiss a decided capacity order's notification
+ */
+router.post(
+  '/seat-orders/:id/ack',
+  agentOnly,
+  validate({ params: Joi.object({ id: Joi.string().trim().max(40).required() }) }),
+  asyncHandler(async (req, res) =>
+    success(res, await subscriptionService.acknowledgeSeatOrder({ user: req.user, orderId: req.params.id }))
+  )
+);
+
 // ── admin ───────────────────────────────────────────────────────────────────
 //
 // Guarded by the `subscriptions` permission, which the super admin and finance

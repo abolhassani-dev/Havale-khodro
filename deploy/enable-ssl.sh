@@ -157,6 +157,9 @@ server {
         proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 60s;
+        # Ticket attachments, same ceiling as the plain-HTTP config: without it
+        # an upload dies as a bare nginx 413 before the API can explain.
+        client_max_body_size 20m;
     }
 
     location = /api/v1/health {

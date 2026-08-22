@@ -7,6 +7,9 @@ const catalogAdminRoutes = require('../catalog/catalog.admin.routes');
 const staffRoutes = require('./staff.routes');
 const brandAccess = require('../catalog/brandAccess.service');
 const authRepository = require('../auth/auth.repository');
+const { ticketRepository } = require('../ticket/ticket.repository');
+const subscriptionRepository = require('../subscription/subscription.repository');
+const { effectivePermissions } = require('../../constants/roles');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -42,6 +45,28 @@ const iranMobile = Joi.string()
 router.use('/catalog', catalogAdminRoutes);
 // Owner only — the router itself requires the `staff` permission.
 router.use('/staff', staffRoutes);
+
+/**
+ * @openapi
+ * /admin/badges:
+ *   get:
+ *     tags: [Admin]
+ *     summary: The numbers the sidebar wears — open tickets, pending capacity orders
+ *     description: >
+ *       Per-permission: a count is null when this account cannot see that queue,
+ *       so the menu never advertises work behind a door it cannot open.
+ */
+router.get(
+  '/badges',
+  asyncHandler(async (req, res) => {
+    const perms = effectivePermissions(req.user);
+    const [openTickets, pendingSeatOrders] = await Promise.all([
+      perms.tickets ? ticketRepository.countOpen() : null,
+      perms.seats ? subscriptionRepository.countPendingSeatOrders() : null,
+    ]);
+    return success(res, { openTickets, pendingSeatOrders });
+  })
+);
 
 // ── monitoring ──────────────────────────────────────────────────────────────
 

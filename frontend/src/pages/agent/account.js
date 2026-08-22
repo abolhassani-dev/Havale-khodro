@@ -471,6 +471,30 @@ export function ticketsPage() {
   </div>`;
 }
 
+/** Human file size, e.g. «۳۲۰ کیلوبایت» / «۱٫۴ مگابایت». */
+function fileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${faDigits(Math.max(1, Math.round(bytes / 1024)))} کیلوبایت`;
+  return `${faDigits((bytes / (1024 * 1024)).toFixed(1))} مگابایت`;
+}
+
+/**
+ * An attachment inside a bubble. An image shows a thumbnail; anything else a
+ * file chip. Both open the file in a new tab — the server decides inline vs
+ * download and enforces who may fetch it.
+ */
+function attachmentChip(a) {
+  if (a.mime?.startsWith('image/')) {
+    return html`<a class="tkb-img" href="${a.url}" target="_blank" rel="noopener" title="${a.name}">
+      <img src="${a.url}" alt="${a.name}" loading="lazy">
+    </a>`;
+  }
+  return html`<a class="tkb-file" href="${a.url}" target="_blank" rel="noopener">
+    ${icon('file', 15)}
+    <span class="tkb-fn">${a.name}</span>
+    <span class="tkb-fs">${fileSize(a.size)}</span>
+  </a>`;
+}
+
 /**
  * The conversation. One page for both panels — who is "me" depends on who is
  * looking: the agency's own messages sit on one side, پشتیبانی on the other,
@@ -504,6 +528,7 @@ export function ticketPage() {
           <span class="num">${timeOnly(m.createdAt)}</span>
         </div>
         <div class="tkb-b">${m.body}</div>
+        ${m.attachments?.length ? html`<div class="tkb-files">${m.attachments.map(attachmentChip)}</div>` : ''}
       </div>
     </div>`);
   }
@@ -546,6 +571,13 @@ export function ticketPage() {
               <button class="btn primary" type="submit">ارسال</button>
             </div>
             <div class="tk-actions">
+              <label class="btn sm tk-clip" title="پیوست عکس یا PDF">
+                ${icon('file', 15)} پیوست
+                <input type="file" name="files" multiple hidden
+                       accept="image/jpeg,image/png,image/webp,application/pdf" data-attach-input>
+              </label>
+              <span class="tk-attach-names hint" data-attach-names></span>
+              <span class="tk-gap"></span>
               <button class="btn sm" type="button" data-close-ticket="${t.id}">بستن گفتگو</button>
               ${
                 admin
@@ -586,14 +618,34 @@ export function newTicketModal(subject = '') {
       <div class="field">
         <label for="m-body">شرح</label>
         <textarea class="in" id="m-body" name="body" rows="4" minlength="5" required></textarea>
+      </div>
+      <div class="field">
+        <label>پیوست <span class="opt">(اختیاری — عکس یا PDF، حداکثر ۳ فایل)</span></label>
+        <label class="btn sm tk-clip" title="پیوست عکس یا PDF">
+          ${icon('file', 15)} انتخاب فایل
+          <input type="file" name="files" multiple hidden
+                 accept="image/jpeg,image/png,image/webp,application/pdf" data-attach-input>
+        </label>
+        <span class="tk-attach-names hint" data-attach-names></span>
       </div>`,
     confirmLabel: 'ثبت تیکت',
     onSubmit: async (form) => {
-      const created = await tickets.create({
-        subject: form.subject.value,
-        priority: form.priority.value,
-        body: form.body.value,
-      });
+      const files = form.files?.files || [];
+      let created;
+      if (files.length) {
+        const fd = new FormData();
+        fd.append('subject', form.subject.value);
+        fd.append('priority', form.priority.value);
+        fd.append('body', form.body.value);
+        for (const f of files) fd.append('files', f);
+        created = await tickets.createForm(fd);
+      } else {
+        created = await tickets.create({
+          subject: form.subject.value,
+          priority: form.priority.value,
+          body: form.body.value,
+        });
+      }
       toast('تیکت ثبت شد');
       go('ticket', { id: created.id });
       await resolve();
@@ -604,7 +656,15 @@ export function newTicketModal(subject = '') {
 export async function submitTicketReply(form) {
   clearFormError(form);
   try {
-    await tickets.reply(form.dataset.id, form.body.value);
+    const files = form.files?.files || [];
+    if (files.length) {
+      const fd = new FormData();
+      fd.append('body', form.body.value);
+      for (const f of files) fd.append('files', f);
+      await tickets.replyForm(form.dataset.id, fd);
+    } else {
+      await tickets.reply(form.dataset.id, form.body.value);
+    }
     await resolve();
   } catch (err) {
     showFormError(form, err);

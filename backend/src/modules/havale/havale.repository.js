@@ -18,6 +18,7 @@ const OWNER_SELECT = {
     coordinatorPhone: true,
     phone: true,
     status: true,
+    parentId: true,
   },
 };
 

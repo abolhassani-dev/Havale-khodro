@@ -47,6 +47,26 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // Upload refusals are the client's to fix, not bugs: too big, too many, or
+  // a type the ticket system does not accept.
+  if (err.name === 'MulterError') {
+    const known = {
+      LIMIT_FILE_SIZE: 'حجم هر فایل پیوست حداکثر ۵ مگابایت است',
+      LIMIT_FILE_COUNT: 'حداکثر ۳ فایل می‌توانید پیوست کنید',
+    };
+    // The type filter writes its own Persian message; anything else falls to
+    // the table, then to a generic refusal.
+    const message = /[؀-ۿ]/.test(err.message)
+      ? err.message
+      : known[err.code] || 'فایل پیوست پذیرفته نشد';
+    return failure(res, {
+      message,
+      code: ERROR_CODES.VALIDATION,
+      statusCode: 400,
+      requestId: req.id,
+    });
+  }
+
   // A unique-constraint violation is a fact about the request — the value is
   // already taken — not a bug. The services pre-check the common cases with
   // their own messages, but any path that forgets (or loses a race between the

@@ -692,5 +692,56 @@ maybe('havale', () => {
         .send(await purchaseRequest())
         .expect(403);
     });
+
+    /**
+     * A central agency sees what its own agencies are working on.
+     *
+     * The widest thing anybody can ask for is their own family: `scope` is
+     * honoured only for a reseller, and only over accounts whose parentId is
+     * that very user. A child's row comes back marked `isOwn: false` so the
+     * panel does not offer edit buttons the server would refuse.
+     */
+    it('lets a reseller see its own agencies’ listings, and nobody else’s', async () => {
+      const parent = await agent({ isReseller: true });
+      const child = track(await createAgent({ parentId: parent.user.id }));
+      await giveSubscription(child, { origin: 'PARENT_SEAT', days: 365 });
+      const childCookie = await signIn(child);
+
+      const posted = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', childCookie)
+        .send(await purchaseRequest())
+        .expect(201);
+
+      const own = await request(app)
+        .get(api('/havales/mine'))
+        .set('Cookie', parent.cookie)
+        .expect(200);
+      expect(own.body.data.items.some((h) => h.id === posted.body.data.id)).toBe(false);
+
+      const family = await request(app)
+        .get(api('/havales/mine?scope=all'))
+        .set('Cookie', parent.cookie)
+        .expect(200);
+      const row = family.body.data.items.find((h) => h.id === posted.body.data.id);
+      expect(row).toBeTruthy();
+      expect(row.isOwn).toBe(false);
+      expect(row.agency.code).toBe(child.agencyCode);
+
+      // The parent may open it in full, the way the owner sees it.
+      const detail = await request(app)
+        .get(api(`/havales/${posted.body.data.id}`))
+        .set('Cookie', parent.cookie)
+        .expect(200);
+      expect(detail.body.data.contactRevealed).toBe(true);
+
+      // An unrelated reseller asking for the same scope gets only its own.
+      const stranger = await agent({ isReseller: true });
+      const strangerList = await request(app)
+        .get(api('/havales/mine?scope=all'))
+        .set('Cookie', stranger.cookie)
+        .expect(200);
+      expect(strangerList.body.data.items.some((h) => h.id === posted.body.data.id)).toBe(false);
+    });
   });
 });

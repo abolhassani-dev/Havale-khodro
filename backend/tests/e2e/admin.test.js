@@ -279,6 +279,52 @@ maybe('admin panel', () => {
     });
   });
 
+  /**
+   * The numbers the sidebar wears.
+   *
+   * Per-permission on purpose: a count is null when the account cannot open
+   * that queue, so the menu never advertises work behind a door it does not
+   * have — support sees the ticket count and not the finance one.
+   */
+  describe('sidebar counts', () => {
+    it('counts unanswered tickets and pending capacity orders, per permission', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const buyer = await agent({ isReseller: true });
+
+      const before = await request(app)
+        .get(api('/admin/badges'))
+        .set('Cookie', superAdmin.cookie)
+        .expect(200);
+
+      await request(app)
+        .post(api('/tickets'))
+        .set('Cookie', buyer.cookie)
+        .send({ subject: 'شمارش تیکت', body: 'این تیکت باید در عدد منو دیده شود.' })
+        .expect(201);
+      await request(app)
+        .post(api('/subscriptions/seat-orders'))
+        .set('Cookie', buyer.cookie)
+        .send({ seats: 1 })
+        .expect(201);
+
+      const after = await request(app)
+        .get(api('/admin/badges'))
+        .set('Cookie', superAdmin.cookie)
+        .expect(200);
+      expect(after.body.data.openTickets).toBe(before.body.data.openTickets + 1);
+      expect(after.body.data.pendingSeatOrders).toBe(before.body.data.pendingSeatOrders + 1);
+
+      // Support may read tickets and not the money side.
+      const support = await staff('SUPPORT');
+      const supportView = await request(app)
+        .get(api('/admin/badges'))
+        .set('Cookie', support.cookie)
+        .expect(200);
+      expect(supportView.body.data.openTickets).toBeGreaterThan(0);
+      expect(supportView.body.data.pendingSeatOrders).toBeNull();
+    });
+  });
+
   describe('monitoring', () => {
     it('says in a sentence what a timeline entry means', async () => {
       const superAdmin = await staff('SUPER_ADMIN');

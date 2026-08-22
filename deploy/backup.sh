@@ -82,6 +82,17 @@ cp .env "$WORK/config/.env"
 cp docker-compose.yml "$WORK/config/"
 cp -r deploy/nginx/. "$WORK/config/nginx/" 2>/dev/null || true
 
+# ---- 2b. ticket attachments ----
+#
+# The database rows point at files on a named volume. Restoring the dump
+# without them gives back conversations whose evidence — the screenshot of the
+# error, the payment receipt — is gone, and nothing in the panel would say why.
+echo "  attachments"
+mkdir -p "$WORK/uploads"
+docker run --rm -v feranocar_uploads:/uploads:ro -v "$WORK/uploads:/out" alpine:3 \
+  sh -c 'tar czf /out/uploads.tar.gz -C /uploads . 2>/dev/null || true' >/dev/null 2>&1 || \
+  echo "    (none yet — skipping)"
+
 # ---- 3. the TLS certificate ----
 #
 # Re-issuing is possible but rate-limited to five a week per domain, and the

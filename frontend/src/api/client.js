@@ -41,12 +41,15 @@ async function request(method, path, { body, query } = {}) {
 
   let response;
   try {
+    // FormData goes as-is: the browser writes the multipart boundary into the
+    // Content-Type itself, and setting the header by hand would corrupt it.
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     response = await fetch(url, {
       method,
       // Without this the browser sends no cookie and every request is anonymous.
       credentials: 'include',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !isForm ? { 'Content-Type': 'application/json' } : {},
+      body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
   } catch {
     // A network failure is not an API error and must not be reported as one —

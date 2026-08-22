@@ -44,6 +44,8 @@ export const subscription = {
   plans: () => api.get('/subscriptions/plans'),
   orderSeats: (seats, note) => api.post('/subscriptions/seat-orders', { seats, note }),
   myOrders: () => api.get('/subscriptions/seat-orders'),
+  seatAlerts: () => api.get('/subscriptions/seat-orders/alerts'),
+  ackSeatOrder: (id) => api.post(`/subscriptions/seat-orders/${id}/ack`),
   pendingOrders: () => api.get('/subscriptions/seat-orders/pending'),
   reviewOrder: (id, approve, note) =>
     api.post(`/subscriptions/seat-orders/${id}/review`, { approve, note }),
@@ -83,12 +85,17 @@ export const tickets = {
   get: (id) => api.get(`/tickets/${id}`),
   create: (payload) => api.post('/tickets', payload),
   reply: (id, body) => api.post(`/tickets/${id}/messages`, { body }),
+  // FormData variants: same endpoints, files attached. The client sends a
+  // FormData body as multipart and leaves the boundary to the browser.
+  createForm: (formData) => api.post('/tickets', formData),
+  replyForm: (id, formData) => api.post(`/tickets/${id}/messages`, formData),
   setStatus: (id, status) => api.put(`/tickets/${id}/status`, { status }),
   setPriority: (id, priority) => api.put(`/tickets/${id}/priority`, { priority }),
 };
 
 export const admin = {
   overview: () => api.get('/admin/overview'),
+  badges: () => api.get('/admin/badges'),
   activity: (query) => api.get('/admin/activity', query),
   activityDetail: (id) => api.get(`/admin/activity/${id}`),
   reveals: (query) => api.get('/admin/reveals', query),

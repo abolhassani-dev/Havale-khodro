@@ -17,7 +17,11 @@ export async function loadCatalogForm() {
 }
 
 export async function loadMine(params) {
-  return { mine: await havale.mine({ status: params.status, limit: 50 }) };
+  // A reseller sees the family by default; the scope chips narrow it. Anyone
+  // else sends no scope and the server pins them to their own.
+  const reseller = Boolean(getState().user?.isReseller);
+  const scope = reseller ? params.scope || 'all' : undefined;
+  return { mine: await havale.mine({ status: params.status, scope, limit: 50 }) };
 }
 
 /**
@@ -68,6 +72,8 @@ export function havaleFormPage(kind) {
     <div class="fields">
       <div class="field">
         <label for="brand">برند</label>
+        <input class="in sel-q" type="search" data-sel-search
+               placeholder="جستجوی برند — مثلاً پژو" aria-label="جستجوی برند">
         <select class="in" id="brand" name="brand" required>
           <option value="">انتخاب کنید</option>
           <!-- The company is a suffix, not a prefix, and is dropped when the
@@ -75,7 +81,7 @@ export function havaleFormPage(kind) {
                «الف» rather than «پ», so somebody looking for پژو had to know
                who makes it first. Most brands have no company at all. -->
           ${brands.map(
-            (b) => html`<option value="${b.id}">
+            (b) => html`<option value="${b.id}" data-search="${b.slug || ''}">
               ${b.name}${b.company ? ` — ${b.company.name}` : ''}
             </option>`
           )}
@@ -84,6 +90,8 @@ export function havaleFormPage(kind) {
 
       <div class="field">
         <label for="carModelId">مدل خودرو</label>
+        <input class="in sel-q" type="search" data-sel-search
+               placeholder="جستجوی مدل…" aria-label="جستجوی مدل">
         <select class="in" id="carModelId" name="carModelId" required disabled>
           <option value="">ابتدا برند را انتخاب کنید</option>
         </select>
@@ -198,6 +206,10 @@ export async function onBrandChange(form) {
   const select = form.carModelId;
   select.innerHTML = '';
   select.disabled = true;
+  // A fresh model list voids whatever the model search had stashed and typed.
+  delete select.dataset.all;
+  const modelSearch = select.closest('.field')?.querySelector('[data-sel-search]');
+  if (modelSearch) modelSearch.value = '';
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
@@ -232,6 +244,57 @@ export async function onBrandChange(form) {
     option.textContent = model.name;
     select.appendChild(option);
   });
+}
+
+/**
+ * The little search box over a select: typing narrows the options, the select
+ * stays a select. The full list is stashed on the element the first time a
+ * character is typed, so clearing the box always restores everything — and a
+ * chosen value is never filtered out from under the form.
+ *
+ * When exactly one real option matches, it is chosen outright and a change
+ * event fired — typing «پژو» is choosing پژو, and for the brand box that
+ * change is what loads the models.
+ */
+export function filterSelect(input) {
+  if (!input.matches?.('[data-sel-search]')) return false;
+  const select = input.closest('.field')?.querySelector('select');
+  if (!select || select.disabled) return true;
+
+  if (!select.dataset.all) {
+    select.dataset.all = JSON.stringify(
+      [...select.options].map((o) => ({
+        v: o.value,
+        t: o.textContent.trim(),
+        s: o.dataset.search || '',
+      }))
+    );
+  }
+
+  const all = JSON.parse(select.dataset.all);
+  const q = input.value.trim().toLowerCase();
+  const chosen = select.value;
+  const keep = all.filter(
+    (o) =>
+      !o.v || !q || o.t.toLowerCase().includes(q) || o.s.toLowerCase().includes(q) || o.v === chosen
+  );
+
+  select.textContent = '';
+  for (const o of keep) {
+    const option = document.createElement('option');
+    option.value = o.v;
+    option.textContent = o.t;
+    if (o.s) option.dataset.search = o.s;
+    select.appendChild(option);
+  }
+  select.value = chosen && keep.some((o) => o.v === chosen) ? chosen : '';
+
+  const real = keep.filter((o) => o.v);
+  if (q && real.length === 1 && select.value !== real[0].v) {
+    select.value = real[0].v;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  return true;
 }
 
 export async function submitHavale(form) {
@@ -295,8 +358,10 @@ export async function submitHavale(form) {
 }
 
 export function minePage() {
-  const { data, params } = getState();
+  const { data, params, user } = getState();
   const items = data.mine?.items || [];
+  const reseller = Boolean(user?.isReseller);
+  const scope = reseller ? params.scope || 'all' : 'own';
 
   const tabs = [
     ['', 'همه'],
@@ -305,25 +370,50 @@ export function minePage() {
     ['SUSPENDED', 'تعلیق‌شده'],
   ];
 
+  const scopes = [
+    ['all', 'همه'],
+    ['own', 'آگهی‌های خودم'],
+    ['children', 'زیرشاخه‌ها'],
+  ];
+
+  const goParams = (patch) => {
+    const q = { ...(params.status ? { status: params.status } : {}), ...(reseller ? { scope } : {}), ...patch };
+    return Object.entries(q)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('&');
+  };
+
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>حواله‌های من ${qtip('همه‌ی آگهی‌های خودتان. «فروخته شد» آگهی را می‌بندد، «تمدید» مهلت را هفت روز دیگر تمدید می‌کند و «حذف» آن را کامل برمی‌دارد. آگهی بعد از پایان مهلت خودبه‌خود از استعلام دیگران حذف می‌شود.')}</h2>
+      <h2>${reseller ? 'حواله‌های مجموعه' : 'حواله‌های من'} ${qtip(reseller ? 'آگهی‌های خودتان و زیرنمایندگی‌هایتان. با چیپ‌های بالا بین «خودم» و «زیرشاخه‌ها» جابه‌جا شوید. تمدید و ویرایش فقط روی آگهی‌های خودتان ممکن است — آگهی زیرشاخه مال خود اوست.' : 'همه‌ی آگهی‌های خودتان. «فروخته شد» آگهی را می‌بندد، «تمدید» مهلت را هفت روز دیگر تمدید می‌کند و «حذف» آن را کامل برمی‌دارد. آگهی بعد از پایان مهلت خودبه‌خود از استعلام دیگران حذف می‌شود.')}</h2>
       <div class="tabs">
         ${tabs.map(
           ([value, label]) => html`<button
             class="tab ${(params.status || '') === value ? 'on' : ''}"
-            data-go="mine" data-go-params="${value ? `status=${value}` : ''}">${label}</button>`
+            data-go="mine" data-go-params="${goParams({ status: value })}">${label}</button>`
         )}
       </div>
     </div>
+
+    ${
+      reseller
+        ? html`<div class="scope-row">
+            ${scopes.map(
+              ([value, label]) => html`<button class="tab ${scope === value ? 'on' : ''}"
+                data-go="mine" data-go-params="${goParams({ scope: value })}">${label}</button>`
+            )}
+          </div>`
+        : ''
+    }
 
     ${
       items.length
         ? html`<table>
             <thead>
               <tr>
-                <th>خودرو</th><th>نوع</th><th>مبلغ</th><th>وضعیت</th>
+                <th>خودرو</th>${reseller ? html`<th>زیرشاخه</th>` : ''}<th>نوع</th><th>مبلغ</th><th>وضعیت</th>
                 <th>مهلت</th><th>بازدید</th><th></th>
               </tr>
             </thead>
@@ -334,6 +424,11 @@ export function minePage() {
                     <b>${h.carType}</b>
                     <div class="sub">${h.carColor || 'هر رنگ'} · ${SOLH_LABEL[h.solh]}</div>
                   </td>
+                  ${
+                    reseller
+                      ? html`<td>${h.isOwn ? html`<span class="tag b">خودم</span>` : html`<span class="num">${h.agency?.code || '—'}</span>`}</td>`
+                      : ''
+                  }
                   <td>${KIND_LABEL[h.kind]}</td>
                   <td class="num">${money(h.amountToman)}</td>
                   <td>${statusTag(h)}</td>
@@ -346,13 +441,21 @@ export function minePage() {
                          money figures; this is where the other two, the payment
                          terms and the deposit window live. -->
                     <button class="btn sm" data-open-havale="${h.id}">جزئیات</button>
-                    <button class="btn sm" data-renew="${h.id}">تمدید</button>
                     ${
-                      h.status === 'ACTIVE'
-                        ? html`<button class="btn sm" data-fulfill="${h.id}">فروخته شد</button>`
+                      // A child's listing is the child's to manage: the server
+                      // refuses these anyway, and a button that always answers
+                      // 403 is worse than no button.
+                      h.isOwn
+                        ? html`
+                          <button class="btn sm" data-renew="${h.id}">تمدید</button>
+                          ${
+                            h.status === 'ACTIVE'
+                              ? html`<button class="btn sm" data-fulfill="${h.id}">فروخته شد</button>`
+                              : ''
+                          }
+                          <button class="btn sm danger" data-delete-havale="${h.id}">حذف</button>`
                         : ''
                     }
-                    <button class="btn sm danger" data-delete-havale="${h.id}">حذف</button>
                   </td>
                 </tr>`
               )}

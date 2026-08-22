@@ -457,6 +457,73 @@ maybe('moderation', () => {
       expect(res.body.data.messages).toHaveLength(1);
     });
 
+    // A screenshot says in one image what a paragraph of «خطا می‌دهد» cannot.
+    // The file is stored under a generated name and served only to people the
+    // ticket itself is visible to.
+    describe('attachments', () => {
+      const png = Buffer.from(
+        '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
+          '0000000d49444154789c626001000000ffff03000006000557bfabd4000000004945' +
+          '4e44ae426082',
+        'hex'
+      );
+
+      it('carries an image on the opening message and serves it back', async () => {
+        const { cookie } = await agent();
+
+        const res = await request(app)
+          .post(api('/tickets'))
+          .set('Cookie', cookie)
+          .field('subject', 'خطای ثبت حواله')
+          .field('body', 'تصویر خطا پیوست است.')
+          .attach('files', png, 'اسکرین‌شات.png')
+          .expect(201);
+
+        const [attachment] = res.body.data.messages[0].attachments;
+        expect(attachment.name).toBe('اسکرین‌شات.png');
+        expect(attachment.mime).toBe('image/png');
+        // The stored name is generated, never the uploaded one — a filename
+        // used as a path is a traversal bug waiting for its first `../`.
+        expect(attachment.url).not.toContain('اسکرین‌شات');
+
+        await request(app).get(attachment.url).set('Cookie', cookie).expect(200);
+      });
+
+      it('serves it to staff and to nobody else', async () => {
+        const owner = await agent();
+        const stranger = await agent();
+        const { cookie: staffCookie } = await staff('SUPPORT');
+
+        const res = await request(app)
+          .post(api('/tickets'))
+          .set('Cookie', owner.cookie)
+          .field('subject', 'پیوست خصوصی')
+          .field('body', 'این فایل فقط برای پشتیبانی است.')
+          .attach('files', png, 'private.png')
+          .expect(201);
+        const { url } = res.body.data.messages[0].attachments[0];
+
+        await request(app).get(url).set('Cookie', staffCookie).expect(200);
+        // Not-found rather than forbidden: another agency must not even learn
+        // the attachment exists.
+        await request(app).get(url).set('Cookie', stranger.cookie).expect(404);
+      });
+
+      it('refuses a type it does not accept, with a message that says so', async () => {
+        const { cookie } = await agent();
+
+        const res = await request(app)
+          .post(api('/tickets'))
+          .set('Cookie', cookie)
+          .field('subject', 'فایل نامعتبر')
+          .field('body', 'این فایل نباید قبول شود.')
+          .attach('files', Buffer.from('#!/bin/sh\necho hi\n'), 'script.sh')
+          .expect(400);
+
+        expect(res.body.error.message).toContain('PDF');
+      });
+    });
+
     it('stays open to an agency whose subscription has lapsed', async () => {
       const { user, cookie } = await agent();
       await prisma.subscription.updateMany({

@@ -12,7 +12,7 @@ import { loadDashboard, dashboardPage } from './pages/agent/dashboard.js';
 import { loadSearch, searchPage, confirmReveal, onSearchBrandChange } from './pages/agent/search.js';
 import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
-  renewModal, confirmFulfill, confirmDelete, havaleDetailModal,
+  renewModal, confirmFulfill, confirmDelete, havaleDetailModal, filterSelect,
 } from './pages/agent/listings.js';
 import {
   loadSubscription, subscriptionPage, orderSeatsModal,
@@ -31,7 +31,7 @@ import {
 } from './ui/brandPicker.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
-import { subAgents, tickets } from './api/index.js';
+import { subAgents, tickets, subscription } from './api/index.js';
 
 /** Page titles, so the top bar and the document title agree. */
 const TITLES = {
@@ -208,7 +208,7 @@ const CLICK_KEYS = new Set([
   'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
-  'newTicket', 'closeTicket', 'reopenTicket', 'ticketPriority',
+  'newTicket', 'closeTicket', 'reopenTicket', 'ticketPriority', 'ackSeat',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
   'grant', 'editSetting',
@@ -266,6 +266,7 @@ function onClick(event) {
   if (d.closeTicket) return closeTicket(d.closeTicket);
   if (d.reopenTicket) return reopenTicket(d.reopenTicket);
   if (d.ticketPriority) return setTicketPriority(d.ticketPriority, d.priority);
+  if (d.ackSeat) return ackSeatOrder(d.ackSeat);
 
   // The brand picker appears on admin pages and inside the agent's sub-agency
   // modal alike, so its buttons are dispatched here rather than per page.
@@ -295,6 +296,15 @@ async function closeTicket(id) {
 
 // Staff-side ticket controls. The server enforces who may do what — an agent
 // calling reopen gets a refusal, not a surprise.
+async function ackSeatOrder(id) {
+  try {
+    await subscription.ackSeatOrder(id);
+    await resolve();
+  } catch (err) {
+    toast(err.message, 'danger');
+  }
+}
+
 async function reopenTicket(id) {
   try {
     await tickets.setStatus(id, 'OPEN');
@@ -362,6 +372,10 @@ function onCatalogSearch(event) {
   // input keeps its own caret and the ticked boxes keep themselves.
   if (handleBrandPickSearch(input)) return;
 
+  // The searchable selects on the listing form — same idea, options instead
+  // of rows.
+  if (filterSelect(input)) return;
+
   if (!input.matches?.('[data-catalog-search]')) return;
 
   const at = input.selectionStart;
@@ -382,6 +396,14 @@ function onChange(event) {
 
   if (event.target.name === 'brand') {
     onBrandChange(event.target.form);
+  }
+  // The ticket composer's paperclip: echo the chosen filenames next to it, so
+  // «پیوست شد» is visible before anything is sent.
+  if (event.target.matches?.('[data-attach-input]')) {
+    const names = event.target.closest('form')?.querySelector('[data-attach-names]');
+    if (names) {
+      names.textContent = [...event.target.files].map((f) => f.name).join('، ');
+    }
   }
   // The search filters' brand box: swap the model options in place.
   if (event.target.name === 'brandId' && event.target.form?.dataset.form === 'search-filters') {

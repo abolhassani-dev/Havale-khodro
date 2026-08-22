@@ -457,7 +457,27 @@ model TicketMessage {
   isStaff   Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  attachments TicketAttachment[]
+
   @@index([ticketId, createdAt])
+}
+
+/// پیوست پیام تیکت — عکس یا PDF. فایل روی دیسک با نام تصادفی است و
+/// storedAs همان نام است؛ name فقط برای نمایش، هرگز برای مسیر.
+model TicketAttachment {
+  id String @id @default(cuid())
+
+  messageId String
+  message   TicketMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  name     String
+  mime     String
+  size     Int
+  storedAs String @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }
 
 /// نشست فعال — هر حساب فقط یک نشست زنده دارد
@@ -518,6 +538,8 @@ model SeatOrder {
   reviewedById    String?
   reviewedBy      User?     @relation("SeatOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedAt      DateTime?
+  /// خریدار نتیجه‌ی بررسی را دیده و اعلانش را بسته است
+  acknowledgedAt  DateTime?
 
   createdAt DateTime @default(now())
 

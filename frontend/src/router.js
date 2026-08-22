@@ -1,5 +1,6 @@
 import { getState, setState, isAdmin, isAgent } from './state/store.js';
 import { adminHome } from './ui/shell.js';
+import { admin } from './api/index.js';
 
 /**
  * Routing on the hash.
@@ -76,6 +77,16 @@ export async function resolve() {
     setState({ data: data || {}, loading: false });
   } catch (err) {
     setState({ loading: false, error: err });
+  }
+
+  // The sidebar's numbers — open tickets, pending capacity orders — refresh
+  // with every navigation, off the page's critical path: a failed count must
+  // never take a working page down with it.
+  if (isAdmin()) {
+    admin
+      .badges()
+      .then((badges) => setState({ badges }))
+      .catch(() => {});
   }
 }
 

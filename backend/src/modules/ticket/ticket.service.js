@@ -12,14 +12,31 @@ const { NotFoundError, BadRequestError } = require('../../errors/AppError');
  * out of the only channel for asking how to pay is an agency that stops paying.
  * The same channel carries appeals against a violation strike (blueprint 8.5).
  */
+/**
+ * What multer hands over, in the shape the repository stores. The original
+ * name arrives latin1-mangled from the multipart headers and is decoded here —
+ * it is display text only; the stored filename was generated server-side.
+ */
+function toStoredFiles(files) {
+  return (files || []).map((f) => ({
+    name: Buffer.from(f.originalname, 'latin1').toString('utf8').slice(0, 200),
+    mime: f.mimetype,
+    size: f.size,
+    storedAs: f.filename,
+  }));
+}
+
 const ticketService = {
-  async create({ user, subject, priority, body }) {
+  async create({ user, subject, priority, body, files }) {
     const ticket = await ticketRepository.create({
       userId: user.id,
       subject,
       priority,
       body,
     });
+
+    const stored = toStoredFiles(files);
+    if (stored.length) await ticketRepository.attachFiles(ticket.messages[0].id, stored);
 
     await authRepository.recordActivity({
       userId: user.id,
@@ -48,21 +65,35 @@ const ticketService = {
     return toTicket(ticket);
   },
 
-  async reply({ user, id, body }) {
+  async reply({ user, id, body, files }) {
     const ticket = await this.requireVisible(user, id);
 
     // A closed ticket needs reopening first. Otherwise a conversation continues
     // under a status that says nobody is looking at it.
     if (ticket.status === 'CLOSED') throw new BadRequestError(MESSAGES.TICKET.CLOSED);
 
-    await ticketRepository.addMessage({
+    const [message] = await ticketRepository.addMessage({
       ticketId: id,
       authorId: user.id,
       body,
       isStaff: isAdmin(user.role),
     });
 
+    const stored = toStoredFiles(files);
+    if (stored.length) await ticketRepository.attachFiles(message.id, stored);
+
     return toTicket(await ticketRepository.findById(id));
+  },
+
+  /**
+   * An attachment, after proving the asker may see its conversation — the
+   * file route must answer with exactly the visibility rules of the ticket.
+   */
+  async attachment({ user, id }) {
+    const att = await ticketRepository.findAttachment(id);
+    if (!att) throw new NotFoundError('پیوست');
+    await this.requireVisible(user, att.message.ticketId);
+    return att;
   },
 
   /** Either side may close a ticket; only staff may reopen one. */
@@ -119,6 +150,13 @@ function toTicket(ticket) {
       // answered is not something an agency needs, and naming them invites
       // people to go around the system and contact them directly.
       author: m.isStaff ? 'پشتیبانی' : m.author?.fullName || null,
+      attachments: (m.attachments || []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        mime: a.mime,
+        size: a.size,
+        url: `/api/v1/tickets/attachments/${a.id}`,
+      })),
     })),
   };
 }

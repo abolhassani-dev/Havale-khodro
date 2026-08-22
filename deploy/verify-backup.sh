@@ -70,6 +70,7 @@ case "$FILE" in
       "config/docker-compose.yml:تعریف سرویس‌ها" \
       "config/nginx:پیکربندی nginx" \
       "source/source.tar.gz:کد برنامه" \
+      "uploads/uploads.tar.gz:پیوست‌های تیکت" \
       "certs/letsencrypt.tar.gz:گواهی TLS" \
       "system/os.txt:مشخصات سرور"
     do

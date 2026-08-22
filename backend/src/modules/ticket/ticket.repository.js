@@ -26,9 +26,36 @@ const ticketRepository = {
       where: { id },
       include: {
         user: AUTHOR_SELECT,
-        messages: { orderBy: { createdAt: 'asc' }, include: { author: AUTHOR_SELECT } },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: { author: AUTHOR_SELECT, attachments: true },
+        },
       },
     });
+  },
+
+  /** Files a message carries. Written after the message, deleted with it. */
+  attachFiles(messageId, files) {
+    return prisma.ticketAttachment.createMany({
+      data: files.map((f) => ({
+        messageId,
+        name: f.name,
+        mime: f.mime,
+        size: f.size,
+        storedAs: f.storedAs,
+      })),
+    });
+  },
+
+  findAttachment(id) {
+    return prisma.ticketAttachment.findUnique({
+      where: { id },
+      include: { message: { select: { ticketId: true } } },
+    });
+  },
+
+  countOpen() {
+    return prisma.ticket.count({ where: { status: 'OPEN' } });
   },
 
   list({ userId, status, take = 50 }) {

@@ -323,6 +323,20 @@ async function listSeatOrders(filters) {
   return orders.map(toSeatOrder);
 }
 
+/** Reviewed orders the buyer has not dismissed yet — the panel's notification. */
+async function seatOrderAlerts(user) {
+  const orders = await subscriptionRepository.listUnacknowledgedSeatOrders(user.id);
+  return orders.map(toSeatOrder);
+}
+
+async function acknowledgeSeatOrder({ user, orderId }) {
+  const { count } = await subscriptionRepository.acknowledgeSeatOrder(orderId, user.id);
+  // Zero rows means "not yours or not there" — one answer for both, so the id
+  // space stays unguessable.
+  if (!count) throw new NotFoundError('درخواست ظرفیت');
+  return { acknowledged: true };
+}
+
 module.exports = {
   resolveAccess,
   latestPeriodStart,
@@ -334,5 +348,7 @@ module.exports = {
   requestSeats,
   reviewSeatOrder,
   listSeatOrders,
+  seatOrderAlerts,
+  acknowledgeSeatOrder,
   planSummary,
 };

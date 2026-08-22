@@ -67,6 +67,26 @@ const subscriptionRepository = {
     return prisma.seatOrder.findUnique({ where: { id }, include: { buyer: true } });
   },
 
+  /** Decisions the buyer has not yet seen — the parent panel's notification. */
+  listUnacknowledgedSeatOrders(buyerId) {
+    return prisma.seatOrder.findMany({
+      where: { buyerId, status: { in: ['PAID', 'REJECTED'] }, acknowledgedAt: null },
+      orderBy: { reviewedAt: 'desc' },
+    });
+  },
+
+  /** Scoped to the buyer in the query, so nobody can dismiss another's alert. */
+  acknowledgeSeatOrder(id, buyerId) {
+    return prisma.seatOrder.updateMany({
+      where: { id, buyerId },
+      data: { acknowledgedAt: new Date() },
+    });
+  },
+
+  countPendingSeatOrders() {
+    return prisma.seatOrder.count({ where: { status: 'PENDING' } });
+  },
+
   listSeatOrders({ buyerId, status, take = 50 }) {
     return prisma.seatOrder.findMany({
       where: { ...(buyerId ? { buyerId } : {}), ...(status ? { status } : {}) },

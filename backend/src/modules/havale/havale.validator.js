@@ -134,6 +134,9 @@ const listQuery = Joi.object({
 
 const ownQuery = Joi.object({
   status: Joi.string().valid(...Object.values(HAVALE_STATUS)),
+  // A reseller may widen the view to its sub-agencies' listings. Anyone else
+  // sends it in vain — the service pins them to their own.
+  scope: Joi.string().valid('own', 'children', 'all').default('own'),
   cursor: Joi.string().max(200),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
 });

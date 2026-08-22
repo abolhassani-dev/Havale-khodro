@@ -95,6 +95,10 @@ services:
     # else. Publishing 3000 would leave a second door with no TLS on it.
     expose:
       - '3000'
+    volumes:
+      # Ticket attachments. A named volume, not the image's filesystem — a
+      # redeploy replaces the container and must not take the files with it.
+      - uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -172,5 +176,6 @@ networks:
 
 volumes:
   dbdata:
+  uploads:
   certbot-webroot:
   certbot-certs:

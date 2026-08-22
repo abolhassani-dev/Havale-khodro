@@ -210,6 +210,12 @@ const havaleService = {
 
     if (havale.ownerId === user.id) return toOwnHavale(havale);
 
+    // A reseller opening its own sub-agency's listing sees it whole, the way
+    // the owner does — the family's listings are the parent's to know.
+    if (user.isReseller && havale.owner.parentId === user.id) {
+      return { ...toOwnHavale(havale), isOwn: false };
+    }
+
     // A listing whose owner is suspended, or which is closed, is not browsable
     // by its id either. Otherwise the id is a way around the list filter.
     if (havale.owner.status !== 'ACTIVE' || havale.status !== HAVALE_STATUS.ACTIVE) {
@@ -220,11 +226,27 @@ const havaleService = {
     return toHavaleCard(havale, { subscriptionActive: access.active, revealed: Boolean(reveal) });
   },
 
-  /** Listings belonging to the signed-in agent, including closed and expired ones. */
+  /**
+   * Listings belonging to the signed-in agent, including closed and expired
+   * ones — and, for a reseller, its sub-agencies' too.
+   *
+   * The scope is honoured only for resellers, and only over accounts whose
+   * parentId is this very user: the widest thing anyone can ask for is their
+   * own family. A child's row keeps its own agency on it and comes back with
+   * isOwn false, so the panel knows not to offer edit buttons the server
+   * would refuse.
+   */
   async listOwn({ user, filters }) {
     const take = Math.min(filters.limit || LIST_PAGE_SIZE.DEFAULT, LIST_PAGE_SIZE.MAX);
     const cursor = decodeCursor(filters.cursor);
-    const where = { ownerId: user.id, deletedAt: null };
+
+    const scope = user.isReseller ? filters.scope || 'own' : 'own';
+    const where =
+      scope === 'children'
+        ? { owner: { parentId: user.id }, deletedAt: null }
+        : scope === 'all'
+          ? { OR: [{ ownerId: user.id }, { owner: { parentId: user.id } }], deletedAt: null }
+          : { ownerId: user.id, deletedAt: null };
     if (filters.status) where.status = filters.status;
 
     const rows = await havaleRepository.list({ where, cursor, take: take + 1 });
@@ -232,7 +254,7 @@ const havaleService = {
     const page = hasNext ? rows.slice(0, take) : rows;
 
     return {
-      items: page.map(toOwnHavale),
+      items: page.map((h) => ({ ...toOwnHavale(h), isOwn: h.ownerId === user.id })),
       nextCursor: hasNext ? encodeCursor(page[page.length - 1]) : null,
     };
   },

@@ -1,7 +1,10 @@
 const { Router } = require('express');
 const Joi = require('joi');
 
+const path = require('path');
+
 const ticketService = require('./ticket.service');
+const { upload, UPLOADS_DIR, MAX_FILES } = require('./ticket.upload');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -38,6 +41,9 @@ const bodyText = Joi.string().trim().min(5).max(4000).required();
 router.post(
   '/',
   requireRole(ROLES.AGENT),
+  // Multipart when files ride along, plain JSON otherwise — multer only
+  // touches multipart requests and leaves the JSON path exactly as it was.
+  upload.array('files', MAX_FILES),
   validate({
     body: Joi.object({
       subject: Joi.string().trim().min(3).max(200).required(),
@@ -46,8 +52,33 @@ router.post(
     }),
   }),
   asyncHandler(async (req, res) => {
-    const ticket = await ticketService.create({ user: req.user, ...req.body });
+    const ticket = await ticketService.create({ user: req.user, ...req.body, files: req.files });
     return created(res, ticket, MESSAGES.TICKET.CREATED);
+  })
+);
+
+/**
+ * @openapi
+ * /tickets/attachments/{id}:
+ *   get:
+ *     tags: [Ticket]
+ *     summary: An attached file, behind the ticket's own visibility rules
+ */
+// Registered before '/:id' — otherwise "attachments" reads as a ticket id.
+router.get(
+  '/attachments/:id',
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) => {
+    const att = await ticketService.attachment({ user: req.user, id: req.params.id });
+    res.setHeader('Content-Type', att.mime);
+    // Images open in place; anything else downloads. `filename*` carries the
+    // Persian original name safely.
+    const disposition = att.mime.startsWith('image/') ? 'inline' : 'attachment';
+    res.setHeader(
+      'Content-Disposition',
+      `${disposition}; filename*=UTF-8''${encodeURIComponent(att.name)}`
+    );
+    return res.sendFile(path.join(UPLOADS_DIR, att.storedAs));
   })
 );
 
@@ -95,12 +126,14 @@ router.get(
  */
 router.post(
   '/:id/messages',
+  upload.array('files', MAX_FILES),
   validate({ params: idParam, body: Joi.object({ body: bodyText }) }),
   asyncHandler(async (req, res) => {
     const ticket = await ticketService.reply({
       user: req.user,
       id: req.params.id,
       body: req.body.body,
+      files: req.files,
     });
     return success(res, ticket, MESSAGES.TICKET.REPLIED);
   })

@@ -219,6 +219,64 @@ maybe('subscription and module mode', () => {
       expect(after.seatCredits).toBe(3);
     });
 
+    /**
+     * The buyer is told what happened to their request.
+     *
+     * A capacity order is decided by somebody else, at a time the buyer is not
+     * watching. Without this they learn about it by wandering back to the page
+     * and noticing a number changed — so the decision waits on their dashboard
+     * until they dismiss it, and only they can dismiss it.
+     */
+    it('notifies the buyer of a decision until they dismiss it', async () => {
+      const reseller = await agent({ isReseller: true });
+      const other = await agent({ isReseller: true });
+      const finance = await admin('FINANCE');
+
+      const order = await request(app)
+        .post(api('/subscriptions/seat-orders'))
+        .set('Cookie', reseller.cookie)
+        .send({ seats: 2 })
+        .expect(201);
+
+      // Nothing to announce while it is still pending.
+      let alerts = await request(app)
+        .get(api('/subscriptions/seat-orders/alerts'))
+        .set('Cookie', reseller.cookie)
+        .expect(200);
+      expect(alerts.body.data).toHaveLength(0);
+
+      await request(app)
+        .post(api(`/subscriptions/seat-orders/${order.body.data.id}/review`))
+        .set('Cookie', finance.cookie)
+        .send({ approve: true, note: 'واریز تأیید شد' })
+        .expect(200);
+
+      alerts = await request(app)
+        .get(api('/subscriptions/seat-orders/alerts'))
+        .set('Cookie', reseller.cookie)
+        .expect(200);
+      expect(alerts.body.data).toHaveLength(1);
+      expect(alerts.body.data[0].status).toBe('PAID');
+
+      // Somebody else's order is not theirs to dismiss — and answers the same
+      // way a missing one does.
+      await request(app)
+        .post(api(`/subscriptions/seat-orders/${order.body.data.id}/ack`))
+        .set('Cookie', other.cookie)
+        .expect(404);
+
+      await request(app)
+        .post(api(`/subscriptions/seat-orders/${order.body.data.id}/ack`))
+        .set('Cookie', reseller.cookie)
+        .expect(200);
+
+      alerts = await request(app)
+        .get(api('/subscriptions/seat-orders/alerts'))
+        .set('Cookie', reseller.cookie)
+        .expect(200);
+      expect(alerts.body.data).toHaveLength(0);
+    });
+
     it('cannot be approved twice from one payment', async () => {
       const reseller = await agent({ isReseller: true });
       const finance = await admin('FINANCE');
