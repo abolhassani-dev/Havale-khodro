@@ -134,12 +134,17 @@ function render() {
     root.innerHTML = String(changePasswordPage());
   } else {
     const [title, crumb] = TITLES[state.page] || ['', ''];
+    // While the next page loads, the current one stays — dimmed, with a thin
+    // bar at the top. The alternative, blanking the body, made a fetch of a
+    // tenth of a second read as a stall.
+    const busy = Boolean(state.navigating);
     root.innerHTML = String(html`
       <div class="shell">
         ${sidebar()}
         <main class="main">
+          ${busy ? html`<div class="navbar-load"></div>` : ''}
           ${topbar(title || adminTitle(state.page), crumb)}
-          <div class="content">
+          <div class="content ${busy ? 'is-busy' : ''}">
             ${expiredBanner()}
             ${pageBody()}
           </div>

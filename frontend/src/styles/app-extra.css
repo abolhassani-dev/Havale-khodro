@@ -1673,3 +1673,39 @@ button.af-parent:hover { text-decoration: underline; }
 
 /* ردیف‌های مشخصات داخل کارت — همان .drow، فقط با فاصله‌ی کارت. */
 .af-rows { padding: 4px 16px 12px; }
+
+/* ================================================================
+   جابه‌جایی بین صفحه‌ها — صفحه می‌ماند، یک نوار نازک کار را نشان می‌دهد
+   ================================================================ */
+
+/* پیش از این، هر کلیک بدنه‌ی صفحه را با «در حال بارگذاری…» جایگزین می‌کرد و
+   یک درخواست صدمیلی‌ثانیه‌ای مثل توقف حس می‌شد. حالا صفحه‌ی فعلی می‌ماند،
+   کم‌رنگ می‌شود و این نوار می‌گوید کاری در جریان است. */
+.navbar-load {
+  position: sticky; top: 0; z-index: 30;
+  height: 2px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.navbar-load::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--primary-3), transparent);
+  animation: navload 900ms ease-in-out infinite;
+}
+@keyframes navload {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* کم‌رنگ، نه غیرفعال: خواندنش ممکن است، ولی معلوم است که تازه نیست. کلیک هم
+   نمی‌گیرد تا کسی روی صفحه‌ای که دارد عوض می‌شود دکمه نزند. */
+.content.is-busy {
+  opacity: .55;
+  pointer-events: none;
+  transition: opacity 120ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-load::after { animation: none; background: var(--primary-3); opacity: .5; }
+}

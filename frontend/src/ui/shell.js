@@ -239,13 +239,18 @@ export function sidebar() {
   // Three cases, not two. An account that is neither gets an empty menu rather
   // than the agency one — which is what `!admin` used to give it, complete with
   // «حواله‌های من» for a user that has no agency behind it.
+  // The destination, not the page still on screen: a click has to light up the
+  // item it was aimed at immediately, or the menu looks unresponsive for as
+  // long as the next page takes to load.
+  const here = s.navigating || s.page;
+
   const body = admin
-    ? adminMenu().map((item) => adminItem(item, s.page))
+    ? adminMenu().map((item) => adminItem(item, here))
     : agent
       ? AGENT_NAV.map((item) =>
           item.children
-            ? navSection(item, s.page, s.openNav || [], s.user)
-            : link(item, s.page)
+            ? navSection(item, here, s.openNav || [], s.user)
+            : link(item, here)
         )
       : raw('');
 

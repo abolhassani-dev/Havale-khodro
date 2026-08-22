@@ -14,6 +14,14 @@ const state = {
   params: {},
   data: {},
   loading: false,
+  // Which page has been asked for while the one on screen is still showing.
+  //
+  // Navigation used to blank the whole body to «در حال بارگذاری…» the moment
+  // anything was clicked, so a hundred-millisecond fetch read as a stall: the
+  // reader lost what they were looking at, watched an empty box, and got the
+  // next page. Now the current page stays until its replacement is ready, the
+  // menu marks the destination at once, and a thin bar says work is happening.
+  navigating: null,
   modal: null,
   // Load failures only. There is nothing to show, so the whole page body is
   // replaced by the message.

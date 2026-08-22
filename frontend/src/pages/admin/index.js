@@ -28,19 +28,29 @@ import {
  */
 
 export function registerAdminRoutes(route) {
-  route('adm-dash', async () => ({
-    overview: await admin.overview(),
-    suspicious: await admin.suspicious({ days: 7, minReveals: 20 }).catch(() => null),
-  }));
+  // Every loader below fires its calls together rather than one after another.
+  // Written as a sequence of awaits — which is how these started — a page with
+  // three calls waits three round trips for data that has no order between it,
+  // and the page arrives three times slower than it needs to.
+  route('adm-dash', async () => {
+    const [overview, suspicious] = await Promise.all([
+      admin.overview(),
+      admin.suspicious({ days: 7, minReveals: 20 }).catch(() => null),
+    ]);
+    return { overview, suspicious };
+  });
 
   route('adm-agents', async (params) => ({
     agents: await admin.agents({ query: params.query, status: params.status, take: 50 }),
   }));
 
-  route('adm-agent', async (params) => ({
-    agent: await admin.agent(params.id),
-    plans: await subscription.plans().catch(() => []),
-  }));
+  route('adm-agent', async (params) => {
+    const [agent, plans] = await Promise.all([
+      admin.agent(params.id),
+      subscription.plans().catch(() => []),
+    ]);
+    return { agent, plans };
+  });
 
   // The brand picker needs the catalogue, and this form cannot be submitted
   // without a brand — so it is loaded with the page rather than fetched when
@@ -58,10 +68,13 @@ export function registerAdminRoutes(route) {
 
   route('adm-havale', async (params) => ({ havale: await admin.havale(params.id) }));
 
-  route('adm-reports', async (params) => ({
-    queue: await reports.queue({ status: params.status || 'PENDING' }),
-    approvals: can('thirdStrike') ? await reports.pendingApproval().catch(() => []) : [],
-  }));
+  route('adm-reports', async (params) => {
+    const [queue, approvals] = await Promise.all([
+      reports.queue({ status: params.status || 'PENDING' }),
+      can('thirdStrike') ? reports.pendingApproval().catch(() => []) : [],
+    ]);
+    return { queue, approvals };
+  });
 
   route('adm-tickets', async (params) => ({
     list: await tickets.list(params.status, params.category),
@@ -69,20 +82,23 @@ export function registerAdminRoutes(route) {
 
   route('adm-monitor', async (params) => {
     const page = Number(params.page) || 1;
-    return {
-      activity: await admin.activity({ take: 50, skip: (page - 1) * 50, userId: params.userId }),
-      activityPage: page,
-      reveals: can('bulkContacts') ? await admin.reveals({ take: 30 }).catch(() => null) : null,
-    };
+    const [activity, reveals] = await Promise.all([
+      admin.activity({ take: 50, skip: (page - 1) * 50, userId: params.userId }),
+      can('bulkContacts') ? admin.reveals({ take: 30 }).catch(() => null) : null,
+    ]);
+    return { activity, activityPage: page, reveals };
   });
 
   route('adm-seats', async () => ({ pending: await subscription.pendingOrders() }));
 
-  route('adm-settings', async () => ({
-    settings: await admin.settings(),
-    sms: await admin.smsStatus(),
-    outbox: await admin.smsOutbox(20),
-  }));
+  route('adm-settings', async () => {
+    const [settings, sms, outbox] = await Promise.all([
+      admin.settings(),
+      admin.smsStatus(),
+      admin.smsOutbox(20),
+    ]);
+    return { settings, sms, outbox };
+  });
 
   route('adm-catalog', loadAdminCatalog);
   route('adm-staff', loadStaff);

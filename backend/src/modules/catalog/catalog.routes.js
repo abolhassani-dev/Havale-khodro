@@ -11,6 +11,25 @@ const router = Router();
 router.use(authenticate, requirePasswordChanged);
 
 /**
+ * Let the browser keep the catalogue for a couple of minutes.
+ *
+ * Brands, models and colours are opened by the search page and both listing
+ * forms, and they change a few times a month — but every visit to those pages
+ * fetched them again, so moving between «استعلام» and «ثبت حواله» paid for the
+ * same payload twice a minute.
+ *
+ * `private` is not optional: this response carries the account's own posting
+ * rights (`canPost`), so a shared cache holding one agency's copy for another
+ * would be a real leak. Two minutes because an administrator who edits the
+ * catalogue, or grants a brand, should see it take effect while they are still
+ * looking at the screen.
+ */
+function cacheBriefly(req, res, next) {
+  res.set('Cache-Control', 'private, max-age=120');
+  return next();
+}
+
+/**
  * @openapi
  * /catalog:
  *   get:
@@ -23,6 +42,7 @@ router.use(authenticate, requirePasswordChanged);
  */
 router.get(
   '/',
+  cacheBriefly,
   asyncHandler(async (req, res) => {
     const [brands, colors, allowed] = await Promise.all([
       catalogRepository.listBrands(),
@@ -68,6 +88,7 @@ router.get(
  */
 router.get(
   '/brands/:id/models',
+  cacheBriefly,
   asyncHandler(async (req, res) =>
     success(res, { models: await catalogRepository.listActiveModelsOfBrand(req.params.id) }))
 );

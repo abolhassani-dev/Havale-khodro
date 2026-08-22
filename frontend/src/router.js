@@ -13,6 +13,9 @@ import { admin } from './api/index.js';
 
 const routes = new Map();
 
+/** Guards against a slow loader answering after a newer one — see resolve(). */
+let navToken = 0;
+
 export function route(name, loader) {
   routes.set(name, loader);
 }
@@ -70,13 +73,26 @@ export async function resolve() {
   const target = home === 'no-access' ? home : page && routes.has(page) ? page : home;
   const loader = routes.get(target);
 
-  setState({ page: target, params, loading: true, error: null, data: {} });
+  // The first render has nothing to keep, so it shows the loading box. Every
+  // navigation after it keeps the page the reader is looking at until the next
+  // one is ready — see `navigating` in the store for why.
+  const first = !state.page || state.page === 'login' || state.page === 'change-password';
+  if (first) setState({ page: target, params, loading: true, error: null, data: {} });
+  else setState({ navigating: target, error: null });
+
+  // Two clicks in a row, and the slower loader can land last and overwrite the
+  // page the reader actually asked for. The token makes a stale answer arrive
+  // to a closed door.
+  navToken += 1;
+  const token = navToken;
 
   try {
     const data = loader ? await loader(params) : {};
-    setState({ data: data || {}, loading: false });
+    if (token !== navToken) return;
+    setState({ page: target, params, data: data || {}, loading: false, navigating: null });
   } catch (err) {
-    setState({ loading: false, error: err });
+    if (token !== navToken) return;
+    setState({ page: target, params, data: {}, loading: false, navigating: null, error: err });
   }
 
   // The sidebar's numbers — open tickets, pending capacity orders — refresh
