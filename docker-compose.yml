@@ -102,15 +102,23 @@ services:
       # past the container's ceiling and gets killed by the kernel with no
       # warning. Told the real budget, it collects instead of dying.
       #
-      # Divided between the workers below: the ceiling is per process, and two
-      # processes each allowed 384 MiB would together outgrow the container.
-      NODE_OPTIONS: --max-old-space-size=192
-      # Processes serving the API. Node runs JavaScript on one thread, so one
-      # process uses one core however many the machine has — under load this
-      # server sat at that limit with two cores idle. Two, not three: nginx and
-      # Postgres live on the same cores and must not be starved by the API.
-      # Set WEB_CONCURRENCY in .env to change it on a bigger machine.
-      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      # A ceiling for the whole API: server.js divides it between the workers
+      # when there is more than one, so raising WEB_CONCURRENCY cannot quietly
+      # multiply the memory this container may use.
+      NODE_OPTIONS: --max-old-space-size=384
+      # Processes serving the API. One, measured rather than assumed.
+      #
+      # The reasoning for more was that Node runs JavaScript on one thread and
+      # this machine has three cores. Measuring it said otherwise: a single
+      # process already used 179% of a core, because Prisma's query engine is a
+      # Rust library with its own threads — the cores were never idle. A second
+      # worker added no throughput, doubled the connection pool, pushed
+      # Postgres from 46% to a full core, and took p95 from 367ms to 510ms by
+      # oversubscribing three cores between the API, the database and nginx.
+      #
+      # Kept as a setting rather than deleted: on a machine with more cores it
+      # is the right lever. Set WEB_CONCURRENCY in .env there.
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
     # No published port: the API is reachable through nginx and from nowhere
     # else. Publishing 3000 would leave a second door with no TLS on it.
     expose:

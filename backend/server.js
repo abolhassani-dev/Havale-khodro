@@ -9,23 +9,40 @@ const { connectDatabase, disconnectDatabase } = require('./src/config/database')
 const registerShutdown = require('./src/hooks/shutdown');
 
 /**
- * How many processes serve the API.
+ * How many processes serve the API. One, on the machine this runs on today.
  *
- * Node runs JavaScript on one thread, so one process can use one core no
- * matter how many the machine has. Under load this server sat at the edge of
- * that limit with two cores idle beside it.
+ * The argument for more is the familiar one: Node runs JavaScript on a single
+ * thread, so a process cannot use a second core and this server has three.
+ * Measuring it said otherwise — one process was already using 179% of a core,
+ * because Prisma's query engine is a Rust library with its own thread pool.
+ * The cores were not idle. A second worker added no throughput at all, doubled
+ * the connection pool, took Postgres from 46% of a core to a full one, and
+ * pushed p95 from 367ms to 510ms by oversubscribing three cores between the
+ * API, the database and nginx.
  *
- * Deliberately opt-in through WEB_CONCURRENCY rather than «one per core»:
- * that default is derived from whatever machine the container happens to boot
- * on, and it would leave nothing for nginx and Postgres, which live on the
- * same three cores. The compose file sets the number this deployment wants.
- *
- * Everything that has to be right per process is: the rate limiter divides its
- * budget by this number (see middlewares/rateLimiter), sessions live in the
- * database rather than in memory, and nothing in the application runs on a
- * timer — so there is no work here that must happen exactly once.
+ * So it stays a setting rather than a default: on a machine with cores to
+ * spare it is the right lever, and everything that has to be per-process is.
+ * The rate limiter divides its budget by this number (see
+ * middlewares/rateLimiter), the heap ceiling is divided below, sessions live
+ * in the database rather than in memory, and nothing in the application runs
+ * on a timer — so there is no work here that must happen exactly once.
  */
 const WORKERS = Math.min(Math.max(Number(process.env.WEB_CONCURRENCY) || 1, 1), 8);
+
+/**
+ * The heap ceiling belongs to the container, not to each process.
+ *
+ * NODE_OPTIONS carries a limit sized for the memory this container may use.
+ * Left alone, every worker would claim that whole figure and two of them could
+ * outgrow the container together — so the workers are started with their
+ * share of it. This is what keeps WEB_CONCURRENCY a safe number to raise.
+ */
+function workerHeapArgs() {
+  if (WORKERS < 2) return [];
+  const total = Number(/--max-old-space-size=(\d+)/.exec(process.env.NODE_OPTIONS || '')?.[1]);
+  if (!total) return [];
+  return [`--max-old-space-size=${Math.max(96, Math.floor(total / WORKERS))}`];
+}
 
 async function start() {
   await connectDatabase();
@@ -71,6 +88,8 @@ async function start() {
  */
 function runPrimary() {
   logger.info(`havale starting ${WORKERS} workers [${config.env}]`);
+
+  cluster.setupPrimary({ execArgv: [...process.execArgv, ...workerHeapArgs()] });
 
   let shuttingDown = false;
   let quickDeaths = 0;
