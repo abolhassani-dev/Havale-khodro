@@ -1,4 +1,5 @@
 const { ticketRepository } = require('./ticket.repository');
+const { toStoredFile } = require('../../utils/uploads');
 const authRepository = require('../auth/auth.repository');
 const { MESSAGES } = require('../../constants/messages');
 const { isAdmin } = require('../../constants/roles');
@@ -12,18 +13,9 @@ const { NotFoundError, BadRequestError } = require('../../errors/AppError');
  * out of the only channel for asking how to pay is an agency that stops paying.
  * The same channel carries appeals against a violation strike (blueprint 8.5).
  */
-/**
- * What multer hands over, in the shape the repository stores. The original
- * name arrives latin1-mangled from the multipart headers and is decoded here —
- * it is display text only; the stored filename was generated server-side.
- */
+/** What multer hands over, in the shape the repository stores. */
 function toStoredFiles(files) {
-  return (files || []).map((f) => ({
-    name: Buffer.from(f.originalname, 'latin1').toString('utf8').slice(0, 200),
-    mime: f.mimetype,
-    size: f.size,
-    storedAs: f.filename,
-  }));
+  return (files || []).map(toStoredFile);
 }
 
 const ticketService = {

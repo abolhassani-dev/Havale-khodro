@@ -5,6 +5,7 @@ const path = require('path');
 
 const ticketService = require('./ticket.service');
 const { upload, UPLOADS_DIR, MAX_FILES } = require('./ticket.upload');
+const { discardOnFailure } = require('../../utils/uploads');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -45,6 +46,7 @@ router.post(
   // Multipart when files ride along, plain JSON otherwise — multer only
   // touches multipart requests and leaves the JSON path exactly as it was.
   upload.array('files', MAX_FILES),
+  discardOnFailure,
   validate({
     body: Joi.object({
       subject: Joi.string().trim().min(3).max(200).required(),
@@ -139,6 +141,7 @@ router.get(
 router.post(
   '/:id/messages',
   upload.array('files', MAX_FILES),
+  discardOnFailure,
   validate({ params: idParam, body: Joi.object({ body: bodyText }) }),
   asyncHandler(async (req, res) => {
     const ticket = await ticketService.reply({

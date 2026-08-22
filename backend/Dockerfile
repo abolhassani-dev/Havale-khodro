@@ -87,7 +87,7 @@ COPY --chown=app:nodejs . .
 # a *fresh* named volume mounted over it inherits that ownership — Docker seeds
 # an empty volume from the image, permissions included. Without it the app runs
 # as `app` against a root-owned mount and cannot write a single file.
-RUN mkdir -p /app/uploads/tickets \
+RUN mkdir -p /app/uploads/tickets /app/uploads/receipts \
     && npx prisma generate \
     && chmod +x docker/entrypoint.sh \
     && chown -R app:nodejs /app

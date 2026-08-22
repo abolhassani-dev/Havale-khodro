@@ -545,6 +545,13 @@ model SeatOrder {
 
   buyerNote       String?
   adminNote       String?
+
+  /// فیش واریزی — بدون آن درخواست ثبت نمی‌شود. فایل با نام تصادفی روی دیسک
+  /// ذخیره می‌شود؛ receiptName فقط برای نمایش است، هرگز برای ساخت مسیر.
+  receiptName     String?
+  receiptMime     String?
+  receiptSize     Int?
+  receiptStoredAs String?
   // زمان اطلاع‌رسانی به آگهی‌دهنده پس از تأیید تخلف، تا فرصت پاسخ از راه تیکت داشته باشد
   ownerNotifiedAt DateTime?
   reviewedById    String?

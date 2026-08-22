@@ -31,6 +31,13 @@ export function money(value) {
   return `${num(value)} تومان`;
 }
 
+/** Human file size, e.g. «۳۲۰ کیلوبایت» / «۱٫۴ مگابایت». */
+export function fileSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024 * 1024) return `${faDigits(Math.max(1, Math.round(bytes / 1024)))} کیلوبایت`;
+  return `${faDigits((bytes / (1024 * 1024)).toFixed(1))} مگابایت`;
+}
+
 const JALALI = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
   year: 'numeric',
   month: '2-digit',

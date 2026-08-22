@@ -175,7 +175,7 @@ fi
 # right whatever produced the volume.
 if docker volume inspect feranocar_uploads >/dev/null 2>&1; then
   docker run --rm -v feranocar_uploads:/uploads alpine:3 \
-    sh -c 'mkdir -p /uploads/tickets && chown -R 1001:1001 /uploads' >/dev/null 2>&1 \
+    sh -c 'mkdir -p /uploads/tickets /uploads/receipts && chown -R 1001:1001 /uploads' >/dev/null 2>&1 \
     && echo "→ attachments volume ownership checked" \
     || echo "  ⚠ could not check the attachments volume — uploads may fail"
 fi

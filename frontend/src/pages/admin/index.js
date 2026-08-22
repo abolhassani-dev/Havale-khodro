@@ -3,7 +3,7 @@ import { icon } from '../../ui/icons.js';
 import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
-  money, faDigits, date, dateTime, timeOnly, relative, enDigits,
+  money, faDigits, date, dateTime, timeOnly, relative, enDigits, fileSize,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -868,6 +868,36 @@ export async function showActivityDetail(id) {
  * is «did this agency pay us?», so the card leads with the agency, states the
  * amount to look for in the bank, and shows what they already hold.
  */
+/**
+ * The deposit slip, which is the whole reason this card is a decision at all.
+ *
+ * The slip is required at request time, so «بدون فیش» here means one of two
+ * things: an order placed before the rule existed, or a file that went missing.
+ * Either way the reviewer should see the gap rather than a blank space, because
+ * approving without a slip is exactly the mistake this section prevents.
+ */
+function seatReceipt(r) {
+  if (!r) {
+    return html`<div class="seat-slip is-none">
+      ${icon('flag', 15)}
+      <span>فیش واریزی پیوست نشده — پیش از تأیید، واریز را در حساب بررسی کنید.</span>
+    </div>`;
+  }
+  const image = r.mime?.startsWith('image/');
+  return html`<div class="seat-slip">
+    <a class="seat-slip-v ${image ? 'is-img' : 'is-file'}" href="${r.url}" target="_blank" rel="noopener"
+       title="${r.name}">
+      ${image ? html`<img src="${r.url}" alt="فیش واریزی" loading="lazy">` : icon('file', 22)}
+    </a>
+    <div class="seat-slip-m">
+      <b>فیش واریزی</b>
+      <span class="seat-slip-fn">${r.name}</span>
+      <span class="hint num">${fileSize(r.size)}</span>
+    </div>
+    <a class="btn sm" href="${r.url}" target="_blank" rel="noopener">دیدن فیش</a>
+  </div>`;
+}
+
 function seatOrderCard(o) {
   const b = o.buyer;
   return html`<div class="seat-card">
@@ -915,6 +945,8 @@ function seatOrderCard(o) {
           : ''
       }
     </div>
+
+    ${seatReceipt(o.receipt)}
 
     ${
       o.buyerNote

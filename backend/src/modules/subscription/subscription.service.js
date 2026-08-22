@@ -1,4 +1,5 @@
 const subscriptionRepository = require('./subscription.repository');
+const { toStoredFile } = require('../../utils/uploads');
 const settingsService = require('../settings/settings.service');
 const authRepository = require('../auth/auth.repository');
 const { DEFAULT_REVEAL_LIMITS, REVEAL_PERIOD_DAYS } = require('../../constants/havale');
@@ -256,8 +257,15 @@ async function invoiceFor(user) {
  * Capacity is paid up front (blueprint 4.7), which is what stops a parent
  * running fifty sub-agents all month and suspending them before the bill.
  */
-async function requestSeats({ user, seats, note }) {
+async function requestSeats({ user, seats, note, receiptFile }) {
   if (!user.isReseller) throw new ForbiddenError(MESSAGES.SEAT.NOT_RESELLER);
+
+  // The deposit slip is the whole basis of the decision: capacity is prepaid,
+  // and an administrator approving one is saying «I can see this money».
+  // Required here rather than only in the form, so no other caller can create
+  // an order nobody can verify.
+  const receipt = toStoredFile(receiptFile);
+  if (!receipt) throw new BadRequestError(MESSAGES.SEAT.RECEIPT_REQUIRED);
 
   const unitPrice = await settingsService.get('seat.priceToman');
 
@@ -267,9 +275,32 @@ async function requestSeats({ user, seats, note }) {
     unitPriceToman: unitPrice,
     totalToman: BigInt(seats) * BigInt(unitPrice),
     buyerNote: note,
+    receiptName: receipt.name,
+    receiptMime: receipt.mime,
+    receiptSize: receipt.size,
+    receiptStoredAs: receipt.storedAs,
   });
 
   return toSeatOrder(order);
+}
+
+/**
+ * The deposit slip, behind the same rule as the order itself: its buyer, and
+ * staff who may review capacity. Not-found rather than forbidden for anybody
+ * else — an outsider must not learn the order exists.
+ */
+async function seatOrderReceipt({ user, orderId }) {
+  const order = await subscriptionRepository.findSeatOrder(orderId);
+  if (!order || !order.receiptStoredAs) throw new NotFoundError('فیش واریزی');
+
+  const maySee = isAdmin(user.role) || order.buyerId === user.id;
+  if (!maySee) throw new NotFoundError('فیش واریزی');
+
+  return {
+    name: order.receiptName,
+    mime: order.receiptMime,
+    storedAs: order.receiptStoredAs,
+  };
 }
 
 async function reviewSeatOrder({ actor, orderId, approve, note }) {
@@ -315,6 +346,17 @@ function toSeatOrder(order) {
     adminNote: order.adminNote,
     createdAt: order.createdAt,
     reviewedAt: order.reviewedAt,
+    // The deposit slip. Present as a link rather than a path: the file is
+    // served by an endpoint that checks who is asking, never from a static
+    // folder anybody could walk.
+    receipt: order.receiptStoredAs
+      ? {
+          name: order.receiptName,
+          mime: order.receiptMime,
+          size: order.receiptSize,
+          url: `/api/v1/subscriptions/seat-orders/${order.id}/receipt`,
+        }
+      : null,
     // Present when the caller asked for orders across agencies — the admin
     // queue. An agency listing its own orders already knows who it is.
     buyer: order.buyer
@@ -359,6 +401,7 @@ module.exports = {
   seatSummary,
   invoiceFor,
   requestSeats,
+  seatOrderReceipt,
   reviewSeatOrder,
   listSeatOrders,
   seatOrderAlerts,

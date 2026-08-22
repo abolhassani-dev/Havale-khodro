@@ -24,7 +24,9 @@ export function renderModal() {
         <button class="btn sm" type="button" data-close-modal aria-label="بستن">✕</button>
       </div>
       <div class="modal-b">
-        ${modal.error ? errorBox(modal.error) : ''}
+        <!-- Filled in place when a submission is refused. Empty in the markup
+             on purpose: see runModalAction. -->
+        <div data-modal-error>${modal.error ? errorBox(modal.error) : ''}</div>
         ${modal.body}
       </div>
       ${
@@ -45,21 +47,39 @@ export function renderModal() {
   </div>`;
 }
 
-/** Runs the modal's action, keeping failures inside the modal. */
+/**
+ * Runs the modal's action, keeping failures inside the modal.
+ *
+ * The refusal is written into the open modal's DOM rather than through the
+ * store. It used to go through the store, and the re-render that followed
+ * rebuilt the modal from its static body — so being told what was wrong cost
+ * the user everything they had typed. On a form with a file on it that is not
+ * a nuisance but a dead end: the second attempt submits an empty field, and
+ * the browser blocks it without saying anything.
+ */
 export async function runModalAction(form) {
   const { modal } = getState();
   if (!modal) return;
 
-  setState({ modal: { ...modal, error: null, busy: true } });
+  const root = document.querySelector('.overlay .modal');
+  const slot = root?.querySelector('[data-modal-error]');
+  const confirm = root?.querySelector('button[type="submit"], [data-confirm]');
+
+  if (slot) slot.innerHTML = '';
+  if (confirm) confirm.disabled = true;
 
   try {
     if (form && modal.onSubmit) await modal.onSubmit(form);
     else if (modal.onConfirm) await modal.onConfirm();
     closeModal();
   } catch (err) {
-    // Kept open with the message inside: closing it would throw away whatever
-    // the user typed, and they would have to type it again to find out what was
-    // wrong.
-    setState({ modal: { ...getState().modal, error: err, busy: false } });
+    if (confirm) confirm.disabled = false;
+    if (slot) {
+      slot.innerHTML = String(errorBox(err));
+      slot.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    // No modal in the document — the only way to say anything is the store.
+    setState({ modal: { ...getState().modal, error: err } });
   }
 }

@@ -1,7 +1,10 @@
 const { Router } = require('express');
 const Joi = require('joi');
 
+const path = require('path');
+
 const subscriptionService = require('./subscription.service');
+const { makeUploader, discardOnFailure } = require('../../utils/uploads');
 const subscriptionRepository = require('./subscription.repository');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
@@ -20,6 +23,14 @@ const router = Router();
 router.use(authenticate, requirePasswordChanged);
 
 const agentOnly = requireRole(ROLES.AGENT);
+
+// One file, and it is the deposit slip. Its own folder so a receipt is never
+// mistaken for a ticket attachment when somebody goes looking on disk.
+const { upload: receiptUpload, dir: RECEIPTS_DIR } = makeUploader({
+  subdir: 'receipts',
+  maxFiles: 1,
+  typeMessage: 'فیش واریزی باید عکس (JPG، PNG، WebP) یا فایل PDF باشد',
+});
 
 /**
  * @openapi
@@ -77,6 +88,10 @@ router.get(
 router.post(
   '/seat-orders',
   agentOnly,
+  // Multipart: the deposit slip rides with the request. Numbers arrive as
+  // strings from a multipart body, so the schema converts rather than refuses.
+  receiptUpload.single('receipt'),
+  discardOnFailure,
   validate({
     body: Joi.object({
       seats: Joi.number().integer().min(1).max(500).required(),
@@ -88,8 +103,35 @@ router.post(
       user: req.user,
       seats: req.body.seats,
       note: req.body.note,
+      receiptFile: req.file,
     });
     return created(res, order, MESSAGES.SEAT.ORDER_CREATED);
+  })
+);
+
+/**
+ * @openapi
+ * /subscriptions/seat-orders/{id}/receipt:
+ *   get:
+ *     tags: [Subscription]
+ *     summary: The deposit slip attached to a capacity order
+ *     description: Its buyer and reviewing staff only; anybody else gets 404.
+ */
+router.get(
+  '/seat-orders/:id/receipt',
+  validate({ params: Joi.object({ id: Joi.string().trim().max(40).required() }) }),
+  asyncHandler(async (req, res) => {
+    const receipt = await subscriptionService.seatOrderReceipt({
+      user: req.user,
+      orderId: req.params.id,
+    });
+    res.setHeader('Content-Type', receipt.mime);
+    const disposition = receipt.mime.startsWith('image/') ? 'inline' : 'attachment';
+    res.setHeader(
+      'Content-Disposition',
+      `${disposition}; filename*=UTF-8''${encodeURIComponent(receipt.name)}`
+    );
+    return res.sendFile(path.join(RECEIPTS_DIR, receipt.storedAs));
   })
 );
 

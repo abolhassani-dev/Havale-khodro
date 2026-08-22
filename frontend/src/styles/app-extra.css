@@ -1410,7 +1410,11 @@ button.af-parent:hover { text-decoration: underline; }
 }
 .tkb.mine .tkb-file { background: var(--card); }
 .tkb-file:hover { border-color: var(--primary-3); color: var(--primary); }
-.tkb-fn { font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tkb-fn {
+  font-weight: 600; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  unicode-bidi: plaintext;
+}
 .tkb-fs { color: var(--ink-3); font-size: 11px; }
 
 /* دکمه‌ی پیوست در کامپوزر */
@@ -1517,6 +1521,39 @@ button.af-parent:hover { text-decoration: underline; }
 /* مبلغی که باید در حساب دیده شود — همان چیزی که تصمیم رویش گرفته می‌شود */
 .seat-fig.is-total { background: var(--primary-08); }
 .seat-fig.is-total b { font-size: 16px; color: var(--primary); }
+
+/* فیش واریزی — چیزی که تصمیم رویش گرفته می‌شود، پس دیده می‌شود نه لینک خشک */
+.seat-slip {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-2);
+}
+.seat-slip-v {
+  flex: none;
+  display: grid; place-items: center;
+  width: 62px; height: 62px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper-2);
+  overflow: hidden;
+  color: var(--ink-3);
+}
+.seat-slip-v img { width: 100%; height: 100%; object-fit: cover; }
+.seat-slip-v:hover { border-color: var(--primary); }
+.seat-slip-m { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.seat-slip-m b { font-size: 13px; }
+.seat-slip-fn {
+  font-size: 12px; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* A name like «فیش-واریزی.png» is Persian with a latin tail; without this the
+     extension jumps to the wrong end of it. */
+  unicode-bidi: plaintext;
+}
+.seat-slip.is-none {
+  background: var(--copper-08);
+  color: var(--copper);
+  font-size: 12.5px;
+}
 
 .seat-note {
   padding: 10px 14px;

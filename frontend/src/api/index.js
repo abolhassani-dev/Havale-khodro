@@ -42,7 +42,8 @@ export const subscription = {
   invoice: () => api.get('/subscriptions/invoice'),
   seats: () => api.get('/subscriptions/seats'),
   plans: () => api.get('/subscriptions/plans'),
-  orderSeats: (seats, note) => api.post('/subscriptions/seat-orders', { seats, note }),
+  // Multipart: the deposit slip is part of the request, not an afterthought.
+  orderSeats: (formData) => api.post('/subscriptions/seat-orders', formData),
   myOrders: () => api.get('/subscriptions/seat-orders'),
   seatAlerts: () => api.get('/subscriptions/seat-orders/alerts'),
   ackSeatOrder: (id) => api.post(`/subscriptions/seat-orders/${id}/ack`),

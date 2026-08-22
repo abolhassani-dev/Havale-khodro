@@ -1,5 +1,7 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 const app = require('../../src/app');
 const { prisma, connectDatabase, disconnectDatabase } = require('../../src/config/database');
@@ -165,27 +167,115 @@ maybe('subscription and module mode', () => {
   });
 
   describe('buying capacity', () => {
+    // Capacity is prepaid by bank transfer, so every order carries the slip.
+    const RECEIPT = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
+        '0000000d49444154789c626001000000ffff03000006000557bfabd4000000004945' +
+        '4e44ae426082',
+      'hex'
+    );
+
+    /** An order the way the form sends one: multipart, slip attached. */
+    const placeOrder = (cookie, seats, note) => {
+      const req = request(app)
+        .post(api('/subscriptions/seat-orders'))
+        .set('Cookie', cookie)
+        .field('seats', String(seats));
+      if (note) req.field('note', note);
+      return req.attach('receipt', RECEIPT, 'فیش.png');
+    };
+
     it('is refused to an agency without module mode', async () => {
       const { cookie } = await agent();
+
+      const res = await placeOrder(cookie, 5).expect(403);
+
+      expect(res.body.error.message).toContain('ماژول');
+    });
+
+    /**
+     * Approving an order means «I can see this money in the account», and
+     * nobody can see it from a number typed into a form. The slip is required
+     * by the service rather than by the page, so there is no way in without it.
+     */
+    it('is refused without the deposit slip', async () => {
+      const { cookie } = await agent({ isReseller: true });
 
       const res = await request(app)
         .post(api('/subscriptions/seat-orders'))
         .set('Cookie', cookie)
-        .send({ seats: 5 })
-        .expect(403);
+        .send({ seats: 3 })
+        .expect(400);
 
-      expect(res.body.error.message).toContain('ماژول');
+      expect(res.body.error.message).toContain('فیش');
+    });
+
+    it('serves the slip to its buyer and to staff, and to nobody else', async () => {
+      const buyer = await agent({ isReseller: true });
+      const stranger = await agent({ isReseller: true });
+      const finance = await admin('FINANCE');
+
+      const res = await placeOrder(buyer.cookie, 2).expect(201);
+      const { receipt } = res.body.data;
+
+      expect(receipt.name).toBe('فیش.png');
+      expect(receipt.mime).toBe('image/png');
+      // The stored name is generated — an uploaded filename is display text,
+      // never part of a path.
+      expect(receipt.url).not.toContain('فیش');
+
+      await request(app).get(receipt.url).set('Cookie', buyer.cookie).expect(200);
+      await request(app).get(receipt.url).set('Cookie', finance.cookie).expect(200);
+      // Not-found rather than forbidden: an outsider must not learn the order
+      // exists at all.
+      await request(app).get(receipt.url).set('Cookie', stranger.cookie).expect(404);
+    });
+
+    it('refuses a slip of a type it cannot display', async () => {
+      const { cookie } = await agent({ isReseller: true });
+
+      const res = await request(app)
+        .post(api('/subscriptions/seat-orders'))
+        .set('Cookie', cookie)
+        .field('seats', '2')
+        .attach('receipt', Buffer.from('#!/bin/sh\necho hi\n'), 'slip.sh')
+        .expect(400);
+
+      expect(res.body.error.message).toContain('PDF');
+    });
+
+    /**
+     * Multer writes the file before anything downstream reads the request, so
+     * a refused order would otherwise leave a five-megabyte file on the disk
+     * that no row will ever point at.
+     */
+    it('leaves no file behind when the order itself is refused', async () => {
+      const { cookie } = await agent({ isReseller: true });
+      const dir = path.join(process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'), 'receipts');
+      const before = fs.existsSync(dir) ? fs.readdirSync(dir).length : 0;
+
+      await request(app)
+        .post(api('/subscriptions/seat-orders'))
+        .set('Cookie', cookie)
+        .field('seats', '0') // refused by the schema, after the file is stored
+        .attach('receipt', RECEIPT, 'فیش.png')
+        .expect(422);
+
+      // The delete is scheduled when the response finishes, so give it a moment
+      // rather than racing it.
+      let after = before + 1;
+      for (let tries = 0; tries < 20 && after !== before; tries += 1) {
+        after = fs.existsSync(dir) ? fs.readdirSync(dir).length : 0;
+        if (after !== before) await new Promise((done) => setTimeout(done, 50));
+      }
+      expect(after).toBe(before);
     });
 
     it('prices the order from the settings table, not from code', async () => {
       await settingsService.set('seat.priceToman', 1_500_000n);
       const { cookie } = await agent({ isReseller: true });
 
-      const res = await request(app)
-        .post(api('/subscriptions/seat-orders'))
-        .set('Cookie', cookie)
-        .send({ seats: 4 })
-        .expect(201);
+      const res = await placeOrder(cookie, 4).expect(201);
 
       // Blueprint 4.10: the price is a business decision, so it lives where the
       // business can change it.
@@ -200,11 +290,7 @@ maybe('subscription and module mode', () => {
       const reseller = await agent({ isReseller: true });
       const finance = await admin('FINANCE');
 
-      const order = await request(app)
-        .post(api('/subscriptions/seat-orders'))
-        .set('Cookie', reseller.cookie)
-        .send({ seats: 3 })
-        .expect(201);
+      const order = await placeOrder(reseller.cookie, 3).expect(201);
 
       const before = await prisma.user.findUnique({ where: { id: reseller.user.id } });
       expect(before.seatCredits).toBe(0);
@@ -232,11 +318,7 @@ maybe('subscription and module mode', () => {
       const other = await agent({ isReseller: true });
       const finance = await admin('FINANCE');
 
-      const order = await request(app)
-        .post(api('/subscriptions/seat-orders'))
-        .set('Cookie', reseller.cookie)
-        .send({ seats: 2 })
-        .expect(201);
+      const order = await placeOrder(reseller.cookie, 2).expect(201);
 
       // Nothing to announce while it is still pending.
       let alerts = await request(app)
@@ -281,11 +363,7 @@ maybe('subscription and module mode', () => {
       const reseller = await agent({ isReseller: true });
       const finance = await admin('FINANCE');
 
-      const order = await request(app)
-        .post(api('/subscriptions/seat-orders'))
-        .set('Cookie', reseller.cookie)
-        .send({ seats: 2 })
-        .expect(201);
+      const order = await placeOrder(reseller.cookie, 2).expect(201);
 
       const review = () =>
         request(app)

@@ -3,7 +3,7 @@ import { icon } from '../../ui/icons.js';
 import { subscription, subAgents, tickets, reports, catalog } from '../../api/index.js';
 import { getState, setState, isAdmin } from '../../state/store.js';
 import {
-  money, faDigits, date, dateTime, timeOnly, relative, enDigits,
+  money, faDigits, date, dateTime, timeOnly, relative, enDigits, fileSize,
   TICKET_STATUS_LABEL, TICKET_CATEGORIES, TICKET_CATEGORY_LABEL, REPORT_REASON_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -170,16 +170,43 @@ export function orderSeatsModal() {
         <div class="hint">قیمت هر ظرفیت در هر دوره: ${money(price)}</div>
       </div>
       <div class="field">
-        <label for="note">توضیح <span class="opt">(اختیاری)</span></label>
-        <textarea class="in" id="note" name="note" rows="2" maxlength="500"></textarea>
+        <label for="m-receipt">فیش واریزی</label>
+        <label class="btn sm tk-clip" title="تصویر یا PDF فیش">
+          ${icon('file', 15)} انتخاب فایل فیش
+          <!-- No required attribute: the input is hidden behind its label, and
+               the browser cannot focus a hidden control to complain about it —
+               the submit button would simply do nothing. The check in onSubmit
+               refuses with a sentence the person can read. -->
+          <input type="file" id="m-receipt" name="receipt" hidden
+                 accept="image/jpeg,image/png,image/webp,application/pdf" data-attach-input>
+        </label>
+        <span class="tk-attach-names hint" data-attach-names></span>
+        <div class="hint">
+          اول مبلغ را واریز کنید، بعد تصویر فیش را این‌جا پیوست کنید — بدون فیش،
+          درخواست قابل بررسی نیست.
+        </div>
+      </div>
+      <div class="field">
+        <label for="seat-note">توضیح (اختیاری)</label>
+        <input class="in" id="seat-note" name="note" maxlength="300"
+               placeholder="مثلاً شماره پیگیری واریز یا نام واریزکننده">
       </div>
       <p style="color:var(--ink-3);font-size:12px">
-        پس از ثبت، مبلغ را واریز کنید. ظرفیت بعد از تأیید پرداخت توسط ما فعال می‌شود.
+        ظرفیت بعد از دیدن و تأیید فیش توسط ما فعال می‌شود.
       </p>`,
     confirmLabel: 'ثبت درخواست',
     onSubmit: async (form) => {
-      await subscription.orderSeats(Number(enDigits(form.seats.value)), form.note.value);
-      toast('درخواست ظرفیت ثبت شد');
+      const file = form.receipt?.files?.[0];
+      if (!file) throw new Error('فیش واریزی را پیوست کنید');
+
+      const fd = new FormData();
+      fd.append('seats', enDigits(form.seats.value));
+      // Optional, and multipart has no notion of «absent» — an empty string is
+      // what the schema expects to strip.
+      if (form.note?.value.trim()) fd.append('note', form.note.value.trim());
+      fd.append('receipt', file);
+      await subscription.orderSeats(fd);
+      toast('درخواست ظرفیت با فیش ثبت شد');
       await resolve();
     },
   });
@@ -469,6 +496,11 @@ function seatOrderRow(o) {
       </div>
       <div class="tk-sub">
         ${money(o.totalToman)} · ثبت <span class="num">${date(o.createdAt)}</span>
+        ${
+          o.receipt
+            ? html` · <a href="${o.receipt.url}" target="_blank" rel="noopener">فیش ارسالی</a>`
+            : ''
+        }
         ${o.adminNote ? html` · ${o.adminNote}` : ''}
       </div>
     </div>
@@ -598,12 +630,6 @@ export function ticketsPage() {
       گفتگو با اشتراک منقضی هم باز می‌شود — برای هماهنگی تمدید از همین‌جا اقدام کنید.
     </div>
   </div>`;
-}
-
-/** Human file size, e.g. «۳۲۰ کیلوبایت» / «۱٫۴ مگابایت». */
-function fileSize(bytes) {
-  if (bytes < 1024 * 1024) return `${faDigits(Math.max(1, Math.round(bytes / 1024)))} کیلوبایت`;
-  return `${faDigits((bytes / (1024 * 1024)).toFixed(1))} مگابایت`;
 }
 
 /**

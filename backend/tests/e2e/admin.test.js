@@ -301,10 +301,21 @@ maybe('admin panel', () => {
         .set('Cookie', buyer.cookie)
         .send({ subject: 'شمارش تیکت', body: 'این تیکت باید در عدد منو دیده شود.' })
         .expect(201);
+      // Capacity is prepaid, so an order without its deposit slip is refused.
       await request(app)
         .post(api('/subscriptions/seat-orders'))
         .set('Cookie', buyer.cookie)
-        .send({ seats: 1 })
+        .field('seats', '1')
+        .attach(
+          'receipt',
+          Buffer.from(
+            '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
+              '0000000d49444154789c626001000000ffff03000006000557bfabd400000000' +
+              '49454e44ae426082',
+            'hex'
+          ),
+          'فیش.png'
+        )
         .expect(201);
 
       const after = await request(app)
