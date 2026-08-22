@@ -60,7 +60,15 @@ services:
     networks: [appnet]
 
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        # Where npm fetches packages from. The default is the official
+        # registry; set NPM_REGISTRY in .env to point at a mirror on a server
+        # whose route to npmjs.org is unreliable — every tarball is still
+        # checked against the integrity hash in package-lock.json, so a mirror
+        # cannot serve anything the lockfile did not describe.
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
     restart: unless-stopped
     logging: *logging
     mem_limit: ${API_MEM_LIMIT:-512m}
