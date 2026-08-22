@@ -111,13 +111,17 @@ const ADMIN_NAV = [
   { page: 'adm-dash', icon: 'dashboard', label: 'داشبورد', permission: 'monitoring' },
   { page: 'adm-agents', icon: 'shield', label: 'نمایندگی‌ها', permission: 'agents' },
   { page: 'adm-new-agent', icon: 'plus', label: 'ساخت نمایندگی', permission: 'agents' },
+  { group: 'پشتیبانی' },
+  // Both halves of «somebody is asking us for something» sit together: a
+  // conversation and a capacity request are the same job from the desk that
+  // answers them.
+  { page: 'adm-tickets', icon: 'ticket', label: 'گفتگوها', permission: 'tickets' },
+  { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
   { group: 'محتوا' },
   { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
-  { page: 'adm-tickets', icon: 'ticket', label: 'تیکت‌ها', permission: 'tickets' },
   { page: 'adm-catalog', icon: 'car', label: 'کاتالوگ خودرو', permission: 'catalog' },
   { group: 'نظارت و مالی' },
   { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
-  { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
   { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
   { group: 'مالک' },
   { page: 'adm-staff', icon: 'shield', label: 'کاربران سیستم', permission: 'staff' },

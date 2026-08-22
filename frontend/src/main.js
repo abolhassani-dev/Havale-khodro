@@ -45,8 +45,8 @@ const TITLES = {
   mine: ['حواله‌های من', 'همه‌ی آگهی‌های شما'],
   subscription: ['اشتراک من', 'وضعیت، صورتحساب و ظرفیت'],
   'sub-agents': ['زیرنمایندگی‌ها', 'حالت ماژول'],
-  tickets: ['پشتیبانی', 'تیکت‌های شما'],
-  ticket: ['تیکت', ''],
+  tickets: ['پشتیبانی', 'گفتگو با تیم پشتیبانی'],
+  ticket: ['گفتگو', ''],
   profile: ['تنظیمات حساب', 'مشخصات نمایندگی و رمز عبور'],
   'no-access': ['دسترسی تعیین نشده', ''],
 };
@@ -179,7 +179,7 @@ function adminTitle(page) {
     'adm-agent': 'پرونده‌ی نمایندگی',
     'adm-new-agent': 'ساخت نمایندگی',
     'adm-reports': 'گزارش‌های تخلف',
-    'adm-tickets': 'تیکت‌ها',
+    'adm-tickets': 'پشتیبانی',
     'adm-catalog': 'کاتالوگ خودرو',
     'adm-monitor': 'مانیتورینگ',
     'adm-seats': 'درخواست‌های ظرفیت',
@@ -270,7 +270,7 @@ function onClick(event) {
   if (d.subagentStatus) return setSubAgentStatus(d.subagentStatus, d.status);
   if (d.subagentPassword) return subAgentPasswordModal(d.subagentPassword);
   if (d.subagentBrands) return subAgentBrandsModal(d.subagentBrands);
-  if (d.newTicket !== undefined) return newTicketModal(d.newTicket);
+  if (d.newTicket !== undefined) return newTicketModal(d.newTicket, d.category);
   if (d.closeTicket) return closeTicket(d.closeTicket);
   if (d.reopenTicket) return reopenTicket(d.reopenTicket);
   if (d.ticketPriority) return setTicketPriority(d.ticketPriority, d.priority);

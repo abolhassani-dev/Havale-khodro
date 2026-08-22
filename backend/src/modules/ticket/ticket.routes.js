@@ -30,6 +30,7 @@ router.use(authenticate, requirePasswordChanged);
 
 const idParam = Joi.object({ id: Joi.string().trim().max(40).required() });
 const bodyText = Joi.string().trim().min(5).max(4000).required();
+const CATEGORIES = ['SUBSCRIPTION', 'SEATS', 'LISTING', 'APPEAL', 'TECHNICAL', 'OTHER'];
 
 /**
  * @openapi
@@ -47,6 +48,7 @@ router.post(
   validate({
     body: Joi.object({
       subject: Joi.string().trim().min(3).max(200).required(),
+      category: Joi.string().valid(...CATEGORIES).default('OTHER'),
       priority: Joi.string().valid('LOW', 'NORMAL', 'HIGH').default('NORMAL'),
       body: bodyText,
     }),
@@ -92,10 +94,20 @@ router.get(
 router.get(
   '/',
   validate({
-    query: Joi.object({ status: Joi.string().valid('OPEN', 'ANSWERED', 'CLOSED') }),
+    query: Joi.object({
+      status: Joi.string().valid('OPEN', 'ANSWERED', 'CLOSED'),
+      category: Joi.string().valid(...CATEGORIES),
+    }),
   }),
   asyncHandler(async (req, res) =>
-    success(res, await ticketService.list({ user: req.user, status: req.query.status }))
+    success(
+      res,
+      await ticketService.list({
+        user: req.user,
+        status: req.query.status,
+        category: req.query.category,
+      })
+    )
   )
 );
 

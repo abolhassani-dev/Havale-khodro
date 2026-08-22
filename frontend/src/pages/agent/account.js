@@ -4,7 +4,7 @@ import { subscription, subAgents, tickets, reports, catalog } from '../../api/in
 import { getState, setState, isAdmin } from '../../state/store.js';
 import {
   money, faDigits, date, dateTime, timeOnly, relative, enDigits,
-  TICKET_STATUS_LABEL, REPORT_REASON_LABEL,
+  TICKET_STATUS_LABEL, TICKET_CATEGORIES, TICKET_CATEGORY_LABEL, REPORT_REASON_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { LIMITS } from '../../constants.js';
@@ -401,7 +401,17 @@ export function subAgentPasswordModal(id) {
 // ── tickets ─────────────────────────────────────────────────────────────────
 
 export async function loadTickets() {
-  return { list: await tickets.list() };
+  // The support hub also carries the capacity requests: buying capacity is a
+  // request to us, answered by us, and the reader who wants to know «what did
+  // I ask for and where is it» should not have to remember which of two pages
+  // holds which kind of asking.
+  const reseller = Boolean(getState().user?.isReseller);
+  const [list, seatOrders, seats] = await Promise.all([
+    tickets.list(),
+    reseller ? subscription.myOrders().catch(() => []) : [],
+    reseller ? subscription.seats().catch(() => null) : null,
+  ]);
+  return { list, seatOrders, seats };
 }
 
 export async function loadTicket(params) {
@@ -435,6 +445,7 @@ export function ticketItem(t, { go, withAgency = false, highlight } = {}) {
       </div>
       <div class="tk-sub">
         ${withAgency && t.agency ? html`${t.agency.name} <span class="num">(${t.agency.code})</span> · ` : ''}
+        ${t.category ? html`${TICKET_CATEGORY_LABEL[t.category] || ''} · ` : ''}
         آخرین پیام ${relative(t.lastReplyAt)}
       </div>
     </div>
@@ -443,30 +454,148 @@ export function ticketItem(t, { go, withAgency = false, highlight } = {}) {
   </div>`;
 }
 
+/** A capacity order as the agency reads its own: what it asked, where it is. */
+function seatOrderRow(o) {
+  const tone = { PENDING: 'w', PAID: 'g', REJECTED: 'r' }[o.status] || '';
+  const label = { PENDING: 'در انتظار تأیید پرداخت', PAID: 'تأیید شد', REJECTED: 'رد شد' }[o.status];
+  return html`<div class="sup-order">
+    <span class="tk-i ${o.status === 'PAID' ? 'is-ok' : o.status === 'PENDING' ? 'is-warn' : ''}">
+      ${icon('layers', 16)}
+    </span>
+    <div class="tk-m">
+      <div class="tk-s">
+        <b>${faDigits(o.seats)} ظرفیت زیرنمایندگی</b>
+        <span class="num tk-serial">#${faDigits(o.serial)}</span>
+      </div>
+      <div class="tk-sub">
+        ${money(o.totalToman)} · ثبت <span class="num">${date(o.createdAt)}</span>
+        ${o.adminNote ? html` · ${o.adminNote}` : ''}
+      </div>
+    </div>
+    <span class="tag ${tone}">${label}</span>
+  </div>`;
+}
+
+/**
+ * The support hub.
+ *
+ * It used to be one flat list of tickets with a «تیکت جدید» button, which put
+ * the whole burden of «what do I even call this?» on the reader. Now the page
+ * starts from what they might need — six subjects, each opening a conversation
+ * already filed under it — and the capacity purchase sits among them, because
+ * from the agency's side it is the same act: asking us for something.
+ *
+ * Live conversations come first; the finished ones are kept, under their own
+ * heading, because «what did they tell me last month» is a real question.
+ */
 export function ticketsPage() {
-  const { data } = getState();
+  const { data, user } = getState();
   const items = data.list || [];
+  const reseller = Boolean(user?.isReseller);
+  const orders = data.seatOrders || [];
+
+  const live = items.filter((t) => t.status !== 'CLOSED');
+  const done = items.filter((t) => t.status === 'CLOSED');
+  const waiting = live.filter((t) => t.status === 'OPEN').length;
+  const answered = live.filter((t) => t.status === 'ANSWERED').length;
+  const pendingOrders = orders.filter((o) => o.status === 'PENDING');
 
   return html`
-  <div class="card">
-    <div class="card-h">
-      <h2>پشتیبانی ${qtip('سؤال، مشکل یا درخواست تمدید اشتراک را این‌جا تیکت بزنید. پاسخ تیم پشتیبانی در همین صفحه زیر همان تیکت می‌آید.')}</h2>
-      <button class="btn primary sm" data-new-ticket="">تیکت جدید</button>
+  <div class="sup">
+    <div class="card sup-head">
+      <div class="sup-intro">
+        <h2>چطور می‌توانیم کمک کنیم؟</h2>
+        <p>موضوع را انتخاب کنید تا گفتگو در همان دسته باز شود — پاسخ در همین صفحه می‌آید.</p>
+      </div>
+      <div class="sup-tiles">
+        ${TICKET_CATEGORIES.filter((c) => c.value !== 'SEATS' || reseller).map(
+          (c) =>
+            html`<button class="sup-tile" data-new-ticket="" data-category="${c.value}">
+              <span class="sup-ti">${icon(c.icon, 18)}</span>
+              <b>${c.label}</b>
+              <span>${c.hint}</span>
+            </button>`
+        )}
+        ${
+          // Buying capacity is not a conversation — it is a form with a price
+          // on it — so its tile opens that form instead. It belongs here all
+          // the same: this is the page for asking us for things.
+          reseller
+            ? html`<button class="sup-tile is-buy" data-order-seats>
+                <span class="sup-ti">${icon('plus', 18)}</span>
+                <b>خرید ظرفیت زیرنمایندگی</b>
+                <span>
+                  ${data.seats
+                    ? `الان ${faDigits(data.seats.available)} ظرفیت آزاد دارید`
+                    : 'ظرفیت تازه بخرید'}
+                </span>
+              </button>`
+            : ''
+        }
+      </div>
     </div>
+
     ${
-      items.length
-        ? html`<div class="tk-list">
-            ${items.map((t) => ticketItem(t, { go: 'ticket', highlight: 'ANSWERED' }))}
+      pendingOrders.length
+        ? html`<div class="banner warn sup-pending">
+            <span class="b-ico">⏳</span>
+            <div class="b-txt">
+              <b>${faDigits(pendingOrders.length)} درخواست ظرفیت در انتظار تأیید پرداخت است</b>
+              مبلغ را واریز کنید و اگر واریز کرده‌اید، از همین‌جا یک گفتگو در دسته‌ی
+              «ظرفیت زیرنمایندگی» باز کنید تا سریع‌تر بررسی شود.
+            </div>
           </div>`
-        : html`<div class="tk-empty">
-            ${icon('mail', 30)}
-            <b>هنوز گفتگویی ندارید</b>
-            <span>سؤال، مشکل یا درخواست تمدید — تیم پشتیبانی همین‌جا جواب می‌دهد.</span>
-            <button class="btn primary sm" data-new-ticket="">شروع اولین گفتگو</button>
-          </div>`
+        : ''
     }
-    <div class="hint" style="padding:10px 16px">
-      تیکت با اشتراک منقضی هم باز می‌شود — برای هماهنگی تمدید از همین‌جا اقدام کنید.
+
+    <div class="card">
+      <div class="card-h">
+        <h2>گفتگوهای جاری ${qtip('گفتگوهایی که هنوز بسته نشده‌اند. «پاسخ داده شد» یعنی نوبت شماست.')}</h2>
+        <div class="sup-counts">
+          ${answered ? html`<span class="tag g">${faDigits(answered)} پاسخ داده</span>` : ''}
+          ${waiting ? html`<span class="tag w">${faDigits(waiting)} در انتظار پاسخ ما</span>` : ''}
+          <button class="btn primary sm" data-new-ticket="">گفتگوی جدید</button>
+        </div>
+      </div>
+      ${
+        live.length
+          ? html`<div class="tk-list">
+              ${live.map((t) => ticketItem(t, { go: 'ticket', highlight: 'ANSWERED' }))}
+            </div>`
+          : html`<div class="tk-empty">
+              ${icon('mail', 28)}
+              <b>گفتگوی بازی ندارید</b>
+              <span>از دسته‌های بالا یکی را انتخاب کنید تا شروع شود.</span>
+            </div>`
+      }
+    </div>
+
+    ${
+      reseller && orders.length
+        ? html`<div class="card">
+            <div class="card-h">
+              <h2>درخواست‌های ظرفیت من ${qtip('ظرفیت پیش‌پرداخت است: بعد از واریز و تأیید ما، به حسابتان اضافه می‌شود.')}</h2>
+              <span class="tag n">${faDigits(orders.length)} مورد</span>
+            </div>
+            <div class="tk-list">${orders.map(seatOrderRow)}</div>
+          </div>`
+        : ''
+    }
+
+    ${
+      done.length
+        ? html`<div class="card">
+            <div class="card-h">
+              <h2>گفتگوهای قبلی ${qtip('گفتگوهای بسته‌شده. برای ادامه‌ی هرکدام، گفتگوی تازه در همان موضوع باز کنید.')}</h2>
+              <span class="tag n">${faDigits(done.length)} بسته‌شده</span>
+            </div>
+            <div class="tk-list">${done.map((t) => ticketItem(t, { go: 'ticket' }))}</div>
+          </div>`
+        : ''
+    }
+
+    <div class="hint sup-foot">
+      گفتگو با اشتراک منقضی هم باز می‌شود — برای هماهنگی تمدید از همین‌جا اقدام کنید.
     </div>
   </div>`;
 }
@@ -546,6 +675,7 @@ export function ticketPage() {
         </div>
       </div>
       <div class="tk-flags">
+        ${t.category ? html`<span class="tag b">${TICKET_CATEGORY_LABEL[t.category]}</span>` : ''}
         ${t.priority !== 'NORMAL' ? html`<span class="tag ${t.priority === 'HIGH' ? 'r' : 'n'}">${TICKET_PRIORITY_LABEL[t.priority]}</span>` : ''}
         ${ticketTag(t.status)}
       </div>
@@ -598,21 +728,32 @@ export function ticketPage() {
   </div>`;
 }
 
-export function newTicketModal(subject = '') {
+export function newTicketModal(subject = '', category = 'OTHER') {
   openModal({
     type: 'form',
-    title: 'تیکت جدید',
+    title: 'گفتگوی جدید با پشتیبانی',
     body: html`
       <div class="field">
-        <label for="m-subject">موضوع</label>
-        <input class="in" id="m-subject" name="subject" value="${subject}" required>
+        <label for="m-category">موضوع گفتگو</label>
+        <select class="in" id="m-category" name="category">
+          ${TICKET_CATEGORIES.map(
+            (c) => html`<option value="${c.value}" ${raw(c.value === category ? 'selected' : '')}>
+              ${c.label}
+            </option>`
+          )}
+        </select>
+      </div>
+      <div class="field">
+        <label for="m-subject">عنوان</label>
+        <input class="in" id="m-subject" name="subject" value="${subject}"
+               placeholder="در یک جمله بگویید موضوع چیست" required>
       </div>
       <div class="field">
         <label for="m-priority">اولویت</label>
         <select class="in" id="m-priority" name="priority">
           <option value="NORMAL">عادی</option>
           <option value="LOW">کم</option>
-          <option value="HIGH">زیاد</option>
+          <option value="HIGH">فوری</option>
         </select>
       </div>
       <div class="field">
@@ -635,6 +776,7 @@ export function newTicketModal(subject = '') {
       if (files.length) {
         const fd = new FormData();
         fd.append('subject', form.subject.value);
+        fd.append('category', form.category.value);
         fd.append('priority', form.priority.value);
         fd.append('body', form.body.value);
         for (const f of files) fd.append('files', f);
@@ -642,6 +784,7 @@ export function newTicketModal(subject = '') {
       } else {
         created = await tickets.create({
           subject: form.subject.value,
+          category: form.category.value,
           priority: form.priority.value,
           body: form.body.value,
         });

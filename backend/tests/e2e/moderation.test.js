@@ -457,6 +457,45 @@ maybe('moderation', () => {
       expect(res.body.data.messages).toHaveLength(1);
     });
 
+    // Filing a conversation under a subject is what makes the support queue
+    // sortable — and what lets the agency start from «what do I need» rather
+    // than from a blank box.
+    it('files a conversation under its subject and filters the queue by it', async () => {
+      const { cookie } = await agent();
+
+      const made = await request(app)
+        .post(api('/tickets'))
+        .set('Cookie', cookie)
+        .send({ subject: 'ظرفیت بیشتر', category: 'SEATS', body: 'می‌خواهم ظرفیت بخرم.' })
+        .expect(201);
+      expect(made.body.data.category).toBe('SEATS');
+
+      // Not naming one is allowed and lands in «موضوع دیگر» rather than
+      // failing — an agency in a hurry must never be blocked by a taxonomy.
+      const plain = await request(app)
+        .post(api('/tickets'))
+        .set('Cookie', cookie)
+        .send({ subject: 'یک سؤال', body: 'یک سؤال ساده دارم.' })
+        .expect(201);
+      expect(plain.body.data.category).toBe('OTHER');
+
+      const seats = await request(app)
+        .get(api('/tickets?category=SEATS'))
+        .set('Cookie', cookie)
+        .expect(200);
+      const ids = seats.body.data.map((t) => t.id);
+      expect(ids).toContain(made.body.data.id);
+      expect(ids).not.toContain(plain.body.data.id);
+
+      // The staff queue filters the same way, across agencies.
+      const { cookie: staffCookie } = await staff('SUPPORT');
+      const staffView = await request(app)
+        .get(api('/tickets?category=SEATS'))
+        .set('Cookie', staffCookie)
+        .expect(200);
+      expect(staffView.body.data.every((t) => t.category === 'SEATS')).toBe(true);
+    });
+
     // A screenshot says in one image what a paragraph of «خطا می‌دهد» cannot.
     // The file is stored under a generated name and served only to people the
     // ticket itself is visible to.

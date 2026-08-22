@@ -81,7 +81,7 @@ export const reports = {
 };
 
 export const tickets = {
-  list: (status) => api.get('/tickets', { status }),
+  list: (status, category) => api.get('/tickets', { status, category }),
   get: (id) => api.get(`/tickets/${id}`),
   create: (payload) => api.post('/tickets', payload),
   reply: (id, body) => api.post(`/tickets/${id}/messages`, { body }),

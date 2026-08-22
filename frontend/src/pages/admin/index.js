@@ -4,7 +4,7 @@ import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
   money, faDigits, date, dateTime, timeOnly, relative, enDigits,
-  REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, ROLE_LABEL,
+  REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { go, resolve } from '../../router.js';
@@ -51,7 +51,9 @@ export function registerAdminRoutes(route) {
     approvals: can('thirdStrike') ? await reports.pendingApproval().catch(() => []) : [],
   }));
 
-  route('adm-tickets', async (params) => ({ list: await tickets.list(params.status) }));
+  route('adm-tickets', async (params) => ({
+    list: await tickets.list(params.status, params.category),
+  }));
 
   route('adm-monitor', async (params) => {
     const page = Number(params.page) || 1;
@@ -603,24 +605,88 @@ export function reviewReportModal(id) {
 function adminTicketsPage() {
   const { data, params } = getState();
   const items = data.list || [];
+  const status = params.status || '';
+  const category = params.category || '';
+
+  // The counts are of what is on screen — the same list the reader is looking
+  // at — so a filtered view's numbers describe that view rather than the whole
+  // queue, which would be a second, invisible truth.
+  const waiting = items.filter((t) => t.status === 'OPEN').length;
+  const answered = items.filter((t) => t.status === 'ANSWERED').length;
+
+  const q = (patch) => {
+    const merged = { status, category, ...patch };
+    return Object.entries(merged)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('&');
+  };
 
   return html`
-  <div class="card">
-    <div class="card-h">
-      <h2>تیکت‌ها ${qtip('پیام‌های پشتیبانی نمایندگی‌ها: سؤال، مشکل و درخواست تمدید اشتراک. پاسخ شما در پنل خودشان زیر همان تیکت می‌آید.')}</h2>
-      <div class="tabs">
-        ${[['', 'همه'], ['OPEN', 'در انتظار پاسخ'], ['ANSWERED', 'پاسخ داده'], ['CLOSED', 'بسته']].map(
-          ([value, label]) => html`<button class="tab ${(params.status || '') === value ? 'on' : ''}"
-            data-go="adm-tickets" data-go-params="${value ? `status=${value}` : ''}">${label}</button>`
-        )}
+  <div class="sup">
+    <div class="card">
+      <div class="card-h">
+        <h2>پشتیبانی ${qtip('گفتگوهای نمایندگی‌ها. «در انتظار پاسخ» یعنی نوبت ماست. با چیپ‌های موضوع، صف را به کاری که می‌خواهید انجام دهید محدود کنید.')}</h2>
+        <div class="sup-counts">
+          ${waiting ? html`<span class="tag w">${faDigits(waiting)} در انتظار پاسخ</span>` : ''}
+          ${answered ? html`<span class="tag g">${faDigits(answered)} پاسخ داده</span>` : ''}
+        </div>
       </div>
+
+      <div class="sup-filters">
+        <div class="tabs">
+          ${[['', 'همه'], ['OPEN', 'در انتظار پاسخ'], ['ANSWERED', 'پاسخ داده'], ['CLOSED', 'بسته']].map(
+            ([value, label]) => html`<button class="tab ${status === value ? 'on' : ''}"
+              data-go="adm-tickets" data-go-params="${q({ status: value })}">${label}</button>`
+          )}
+        </div>
+        <div class="tabs sup-cats">
+          <button class="tab ${category === '' ? 'on' : ''}"
+                  data-go="adm-tickets" data-go-params="${q({ category: '' })}">همه‌ی موضوع‌ها</button>
+          ${TICKET_CATEGORIES.map(
+            (c) => html`<button class="tab ${category === c.value ? 'on' : ''}"
+              data-go="adm-tickets" data-go-params="${q({ category: c.value })}">
+              ${icon(c.icon, 13)} ${c.label}
+            </button>`
+          )}
+        </div>
+      </div>
+
+      ${
+        items.length
+          ? html`<div class="tk-list">
+              ${items.map((t) => ticketItem(t, { go: 'ticket', withAgency: true, highlight: 'OPEN' }))}
+            </div>`
+          : html`<div class="tk-empty">
+              ${icon('mail', 28)}
+              <b>گفتگویی در این فیلتر نیست</b>
+              <span>فیلتر را عوض کنید یا «همه» را بزنید.</span>
+            </div>`
+      }
     </div>
+
     ${
-      items.length
-        ? html`<div class="tk-list">
-            ${items.map((t) => ticketItem(t, { go: 'ticket', withAgency: true, highlight: 'OPEN' }))}
+      // Capacity requests are support work too — somebody asking us for
+      // something and waiting for an answer — so the section carries a way
+      // into that queue rather than leaving it to be found elsewhere.
+      can('seats')
+        ? html`<div class="card sup-cross">
+            <div class="card-h">
+              <h2>درخواست‌های ظرفیت</h2>
+              ${
+                getState().badges?.pendingSeatOrders
+                  ? html`<span class="tag w">${faDigits(getState().badges.pendingSeatOrders)} در انتظار</span>`
+                  : html`<span class="tag g">در انتظاری نیست</span>`
+              }
+            </div>
+            <div class="sup-cross-b">
+              <span class="hint">
+                خرید ظرفیت زیرنمایندگی هم نوعی درخواست است و در همین بخش پیگیری می‌شود.
+              </span>
+              <button class="btn sm" data-go="adm-seats">رفتن به صف ظرفیت</button>
+            </div>
           </div>`
-        : emptyBox('تیکتی نیست.')
+        : ''
     }
   </div>`;
 }

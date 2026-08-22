@@ -27,10 +27,11 @@ function toStoredFiles(files) {
 }
 
 const ticketService = {
-  async create({ user, subject, priority, body, files }) {
+  async create({ user, subject, category, priority, body, files }) {
     const ticket = await ticketRepository.create({
       userId: user.id,
       subject,
+      category,
       priority,
       body,
     });
@@ -49,13 +50,14 @@ const ticketService = {
     return toTicket(await ticketRepository.findById(ticket.id));
   },
 
-  async list({ user, status }) {
+  async list({ user, status, category }) {
     // Staff see the whole queue; an agent sees only their own. The scope is part
     // of the query rather than a check afterwards, so a missing check cannot
     // show one agency another's correspondence.
     const tickets = await ticketRepository.list({
       userId: isAdmin(user.role) ? undefined : user.id,
       status,
+      category,
     });
     return tickets.map(toTicketSummary);
   },
@@ -128,6 +130,7 @@ function toTicketSummary(ticket) {
     id: ticket.id,
     serial: ticket.serial,
     subject: ticket.subject,
+    category: ticket.category,
     status: ticket.status,
     priority: ticket.priority,
     lastReplyAt: ticket.lastReplyAt,

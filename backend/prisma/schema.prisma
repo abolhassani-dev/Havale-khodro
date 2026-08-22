@@ -99,6 +99,16 @@ enum TicketStatus {
   CLOSED
 }
 
+/// موضوع گفتگو — برای دسته‌بندی صف پشتیبانی و مسیر درست پاسخ
+enum TicketCategory {
+  SUBSCRIPTION
+  SEATS
+  LISTING
+  APPEAL
+  TECHNICAL
+  OTHER
+}
+
 enum TicketPriority {
   LOW
   NORMAL
@@ -431,6 +441,7 @@ model Ticket {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   subject  String
+  category TicketCategory @default(OTHER)
   priority TicketPriority @default(NORMAL)
   status   TicketStatus   @default(OPEN)
 
@@ -441,6 +452,7 @@ model Ticket {
   messages TicketMessage[]
 
   @@index([status, lastReplyAt])
+  @@index([category, status])
   @@index([userId, createdAt])
 }
 

@@ -143,7 +143,35 @@ export const REPORT_STATUS_LABEL = {
 
 export const TICKET_STATUS_LABEL = { OPEN: 'باز', ANSWERED: 'پاسخ داده شد', CLOSED: 'بسته' };
 
-export const TICKET_PRIORITY_LABEL = { LOW: 'کم', NORMAL: 'عادی', HIGH: 'زیاد' };
+export const TICKET_PRIORITY_LABEL = { LOW: 'کم', NORMAL: 'عادی', HIGH: 'فوری' };
+
+/**
+ * What a conversation is about.
+ *
+ * The order is the order they are offered in, and it is deliberate: the two
+ * things agencies write about most — paying us and buying capacity — come
+ * first. `icon` and `hint` are here rather than in the page so the tiles, the
+ * row badges and the admin's filter chips can never disagree about what a
+ * category is called.
+ */
+export const TICKET_CATEGORIES = [
+  { value: 'SUBSCRIPTION', label: 'اشتراک و تمدید', icon: 'clock',
+    hint: 'تمدید، فاکتور، یا سؤال درباره‌ی مبلغ' },
+  { value: 'SEATS', label: 'ظرفیت زیرنمایندگی', icon: 'layers',
+    hint: 'خرید ظرفیت و حالت ماژول' },
+  { value: 'LISTING', label: 'آگهی و کاتالوگ', icon: 'car',
+    hint: 'مشکل در ثبت آگهی، یا نبودن یک برند و مدل' },
+  { value: 'APPEAL', label: 'اعتراض به اخطار', icon: 'flag',
+    hint: 'اگر گزارشی علیه شما تأیید شده و اعتراض دارید' },
+  { value: 'TECHNICAL', label: 'مشکل فنی', icon: 'wrench',
+    hint: 'خطای سامانه، ورود، یا چیزی که کار نمی‌کند' },
+  { value: 'OTHER', label: 'موضوع دیگر', icon: 'mail',
+    hint: 'هر چیزی که در دسته‌های بالا نمی‌گنجد' },
+];
+
+export const TICKET_CATEGORY_LABEL = Object.fromEntries(
+  TICKET_CATEGORIES.map((c) => [c.value, c.label])
+);
 
 export const ROLE_LABEL = {
   SUPER_ADMIN: 'مدیر کل',

@@ -9,11 +9,12 @@ const ticketRepository = {
    * Opening a ticket and writing its first message are one operation — a ticket
    * with no message is not a question anyone can answer.
    */
-  create({ userId, subject, priority, body }) {
+  create({ userId, subject, category, priority, body }) {
     return prisma.ticket.create({
       data: {
         userId,
         subject,
+        category,
         priority,
         messages: { create: { authorId: userId, body, isStaff: false } },
       },
@@ -58,9 +59,13 @@ const ticketRepository = {
     return prisma.ticket.count({ where: { status: 'OPEN' } });
   },
 
-  list({ userId, status, take = 50 }) {
+  list({ userId, status, category, take = 50 }) {
     return prisma.ticket.findMany({
-      where: { ...(userId ? { userId } : {}), ...(status ? { status } : {}) },
+      where: {
+        ...(userId ? { userId } : {}),
+        ...(status ? { status } : {}),
+        ...(category ? { category } : {}),
+      },
       orderBy: { lastReplyAt: 'desc' },
       take,
       include: { user: AUTHOR_SELECT },
