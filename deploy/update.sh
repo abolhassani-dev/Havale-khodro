@@ -164,6 +164,22 @@ if [ -n "$CURRENT_LIMIT" ] && [ "$CURRENT_LIMIT" -lt 600 ] 2>/dev/null; then
   sed -i 's|^RATE_LIMIT_MAX=.*|RATE_LIMIT_MAX=1200|' .env
 fi
 
+# ---- 3.9 the attachments volume belongs to the app user ----
+#
+# The API runs as uid 1001 and writes ticket attachments into this volume. A
+# volume Docker creates for a container inherits the image's ownership, but one
+# that already existed — created by a `docker run -v` somewhere, as the backup
+# script once did — is root-owned, and the container then cannot write a single
+# byte. That took the whole API down in a restart loop on the deploy that
+# introduced attachments, so it is corrected here on every update: cheap, and
+# right whatever produced the volume.
+if docker volume inspect feranocar_uploads >/dev/null 2>&1; then
+  docker run --rm -v feranocar_uploads:/uploads alpine:3 \
+    sh -c 'mkdir -p /uploads/tickets && chown -R 1001:1001 /uploads' >/dev/null 2>&1 \
+    && echo "→ attachments volume ownership checked" \
+    || echo "  ⚠ could not check the attachments volume — uploads may fail"
+fi
+
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
 # A failed build leaves the running containers untouched — the site stays up on

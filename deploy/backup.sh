@@ -89,9 +89,19 @@ cp -r deploy/nginx/. "$WORK/config/nginx/" 2>/dev/null || true
 # error, the payment receipt — is gone, and nothing in the panel would say why.
 echo "  attachments"
 mkdir -p "$WORK/uploads"
-docker run --rm -v feranocar_uploads:/uploads:ro -v "$WORK/uploads:/out" alpine:3 \
-  sh -c 'tar czf /out/uploads.tar.gz -C /uploads . 2>/dev/null || true' >/dev/null 2>&1 || \
-  echo "    (none yet — skipping)"
+# The existence check is not politeness — `docker run -v name:/path` *creates*
+# a missing named volume, empty and owned by root. On the first deploy of this
+# feature the backup ran before compose did exactly that, compose then mounted
+# the root-owned volume into a container that runs as a non-root user, and the
+# API died in a restart loop unable to create a folder. A backup must never
+# bring anything into existence.
+if docker volume inspect feranocar_uploads >/dev/null 2>&1; then
+  docker run --rm -v feranocar_uploads:/uploads:ro -v "$WORK/uploads:/out" alpine:3 \
+    sh -c 'tar czf /out/uploads.tar.gz -C /uploads . 2>/dev/null || true' >/dev/null 2>&1 || \
+    echo "    (could not read the volume — skipping)"
+else
+  echo "    (no attachments volume yet — skipping)"
+fi
 
 # ---- 3. the TLS certificate ----
 #

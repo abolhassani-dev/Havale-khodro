@@ -3,6 +3,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 
+const logger = require('../../utils/logger');
+
 /**
  * Ticket attachments: images and PDFs, nothing else.
  *
@@ -15,7 +17,29 @@ const multer = require('multer');
  */
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads', 'tickets');
-fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+/**
+ * Prepared at boot, and never fatal.
+ *
+ * This used to be a bare mkdirSync at import time. On the first production
+ * deploy the named volume had been created root-owned by something else, the
+ * mkdir threw EACCES while the module was loading, and the whole API died in a
+ * restart loop — the entire platform down because one optional feature could
+ * not find a folder. An attachment must never have that power: if the
+ * directory is unusable the API starts anyway, and uploads alone fail with a
+ * message that says what is wrong.
+ */
+let uploadsReady = false;
+try {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  fs.accessSync(UPLOADS_DIR, fs.constants.W_OK);
+  uploadsReady = true;
+} catch (err) {
+  logger.error('Ticket attachments are unavailable — the upload directory is not writable', {
+    dir: UPLOADS_DIR,
+    error: err.message,
+  });
+}
 
 const EXT_BY_MIME = {
   'image/jpeg': 'jpg',
@@ -36,6 +60,11 @@ const upload = multer({
   storage,
   limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES },
   fileFilter: (req, file, cb) => {
+    if (!uploadsReady) {
+      const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE');
+      err.message = 'بارگذاری فایل موقتاً در دسترس نیست — پیام را بدون پیوست بفرستید.';
+      return cb(err);
+    }
     if (EXT_BY_MIME[file.mimetype]) return cb(null, true);
     // Multer surfaces this through the error handler as a 400 — see the
     // MulterError branch there.

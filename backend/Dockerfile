@@ -83,7 +83,12 @@ COPY --chown=app:nodejs . .
 
 # Generated at build time so the first request does not pay for it, and so a
 # schema the client does not match fails the build instead of production.
-RUN npx prisma generate \
+# The attachment directory is created here, owned by the runtime user, so that
+# a *fresh* named volume mounted over it inherits that ownership — Docker seeds
+# an empty volume from the image, permissions included. Without it the app runs
+# as `app` against a root-owned mount and cannot write a single file.
+RUN mkdir -p /app/uploads/tickets \
+    && npx prisma generate \
     && chmod +x docker/entrypoint.sh \
     && chown -R app:nodejs /app
 
