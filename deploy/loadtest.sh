@@ -27,6 +27,7 @@ cd "$(dirname "$0")/.."
 # Collected here and passed on stdin; everything else goes through to the
 # script inside the container untouched.
 ACCOUNTS=()
+FILE_SPECS=()
 PASSTHRU=()
 
 while [ $# -gt 0 ]; do
@@ -34,6 +35,25 @@ while [ $# -gt 0 ]; do
     --account)
       [ $# -ge 2 ] || { echo "پس از --account نام کاربری لازم است" >&2; exit 1; }
       ACCOUNTS+=("$2")
+      shift 2
+      ;;
+    --accounts-file)
+      # A file kept outside the repository, one «username:password» per line.
+      # Credentials belong on the machine that runs the test, never in a file
+      # that gets committed — this is how a demo password ended up in a public
+      # repository once already.
+      [ $# -ge 2 ] || { echo "پس از --accounts-file مسیر فایل لازم است" >&2; exit 1; }
+      [ -r "$2" ] || { echo "فایل «$2» خوانده نشد" >&2; exit 1; }
+      case "$(git -C . check-ignore -q "$2" 2>/dev/null; echo $?)" in
+        0|128) : ;;  # ignored by git, or outside a repository — both fine
+        *) echo "  ⚠ این فایل زیر نظر گیت است؛ آن را بیرون از مخزن بگذارید." >&2 ;;
+      esac
+      while IFS= read -r LINE || [ -n "$LINE" ]; do
+        LINE="${LINE%%$'\r'}"
+        case "$LINE" in ''|'#'*) continue ;; esac
+        [[ "$LINE" == *:* ]] || { echo "سطر بدون «:» در فایل حساب‌ها" >&2; exit 1; }
+        FILE_SPECS+=("$LINE")
+      done < "$2"
       shift 2
       ;;
     -h|--help)
@@ -48,6 +68,9 @@ while [ $# -gt 0 ]; do
   --write N       N درخواست خرید هم ثبت و بعد پاک می‌کند (پیش‌فرض ۰)
   --account نام   حساب نماینده؛ رمز جداگانه پرسیده می‌شود.
                   می‌توانید چند بار بدهید تا بار روی چند نشست پخش شود.
+  --accounts-file مسیر
+                  فایلی بیرون از مخزن، هر سطر «نام‌کاربری:رمز».
+                  برای اجراهای پشت‌سرهم، تا رمز را هر بار تایپ نکنید.
 
 نکته: محافظ نرخ روی هر نشست ۱۲۰۰ درخواست در ۱۵ دقیقه است. برای آزمون
 سنگین‌تر از یک حساب، چند حساب بدهید.
@@ -61,7 +84,7 @@ USAGE
   esac
 done
 
-if [ ${#ACCOUNTS[@]} -eq 0 ]; then
+if [ ${#ACCOUNTS[@]} -eq 0 ] && [ ${#FILE_SPECS[@]} -eq 0 ]; then
   read -rp "نام کاربری نماینده برای آزمون: " ONE
   [ -n "$ONE" ] || { echo "نام کاربری لازم است" >&2; exit 1; }
   ACCOUNTS+=("$ONE")
@@ -69,8 +92,8 @@ fi
 
 # One prompt per account. `read -s` keeps the password off the screen; the
 # pairs live in this shell's memory only, and go to the container on stdin.
-SPECS=()
-for NAME in "${ACCOUNTS[@]}"; do
+SPECS=(${FILE_SPECS[@]+"${FILE_SPECS[@]}"})
+for NAME in ${ACCOUNTS[@]+"${ACCOUNTS[@]}"}; do
   if [[ "$NAME" == *:* ]]; then
     # Given as user:pass on the command line — accepted, but say why not to.
     echo "  ⚠ رمز را در خط فرمان ندهید؛ در تاریخچه‌ی شل و خروجی ps می‌ماند." >&2
