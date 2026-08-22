@@ -229,8 +229,20 @@ async function main() {
   console.log(`کاربر هم‌زمان: ${USERS} · مجموع درخواست: ${REQUESTS}${WRITES ? ` · نوشتن: ${WRITES}` : ''}`);
   console.log('ورود…');
 
+  // One bad password should not throw away the run. Whoever is typing these
+  // is on a server prompt at an odd hour; the useful answer is «that one did
+  // not work, going ahead with the rest», not a start-over.
   const sessions = [];
-  for (const spec of ACCOUNTS) sessions.push(await signIn(spec));
+  const refused = [];
+  for (const spec of ACCOUNTS) {
+    try {
+      sessions.push(await signIn(spec));
+    } catch (err) {
+      refused.push(err.message);
+    }
+  }
+  for (const message of refused) console.log(`  ⚠ ${message}`);
+  if (!sessions.length) throw new Error('هیچ حسابی وارد نشد — آزمون انجام نشد.');
   console.log(`${sessions.length} نشست آماده شد.\n`);
 
   // A warm-up that is not measured: the first request pays for the connection
