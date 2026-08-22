@@ -7,8 +7,11 @@
 # tell you whether the system was comfortable or one request away from being
 # killed by the memory limit.
 #
-# Traffic goes through nginx, so the path measured is the real one — nginx,
-# API, Prisma's pool, Postgres — everything except TLS and the public internet.
+# Traffic goes through nginx where nginx can be reached from inside — the real
+# path: nginx, API, Prisma's pool, Postgres. With TLS switched on nginx answers
+# internal HTTP with a redirect to the public address, so the script falls back
+# to the API directly and says so in its first line. Either way the report
+# names the path it measured.
 #
 #   ./deploy/loadtest.sh                       # asks for the account
 #   ./deploy/loadtest.sh --users 100 --requests 2000
@@ -131,7 +134,7 @@ echo
 set +e
 printf '%s\n' "${SPECS[@]}" |
   docker compose exec -T api node scripts/loadtest.js \
-    --target http://web --accounts-stdin ${PASSTHRU[@]+"${PASSTHRU[@]}"}
+    --accounts-stdin ${PASSTHRU[@]+"${PASSTHRU[@]}"}
 RESULT=$?
 set -e
 unset SPECS
@@ -171,7 +174,8 @@ if [ -s "$DBPEAK" ]; then
 fi
 
 echo
-echo "یادآوری: بار این آزمون از داخل خود سرور آمد، پس شبکه‌ی اینترنت و TLS در"
-echo "اعداد بالا نیست — تأخیر واقعی کاربر کمی بیشتر از این است."
+echo "یادآوری: بار از داخل خود سرور آمد. اگر سطر «هدف» بالا گفته nginx در مسیر"
+echo "نبوده، تأخیر واقعی کاربر کمی بیشتر از این اعداد است — به‌اندازه‌ی nginx،"
+echo "TLS و مسیر اینترنت."
 
 exit "$RESULT"

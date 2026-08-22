@@ -39,7 +39,7 @@
  * what deploy/loadtest.sh does.
  */
 
-const TARGET = argValue('--target', 'http://web');
+const TARGET = argValue('--target', 'auto');
 const USERS = Number(argValue('--users', '50'));
 const REQUESTS = Number(argValue('--requests', '1000'));
 const WRITES = Number(argValue('--write', '0'));
@@ -59,7 +59,47 @@ function argAll(name) {
   return out;
 }
 
-const API = `${TARGET.replace(/\/$/, '')}/api/v1`;
+// Resolved before anything is measured — see pickTarget.
+let API = '';
+
+/**
+ * Where to send the traffic, when nobody said.
+ *
+ * The obvious answer is nginx on the compose network, and on a server with
+ * plain HTTP that is the whole story. Once TLS is switched on, nginx answers
+ * every HTTP request with a 301 to the public address, so `http://web` stops
+ * being a way in from inside — measuring redirects, or following one back out
+ * through the NAT, would both be answers to a question nobody asked.
+ *
+ * So each candidate is tried in order and the first that actually answers is
+ * used, and the report says which — because «nginx was not in the path» is
+ * something the reader has to know to read the numbers.
+ */
+async function pickTarget() {
+  if (TARGET !== 'auto') return { url: TARGET.replace(/\/$/, ''), via: 'مسیر دستی' };
+
+  const domain = process.env.BRAND_DOMAIN;
+  const candidates = [
+    { url: 'http://web', via: 'nginx → API' },
+    domain ? { url: `https://${domain}`, via: 'اینترنت → nginx (با TLS)' } : null,
+    { url: 'http://api:3000', via: 'مستقیم به API — nginx در مسیر نیست' },
+    { url: 'http://127.0.0.1:3000', via: 'مستقیم به API — nginx در مسیر نیست' },
+  ].filter(Boolean);
+
+  const tried = [];
+  for (const c of candidates) {
+    try {
+      // Manual redirect: a 301 means this door only leads back out to the
+      // public address, which is not a path worth measuring from in here.
+      const res = await fetch(`${c.url}/api/v1/health`, { redirect: 'manual' });
+      if (res.status === 200) return c;
+      tried.push(`${c.url} → ${res.status}`);
+    } catch (err) {
+      tried.push(`${c.url} → ${err.cause?.message || err.message}`);
+    }
+  }
+  throw new Error(`هیچ راهی به API پیدا نشد:\n  ${tried.join('\n  ')}`);
+}
 
 /**
  * The mix, weighted by how often a working panel makes each call.
@@ -182,7 +222,10 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`هدف: ${TARGET}`);
+  const target = await pickTarget();
+  API = `${target.url}/api/v1`;
+
+  console.log(`هدف: ${target.url}  (${target.via})`);
   console.log(`کاربر هم‌زمان: ${USERS} · مجموع درخواست: ${REQUESTS}${WRITES ? ` · نوشتن: ${WRITES}` : ''}`);
   console.log('ورود…');
 
@@ -313,6 +356,9 @@ function report(elapsed) {
 }
 
 main().catch((err) => {
-  console.error(`\n✗ ${err.message}`);
+  // fetch's own message is the word «failed» and nothing else; the reason is
+  // one level down, and it is the only part worth reading.
+  const cause = err.cause?.message ? ` — ${err.cause.message}` : '';
+  console.error(`\n✗ ${err.message}${cause}`);
   process.exit(1);
 });
