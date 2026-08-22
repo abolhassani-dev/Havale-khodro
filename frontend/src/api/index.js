@@ -102,6 +102,15 @@ export const admin = {
   reveals: (query) => api.get('/admin/reveals', query),
   suspicious: (query) => api.get('/admin/suspicious', query),
 
+  // Listings, from the desk that has to answer for them: every state, whose
+  // they are, and the two levers — hide, or take down.
+  havales: (query) => api.get('/admin/havales', query),
+  havale: (id) => api.get(`/admin/havales/${id}`),
+  setHavaleStatus: (id, status, reason) =>
+    api.put(`/admin/havales/${id}/status`, { status, reason }),
+  setHavaleRemoved: (id, removed, reason) =>
+    api.put(`/admin/havales/${id}/removed`, { removed, reason }),
+
   agents: (query) => api.get('/admin/agents', query),
   agent: (id) => api.get(`/admin/agents/${id}`),
   createAgent: (payload) => api.post('/admin/agents', payload),

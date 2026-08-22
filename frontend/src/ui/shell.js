@@ -106,25 +106,38 @@ export const SOON_PAGES = new Map(
   )
 );
 
+/**
+ * The admin menu, grouped by what the reader is trying to do.
+ *
+ * The headings are the part that has to be right: a heading is a promise about
+ * what is under it. «محتوا» over the car catalogue and the violation reports
+ * was not one — a violation report is not content, it is a complaint about a
+ * listing, and it belongs beside the listings it is about. So each heading now
+ * names the thing its items act on: the agencies, the listings, the people
+ * asking us for something, and the system itself.
+ */
 const ADMIN_NAV = [
-  { group: 'مدیریت' },
+  { group: 'مرور کلی' },
   { page: 'adm-dash', icon: 'dashboard', label: 'داشبورد', permission: 'monitoring' },
-  { page: 'adm-agents', icon: 'shield', label: 'نمایندگی‌ها', permission: 'agents' },
+  { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
+  { group: 'نمایندگی‌ها' },
+  { page: 'adm-agents', icon: 'shield', label: 'فهرست نمایندگی‌ها', permission: 'agents' },
   { page: 'adm-new-agent', icon: 'plus', label: 'ساخت نمایندگی', permission: 'agents' },
+  { group: 'حواله‌ها' },
+  // A report is a complaint about a listing, so it sits with the listings
+  // rather than under a heading of its own.
+  { page: 'adm-havales', icon: 'file', label: 'مدیریت حواله‌ها', permission: 'listings' },
+  { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
+  { page: 'adm-catalog', icon: 'car', label: 'کاتالوگ خودرو', permission: 'catalog' },
   { group: 'پشتیبانی' },
   // Both halves of «somebody is asking us for something» sit together: a
   // conversation and a capacity request are the same job from the desk that
   // answers them.
   { page: 'adm-tickets', icon: 'ticket', label: 'گفتگوها', permission: 'tickets' },
   { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
-  { group: 'محتوا' },
-  { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
-  { page: 'adm-catalog', icon: 'car', label: 'کاتالوگ خودرو', permission: 'catalog' },
-  { group: 'نظارت و مالی' },
-  { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
+  { group: 'سامانه' },
   { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
-  { group: 'مالک' },
-  { page: 'adm-staff', icon: 'shield', label: 'کاربران سیستم', permission: 'staff' },
+  { page: 'adm-staff', icon: 'users', label: 'کاربران سیستم', permission: 'staff' },
 ];
 
 /**
@@ -134,13 +147,14 @@ const ADMIN_NAV = [
  * no permission for; the second drops any heading left standing over nothing.
  *
  * The second pass is not decoration. A heading with no items under it announces
- * a part of the system the reader cannot reach, and «مالک» would announce the
- * one account the whole design exists to keep quiet. It was originally solved
- * by giving that one heading a permission of its own — which fixed «مالک» and
- * left «مدیریت» and «نظارت و مالی» hanging empty over a support account, as a
- * real sign-in showed. Per-account ticks make that the ordinary case rather
- * than the odd one, so the rule is general: a heading is shown when something
- * follows it.
+ * a part of the system the reader cannot reach — and the rule was first written
+ * for a heading named «مالک», which announced the one account the whole design
+ * exists to keep quiet. That one was fixed by giving the heading a permission
+ * of its own, which left the other headings hanging empty over a support
+ * account, as a real sign-in showed. Per-account ticks make that the ordinary
+ * case rather than the odd one, so the rule is general: a heading is shown when
+ * something follows it. (The owner's page now sits under «سامانه», so no
+ * heading names that account either.)
  */
 export function adminMenu() {
   const allowed = ADMIN_NAV.filter((item) => (item.permission ? can(item.permission) : true));

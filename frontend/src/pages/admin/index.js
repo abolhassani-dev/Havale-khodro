@@ -4,6 +4,7 @@ import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
   money, faDigits, date, dateTime, timeOnly, relative, enDigits, fileSize,
+  KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL, PAYMENT_TYPE_LABEL,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -46,6 +47,17 @@ export function registerAdminRoutes(route) {
   // somebody scrolls to the picker.
   route('adm-new-agent', async () => ({ catalog: await admin.catalog() }));
 
+  route('adm-havales', async (params) => ({
+    havales: await admin.havales({
+      query: params.query,
+      status: params.status || 'LIVE',
+      kind: params.kind,
+      take: 50,
+    }),
+  }));
+
+  route('adm-havale', async (params) => ({ havale: await admin.havale(params.id) }));
+
   route('adm-reports', async (params) => ({
     queue: await reports.queue({ status: params.status || 'PENDING' }),
     approvals: can('thirdStrike') ? await reports.pendingApproval().catch(() => []) : [],
@@ -82,6 +94,8 @@ export function renderAdminPage(page) {
     case 'adm-agents': return agentsPage();
     case 'adm-agent': return agentPage();
     case 'adm-new-agent': return newAgentPage();
+    case 'adm-havales': return havalesPage();
+    case 'adm-havale': return havalePage();
     case 'adm-reports': return reportsPage();
     case 'adm-tickets': return adminTicketsPage();
     case 'adm-monitor': return monitorPage();
@@ -478,6 +492,339 @@ function field(name, label, type = 'text', dir = 'rtl') {
     <label for="${name}">${label}</label>
     <input class="in" id="${name}" name="${name}" type="${type}" dir="${dir}" required>
   </div>`;
+}
+
+// ── listings ────────────────────────────────────────────────────────────────
+
+/** The five buckets somebody actually sorts listings into. */
+const HAVALE_SCOPES = [
+  ['LIVE', 'در بازار'],
+  ['SUSPENDED', 'تعلیق‌شده'],
+  ['DELETED', 'برداشته‌شده'],
+  ['FULFILLED', 'فروخته‌شده'],
+  ['ALL', 'همه'],
+];
+
+/**
+ * Every listing in the system, from the desk that has to answer for them.
+ *
+ * The agency side of this is a market and shows only what is for sale. Here
+ * the question is different — «find the listing this person is complaining
+ * about» — so the state comes first, as tabs, and a listing that was hidden or
+ * taken down is a row like any other rather than an absence.
+ */
+function havalesPage() {
+  const { data, params } = getState();
+  const items = data.havales?.items || [];
+  const summary = data.havales?.summary || {};
+  const scope = params.status || 'LIVE';
+
+  return html`
+  <div class="stats">
+    ${stat('در بازار', faDigits(summary.live ?? 0), 'قابل دیدن برای نمایندگی‌ها', 'file', 'ok')}
+    ${stat('تعلیق‌شده', faDigits(summary.suspended ?? 0), summary.suspended ? 'با دلیل، برای نماینده قابل دیدن' : 'خالی', 'flag', summary.suspended ? 'warn' : '')}
+    ${stat('برداشته‌شده', faDigits(summary.deleted ?? 0), 'از بازار خارج، در سابقه مانده', 'close')}
+    ${stat('کل حواله‌ها', faDigits(summary.total ?? 0), 'از ابتدا تا امروز', 'layers')}
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <h2>حواله‌ها ${qtip('همه‌ی آگهی‌های سامانه در هر وضعیتی. «تعلیق» آگهی را با دلیلی که نماینده می‌خواند از بازار خارج می‌کند؛ «برداشتن» همان کار را می‌کند و آگهی را از فهرست‌های نماینده هم بیرون می‌برد. هیچ‌کدام رکورد را پاک نمی‌کند.')}</h2>
+      <span class="tag">${faDigits(data.havales?.total ?? 0)} مورد</span>
+    </div>
+
+    <div class="scope-row">
+      ${HAVALE_SCOPES.map(
+        ([key, label]) => html`<button class="tab ${scope === key ? 'on' : ''}"
+          data-go="adm-havales" data-go-params="status=${key}${params.query ? `&query=${encodeURIComponent(params.query)}` : ''}">
+          ${label}
+        </button>`
+      )}
+    </div>
+
+    <form class="filters" data-form="havale-search">
+      <input type="hidden" name="status" value="${scope}">
+      <div class="field" style="flex:2">
+        <label for="hq">جستجو</label>
+        <input class="in" id="hq" name="query" value="${params.query || ''}"
+               placeholder="شماره آگهی، خودرو، رنگ، نام یا کد نمایندگی">
+      </div>
+      <div class="field">
+        <label for="hk">نوع</label>
+        <select class="in" id="hk" name="kind">
+          <option value="">هر دو</option>
+          <option value="OFFER" ${raw(params.kind === 'OFFER' ? 'selected' : '')}>حواله فروش</option>
+          <option value="REQUEST" ${raw(params.kind === 'REQUEST' ? 'selected' : '')}>درخواست خرید</option>
+        </select>
+      </div>
+      <div class="field" style="align-self:end">
+        <button class="btn primary" type="submit">جستجو</button>
+      </div>
+    </form>
+
+    ${
+      items.length
+        ? html`<table class="hv-tbl">
+            <thead>
+              <tr><th>آگهی</th><th>نمایندگی</th><th>مبلغ</th><th>وضعیت</th>
+                  <th>بازدید</th><th>ثبت</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${items.map(havaleRow)}
+            </tbody>
+          </table>`
+        : emptyBox('حواله‌ای با این فیلترها پیدا نشد.')
+    }
+  </div>`;
+}
+
+/** The state badge, which is three fields collapsed into the one word people use. */
+function havaleTag(h) {
+  if (h.removed) return html`<span class="tag r">برداشته شد</span>`;
+  if (h.status === 'SUSPENDED') return html`<span class="tag w">تعلیق</span>`;
+  if (h.status === 'ACTIVE') return html`<span class="tag g">در بازار</span>`;
+  return html`<span class="tag n">${HAVALE_STATUS_LABEL[h.status] || h.status}</span>`;
+}
+
+function havaleRow(h) {
+  return html`<tr class="${h.removed || h.status === 'SUSPENDED' ? 'dim' : ''}">
+    <td>
+      <div class="hv-id">
+        <b>${h.carType}</b>
+        <span class="sub">
+          <span class="num">#${faDigits(h.serial)}</span> · ${KIND_LABEL[h.kind] || h.kind}
+          ${h.carColor ? ` · ${h.carColor}` : ''}${h.model ? ` · ${h.model}` : ''}
+        </span>
+      </div>
+    </td>
+    <td>
+      ${
+        h.owner
+          ? html`<div class="hv-ag">
+              <b>${h.owner.agencyName}</b>
+              <span class="sub"><span class="num">${h.owner.agencyCode}</span> · ${h.owner.city}</span>
+            </div>`
+          : html`<span class="sub">—</span>`
+      }
+    </td>
+    <td class="num">${h.amountToman ? money(h.amountToman) : '—'}</td>
+    <td>${havaleTag(h)}</td>
+    <td class="num">${faDigits(h.revealCount ?? 0)}</td>
+    <td>${relative(h.createdAt)}</td>
+    <td style="text-align:left">
+      <button class="btn sm" data-go="adm-havale" data-go-params="id=${h.id}">پرونده</button>
+    </td>
+  </tr>`;
+}
+
+/**
+ * One listing, everything on it, and the two decisions that can be taken.
+ *
+ * Written as a page rather than a modal because it is where somebody lands
+ * from a violation report or a support ticket, and a modal cannot be linked to.
+ */
+function havalePage() {
+  const { data } = getState();
+  const h = data.havale;
+  if (!h) return emptyBox('حواله پیدا نشد.');
+
+  const owner = h.owner || {};
+
+  return html`
+  <div class="af">
+  <div class="card">
+    <div class="af-id">
+      <span class="agent-av af-av" style="--h:${hueOf(owner.agencyCode || String(h.serial))}">
+        ${(h.carType || '؟').slice(0, 1)}
+      </span>
+      <div class="af-who">
+        <div class="af-name">
+          <h2>${h.carType}</h2>
+          ${havaleTag(h)}
+        </div>
+        <div class="af-sub">
+          <span class="num">#${faDigits(h.serial)}</span> · ${KIND_LABEL[h.kind] || h.kind}
+          · ${SOLH_LABEL[h.solh] || h.solh}
+          ${h.brand ? ` · ${h.brand}` : ''}
+        </div>
+      </div>
+      <div class="af-cta">
+        <button class="btn sm" data-go="adm-havales">فهرست حواله‌ها</button>
+      </div>
+    </div>
+
+    ${
+      h.suspendReason
+        ? html`<div class="hv-reason">
+            ${icon('flag', 15)}
+            <span><b>دلیل تعلیق:</b> ${h.suspendReason} — نماینده همین متن را روی آگهی خود می‌بیند.</span>
+          </div>`
+        : ''
+    }
+
+    <div class="af-grid">
+      ${infoCell('layers', 'مبلغ حواله', h.amountToman ? money(h.amountToman) : '—')}
+      ${infoCell('car', 'قیمت خودرو', h.carPriceToman ? money(h.carPriceToman) : '—')}
+      ${infoCell('ticket', 'واریزشده', h.paidAmountToman ? money(h.paidAmountToman) : '—')}
+      ${infoCell('clock', 'زمان تحویل', h.deliveryDays ? `${faDigits(h.deliveryDays)} روز` : '—')}
+      ${infoCell('clock', 'مهلت واریز', h.depositDays ? `${faDigits(h.depositDays)} روز` : '—')}
+      ${infoCell('car', 'رنگ و سال', [h.carColor, h.model].filter(Boolean).join(' · ') || '—')}
+      ${infoCell('ticket', 'نحوه پرداخت', PAYMENT_TYPE_LABEL[h.paymentType] || '—')}
+      ${infoCell('shield', 'تأمین‌کننده', h.supplierCompany || '—')}
+      ${infoCell('eye', 'بازدید مشخصات', faDigits(h.revealCount ?? 0), true)}
+      ${infoCell('flag', 'گزارش تخلف', faDigits(h.reportCount ?? 0), true)}
+      ${infoCell('clock', 'انقضای آگهی', h.closesAt ? date(h.closesAt) : '—')}
+    </div>
+  </div>
+
+  <div class="cols c2">
+    <div class="card">
+      <div class="card-h"><h2>نمایندگی ثبت‌کننده</h2></div>
+      <div class="af-rows">
+        ${detailRow('نمایندگی', owner.agencyName || '—')}
+        ${detailRow('کد', owner.agencyCode || '—')}
+        ${detailRow('مدیر', owner.manager || '—')}
+        ${detailRow('شهر', owner.city || '—')}
+        ${detailRow('نوع حساب', owner.isSubAgent ? 'زیرنمایندگی' : 'نمایندگی مرکزی')}
+        ${detailRow('وضعیت حساب', owner.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده')}
+      </div>
+      ${
+        h.contact
+          ? html`<div class="af-rows">
+              ${detailRow('موبایل', h.contact.phone || '—')}
+              ${detailRow('مسئول هماهنگی', h.contact.coordinatorName || '—')}
+              ${detailRow('شماره هماهنگی', h.contact.coordinatorPhone || '—')}
+            </div>`
+          : html`<div class="hint" style="padding:10px 14px">
+              مشاهده‌ی اطلاعات تماس در دسترسی این حساب نیست.
+            </div>`
+      }
+      ${
+        owner.id
+          ? html`<div style="padding:10px 14px">
+              <button class="btn sm" data-go="adm-agent" data-go-params="id=${owner.id}">پرونده‌ی نمایندگی</button>
+            </div>`
+          : ''
+      }
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>تصمیم</h2></div>
+      <div class="hv-acts">
+        ${
+          h.removed
+            ? html`<div class="hv-act">
+                <div>
+                  <b>این آگهی برداشته شده است</b>
+                  <span class="hint">در سابقه‌ی سامانه مانده، ولی هیچ نماینده‌ای آن را نمی‌بیند.</span>
+                </div>
+                <button class="btn primary sm" data-havale-restore="${h.id}">بازگرداندن به بازار</button>
+              </div>`
+            : html`
+              <div class="hv-act">
+                <div>
+                  <b>${h.status === 'SUSPENDED' ? 'تعلیق‌شده' : 'تعلیق آگهی'}</b>
+                  <span class="hint">
+                    ${h.status === 'SUSPENDED'
+                      ? 'از بازار خارج است و نماینده دلیل را می‌بیند.'
+                      : 'از بازار خارج می‌شود و نماینده دلیلی را که می‌نویسید می‌بیند.'}
+                  </span>
+                </div>
+                ${
+                  h.status === 'SUSPENDED'
+                    ? html`<button class="btn primary sm" data-havale-unsuspend="${h.id}">رفع تعلیق</button>`
+                    : html`<button class="btn sm danger" data-havale-suspend="${h.id}">تعلیق آگهی</button>`
+                }
+              </div>
+              <div class="hv-act">
+                <div>
+                  <b>برداشتن از سامانه</b>
+                  <span class="hint">آگهی از همه‌ی فهرست‌ها بیرون می‌رود. رکورد و سابقه‌ی بازدیدها می‌ماند.</span>
+                </div>
+                <button class="btn sm danger" data-havale-remove="${h.id}">برداشتن</button>
+              </div>`
+        }
+      </div>
+
+      ${
+        h.description
+          ? html`<div class="card-h" style="border-top:1px solid var(--line-2)"><h2>توضیح نماینده</h2></div>
+            <div class="seat-note">${h.description}</div>`
+          : ''
+      }
+
+      ${
+        h.reports?.length
+          ? html`<div class="card-h" style="border-top:1px solid var(--line-2)"><h2>گزارش‌های این آگهی</h2></div>
+            <div class="af-rows">
+              ${h.reports.map((r) =>
+                detailRow(
+                  REPORT_REASON_LABEL[r.reason] || r.reason,
+                  html`${REPORT_STATUS_LABEL[r.status] || r.status} · <span class="num">${date(r.createdAt)}</span>`
+                )
+              )}
+            </div>`
+          : ''
+      }
+    </div>
+  </div>
+  </div>`;
+}
+
+function suspendHavaleModal(id) {
+  openModal({
+    type: 'form',
+    title: 'تعلیق آگهی',
+    tone: 'danger',
+    body: html`
+      <div class="field">
+        <label for="hv-reason">دلیل تعلیق</label>
+        <textarea class="in" id="hv-reason" name="reason" rows="3" maxlength="300" required
+                  placeholder="مثلاً: مبلغ با بازار نمی‌خواند و نماینده پاسخگو نیست"></textarea>
+        <div class="hint">نماینده همین متن را روی آگهی خودش می‌بیند، پس طوری بنویسید که قابل رفع باشد.</div>
+      </div>`,
+    confirmLabel: 'تعلیق کن',
+    onSubmit: async (form) => {
+      await admin.setHavaleStatus(id, 'SUSPENDED', form.reason.value.trim());
+      toast('آگهی تعلیق شد');
+      await resolve();
+    },
+  });
+}
+
+function removeHavaleModal(id) {
+  openModal({
+    type: 'form',
+    title: 'برداشتن آگهی از سامانه',
+    tone: 'danger',
+    body: html`
+      <div class="field">
+        <label for="hv-rm">دلیل</label>
+        <textarea class="in" id="hv-rm" name="reason" rows="3" maxlength="300" required
+                  placeholder="مثلاً: آگهی تکراری، یا خودروی نامرتبط"></textarea>
+        <div class="hint">
+          رکورد آگهی و سابقه‌ی بازدیدهایش پاک نمی‌شود — فقط از همه‌ی فهرست‌ها بیرون می‌رود.
+          این دلیل در سابقه‌ی سامانه ثبت می‌شود.
+        </div>
+      </div>`,
+    confirmLabel: 'بردار',
+    onSubmit: async (form) => {
+      await admin.setHavaleRemoved(id, true, form.reason.value.trim());
+      toast('آگهی از سامانه برداشته شد');
+      await resolve();
+    },
+  });
+}
+
+async function setHavaleBack(id, kind) {
+  try {
+    if (kind === 'removed') await admin.setHavaleRemoved(id, false);
+    else await admin.setHavaleStatus(id, 'ACTIVE');
+    toast('آگهی به بازار برگشت');
+    await resolve();
+  } catch (err) {
+    toast(err.message, 'danger');
+  }
 }
 
 // ── reports ─────────────────────────────────────────────────────────────────
@@ -1075,6 +1422,10 @@ export function handleAdminClick(d, el) {
   if (d.permNone) return toggleGroup(el.closest('form'), d.permNone, false);
   if (d.activity) return showActivityDetail(d.activity);
   if (d.reviewReport) return reviewReportModal(d.reviewReport);
+  if (d.havaleSuspend) return suspendHavaleModal(d.havaleSuspend);
+  if (d.havaleUnsuspend) return setHavaleBack(d.havaleUnsuspend, 'suspended');
+  if (d.havaleRemove) return removeHavaleModal(d.havaleRemove);
+  if (d.havaleRestore) return setHavaleBack(d.havaleRestore, 'removed');
   if (d.approveSuspension) return approveSuspension(d.approveSuspension);
   if (d.seatReview) return seatReview(d.seatReview, d.approve === 'true');
   if (d.agentStatus) return setAgentStatus(d.agentStatus, d.status);
@@ -1095,8 +1446,17 @@ export function handleAdminSubmit(form) {
   switch (form.dataset.form) {
     case 'new-agent': return submitNewAgent(form);
     case 'agent-search': return submitAgentSearch(form);
+    case 'havale-search': return submitHavaleSearch(form);
     default: return handleCatalogSubmit(form);
   }
+}
+
+function submitHavaleSearch(form) {
+  const params = {};
+  new FormData(form).forEach((value, key) => {
+    if (value !== '') params[key] = value;
+  });
+  go('adm-havales', params);
 }
 
 function submitAgentSearch(form) {

@@ -54,7 +54,7 @@ const isOwner = (role) => role === ROLES.OWNER;
  */
 const PERMISSIONS = {
   OWNER: {
-    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
+    tickets: true, reports: true, listings: true, contactEdit: true, thirdStrike: true,
     subscriptions: true, seats: true, agents: true, monitoring: true,
     export: true, bulkContacts: true, settings: true, catalog: true,
     // Owner only.
@@ -70,19 +70,19 @@ const PERMISSIONS = {
   DEVELOPER: {},
 
   SUPER_ADMIN: {
-    tickets: true, reports: true, contactEdit: true, thirdStrike: true,
+    tickets: true, reports: true, listings: true, contactEdit: true, thirdStrike: true,
     subscriptions: true, seats: true, agents: true, monitoring: true,
     export: true, bulkContacts: true, settings: true, catalog: true,
     staff: false, systemAlerts: false, errorLog: false,
   },
   SUPPORT: {
-    tickets: true, reports: true, contactEdit: true, thirdStrike: false,
+    tickets: true, reports: true, listings: true, contactEdit: true, thirdStrike: false,
     subscriptions: false, seats: false, agents: false, monitoring: false,
     export: false, bulkContacts: false, settings: false, catalog: false,
     staff: false, systemAlerts: false, errorLog: false,
   },
   FINANCE: {
-    tickets: false, reports: false, contactEdit: false, thirdStrike: false,
+    tickets: false, reports: false, listings: false, contactEdit: false, thirdStrike: false,
     subscriptions: true, seats: true, agents: false, monitoring: false,
     export: false, bulkContacts: false, settings: false, catalog: false,
     staff: false, systemAlerts: false, errorLog: false,
@@ -118,6 +118,7 @@ const PERMISSION_GROUPS = [
     items: [
       { key: 'tickets', label: 'تیکت‌های پشتیبانی', hint: 'خواندن و پاسخ دادن به تیکت نمایندگی‌ها' },
       { key: 'reports', label: 'گزارش‌های تخلف', hint: 'بررسی گزارش‌هایی که نمایندگی‌ها ثبت می‌کنند' },
+      { key: 'listings', label: 'مدیریت حواله‌ها', hint: 'دیدن همه‌ی حواله‌ها، تعلیق و حذف یک آگهی' },
       { key: 'thirdStrike', label: 'تأیید تعلیق نهایی', hint: 'تعلیق نمایندگی بعد از سومین تخلف — تصمیم برگشت‌ناپذیر' },
     ],
   },

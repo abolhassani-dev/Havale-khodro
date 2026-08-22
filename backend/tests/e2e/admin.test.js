@@ -286,6 +286,156 @@ maybe('admin panel', () => {
    * that queue, so the menu never advertises work behind a door it does not
    * have — support sees the ticket count and not the finance one.
    */
+  /**
+   * Managing listings from the admin side.
+   *
+   * The agency-facing list is a market and hides anything not for sale. This
+   * one is a filing cabinet: an administrator has to be able to find the
+   * listing somebody is complaining about, whatever state it is in, and take
+   * it down with the reason recorded — where its own agency can read it.
+   */
+  describe('listings', () => {
+    const post = async (cookie, overrides) =>
+      request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await offer(overrides))
+        .expect(201);
+
+    it('lists every listing with the agency that posted it', async () => {
+      const owner = await agent();
+      const { cookie } = await staff('SUPER_ADMIN');
+      const made = await post(owner.cookie);
+
+      // The serial is what somebody reads out over the phone, so a bare number
+      // in the one search box has to find it.
+      const res = await request(app)
+        .get(api(`/admin/havales?query=${made.body.data.serial}`))
+        .set('Cookie', cookie)
+        .expect(200);
+
+      const row = res.body.data.items.find((h) => h.id === made.body.data.id);
+      expect(row).toBeTruthy();
+      // Whose it is, which is the first thing anybody asks here.
+      expect(row.owner.agencyCode).toBe(owner.user.agencyCode);
+      expect(row.live).toBe(true);
+      expect(res.body.data.summary.total).toBeGreaterThan(0);
+
+      // And so does the agency's own code, the other thing people quote.
+      const byAgency = await request(app)
+        .get(api(`/admin/havales?query=${encodeURIComponent(owner.user.agencyCode)}`))
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(byAgency.body.data.items.some((h) => h.id === made.body.data.id)).toBe(true);
+    });
+
+    it('is refused to an account without the permission', async () => {
+      const { cookie } = await staff('FINANCE');
+      await request(app).get(api('/admin/havales')).set('Cookie', cookie).expect(403);
+    });
+
+    it('suspends only with a reason, and the agency reads that reason', async () => {
+      const owner = await agent();
+      const { cookie } = await staff('SUPER_ADMIN');
+      const made = await post(owner.cookie);
+      const id = made.body.data.id;
+
+      // «تعلیق شد» with nothing after it is the support ticket this field
+      // exists to prevent.
+      await request(app)
+        .put(api(`/admin/havales/${id}/status`))
+        .set('Cookie', cookie)
+        .send({ status: 'SUSPENDED' })
+        .expect(400);
+
+      await request(app)
+        .put(api(`/admin/havales/${id}/status`))
+        .set('Cookie', cookie)
+        .send({ status: 'SUSPENDED', reason: 'مبلغ با بازار نمی‌خواند' })
+        .expect(200);
+
+      const mine = await request(app)
+        .get(api('/havales/mine'))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      const row = mine.body.data.items.find((h) => h.id === id);
+      expect(row.status).toBe('SUSPENDED');
+      expect(row.suspendReason).toContain('بازار');
+    });
+
+    it('removes a listing from the market without destroying it', async () => {
+      const owner = await agent();
+      const other = await agent();
+      const { cookie } = await staff('SUPER_ADMIN');
+      const made = await post(owner.cookie);
+      const id = made.body.data.id;
+
+      await request(app)
+        .put(api(`/admin/havales/${id}/removed`))
+        .set('Cookie', cookie)
+        .send({ removed: true, reason: 'آگهی تکراری' })
+        .expect(200);
+
+      // Gone from the market…
+      const market = await request(app)
+        .get(api('/havales?take=100'))
+        .set('Cookie', other.cookie)
+        .expect(200);
+      expect(market.body.data.items.some((h) => h.id === id)).toBe(false);
+
+      // …and still on file, which is what keeps the reveal history and any
+      // violation report pointing at it meaningful.
+      const filed = await request(app)
+        .get(api('/admin/havales?status=DELETED&take=100'))
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(filed.body.data.items.some((h) => h.id === id)).toBe(true);
+
+      // Restoring puts it back as an ordinary active listing.
+      await request(app)
+        .put(api(`/admin/havales/${id}/removed`))
+        .set('Cookie', cookie)
+        .send({ removed: false })
+        .expect(200);
+
+      const detail = await request(app)
+        .get(api(`/admin/havales/${id}`))
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(detail.body.data.removed).toBe(false);
+      expect(detail.body.data.status).toBe('ACTIVE');
+    });
+
+    /**
+     * The contact details are the thing the whole masking design protects, so
+     * seeing them here follows the same rule as everywhere else: only an
+     * account whose «مشاهده‌ی گروهی مشخصات» box is ticked.
+     */
+    it('shows contact details only to an account allowed to see them', async () => {
+      const owner = await agent();
+      const made = await post(owner.cookie);
+
+      const full = await staff('SUPER_ADMIN');
+      const seen = await request(app)
+        .get(api(`/admin/havales/${made.body.data.id}`))
+        .set('Cookie', full.cookie)
+        .expect(200);
+      expect(seen.body.data.contact.coordinatorPhone).toBeTruthy();
+
+      const limited = await staff('SUPPORT');
+      await prisma.user.update({
+        where: { id: limited.user.id },
+        data: { permissions: { listings: true, bulkContacts: false } },
+      });
+      const hidden = await request(app)
+        .get(api(`/admin/havales/${made.body.data.id}`))
+        .set('Cookie', limited.cookie)
+        .expect(200);
+      expect(hidden.body.data.contact).toBeNull();
+      expect(hidden.body.data.carType).toBeTruthy();
+    });
+  });
+
   describe('sidebar counts', () => {
     it('counts unanswered tickets and pending capacity orders, per permission', async () => {
       const superAdmin = await staff('SUPER_ADMIN');

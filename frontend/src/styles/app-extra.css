@@ -1641,3 +1641,35 @@ button.af-parent:hover { text-decoration: underline; }
   border-top: 1px solid var(--line-2);
 }
 .sup-order:first-child { border-top: 0; }
+
+/* ================================================================
+   مدیریت حواله‌ها — فهرست، پرونده، و دو تصمیمی که می‌شود گرفت
+   ================================================================ */
+
+.hv-id b, .hv-ag b { display: block; }
+.hv-tbl td { vertical-align: middle; }
+
+/* دلیل تعلیق را نماینده هم می‌بیند، پس این‌جا هم باید مثل یک اعلان دیده شود
+   نه مثل یک فیلد. */
+.hv-reason {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--line-2);
+  background: var(--copper-08);
+  color: var(--copper);
+  font-size: 12.5px;
+}
+
+.hv-acts { display: grid; }
+.hv-act {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line-2);
+}
+.hv-act:last-child { border-bottom: 0; }
+.hv-act > div { flex: 1; min-width: 190px; display: grid; gap: 2px; }
+.hv-act b { font-size: 13.5px; }
+.hv-act .hint { font-size: 12px; }
+
+/* ردیف‌های مشخصات داخل کارت — همان .drow، فقط با فاصله‌ی کارت. */
+.af-rows { padding: 4px 16px 12px; }

@@ -2,6 +2,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 
 const agentService = require('./agent.service');
+const listingService = require('./listing.service');
 const monitoringService = require('./monitoring.service');
 const catalogAdminRoutes = require('../catalog/catalog.admin.routes');
 const staffRoutes = require('./staff.routes');
@@ -177,6 +178,123 @@ router.get(
     }),
   }),
   asyncHandler(async (req, res) => success(res, await monitoringService.suspicious(req.query)))
+);
+
+// ── listings ────────────────────────────────────────────────────────────────
+
+/**
+ * @openapi
+ * /admin/havales:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Every listing, including suspended and removed ones
+ *     description: >
+ *       The agency-facing list hides suspended listings, removed ones, and
+ *       whose they are. This one shows all three, because the question here is
+ *       «what is this listing and who posted it», not «what may I buy».
+ */
+router.get(
+  '/havales',
+  requirePermission('listings'),
+  validate({
+    query: Joi.object({
+      query: Joi.string().trim().max(120).allow(''),
+      kind: Joi.string().valid('OFFER', 'REQUEST'),
+      // LIVE and DELETED are not columns — see the repository.
+      status: Joi.string().valid('ALL', 'LIVE', 'DELETED', 'ACTIVE', 'FULFILLED', 'EXPIRED', 'SUSPENDED', 'ARCHIVED'),
+      ownerId: Joi.string().trim().max(40),
+      skip: Joi.number().integer().min(0).default(0),
+      take: Joi.number().integer().min(1).max(100).default(25),
+    }),
+  }),
+  asyncHandler(async (req, res) => success(res, await listingService.list(req.query)))
+);
+
+/**
+ * @openapi
+ * /admin/havales/{id}:
+ *   get:
+ *     tags: [Admin]
+ *     summary: One listing in full, with its reports
+ *     description: >
+ *       Contact details are included only for an account with the
+ *       «bulkContacts» permission — the same rule that governs seeing a number
+ *       without spending a reveal anywhere else in the system.
+ */
+router.get(
+  '/havales/:id',
+  requirePermission('listings'),
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) =>
+    success(res, await listingService.detail({ actor: req.user, id: req.params.id }))
+  )
+);
+
+/**
+ * @openapi
+ * /admin/havales/{id}/status:
+ *   put:
+ *     tags: [Admin]
+ *     summary: Suspend a listing, or put it back
+ */
+router.put(
+  '/havales/:id/status',
+  requirePermission('listings'),
+  validate({
+    params: idParam,
+    body: Joi.object({
+      status: Joi.string().valid('ACTIVE', 'SUSPENDED').required(),
+      // The agency reads this on its own listing, so it is required to suspend
+      // and enforced in the service rather than only here.
+      reason: Joi.string().trim().max(300).allow('', null),
+    }),
+  }),
+  asyncHandler(async (req, res) =>
+    success(
+      res,
+      await listingService.setStatus({
+        actor: req.user,
+        id: req.params.id,
+        status: req.body.status,
+        reason: req.body.reason,
+      }),
+      MESSAGES.HAVALE.UPDATED
+    )
+  )
+);
+
+/**
+ * @openapi
+ * /admin/havales/{id}/removed:
+ *   put:
+ *     tags: [Admin]
+ *     summary: Take a listing down, or restore it
+ *     description: >
+ *       A soft delete: the row stays, so the reveal history and the violation
+ *       reports pointing at it survive. Agencies' queries filter on it.
+ */
+router.put(
+  '/havales/:id/removed',
+  requirePermission('listings'),
+  validate({
+    params: idParam,
+    body: Joi.object({
+      removed: Joi.boolean().required(),
+      reason: Joi.string().trim().max(300).allow('', null),
+    }),
+  }),
+  asyncHandler(async (req, res) =>
+    success(
+      res,
+      await listingService.setRemoved({
+        actor: req.user,
+        id: req.params.id,
+        removed: req.body.removed,
+        reason: req.body.reason,
+      }),
+      MESSAGES.HAVALE.UPDATED
+    )
+  )
 );
 
 // ── agencies ────────────────────────────────────────────────────────────────
