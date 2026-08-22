@@ -1,7 +1,6 @@
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 
@@ -22,7 +21,15 @@ app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors({ origin: config.security.corsOrigins, credentials: true }));
-app.use(compression());
+// Compression is nginx's job, not this process's.
+//
+// It used to be `compression()` right here, and under load that was the single
+// most expensive thing the API did: zlib at level 6 on every JSON response,
+// paid by the same container that has to answer the next request. nginx sits
+// in front of every response anyway, compresses at a cheaper level, and was
+// measured at under ten percent of one core while the API was using two.
+// Removed rather than made conditional — a switch here would only ever be a
+// way to turn the expensive one back on by accident.
 app.use(express.json({ limit: config.security.bodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: config.security.bodyLimit }));
 

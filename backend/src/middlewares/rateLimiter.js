@@ -33,6 +33,23 @@ const message = {
  */
 
 /**
+ * How many processes share this budget.
+ *
+ * The counters live in this process's memory, and with several workers each
+ * keeps its own. Left alone, running two workers would quietly double every
+ * limit in this file — including the ten wrong passwords that are the whole
+ * brute-force defence. Requests are spread across the workers, so each one
+ * gets its share of the budget and the total stays what the operator asked
+ * for. Set by server.js when it forks; absent means one process.
+ */
+const WORKERS = Math.max(Number(process.env.CLUSTER_WORKERS) || 1, 1);
+
+/** A global budget, as this one process is allowed to count it. */
+function share(total, floor) {
+  return Math.max(Math.round(total / WORKERS), floor);
+}
+
+/**
  * Per session where possible, per address otherwise.
  *
  * The cookie is used only as a bucket label — nothing is trusted about it and
@@ -51,7 +68,7 @@ const rateLimiter = rateLimit({
   // working panel: one dashboard view is five to seven calls. A server whose
   // .env still says 100 would otherwise keep locking people out with no sign
   // that the number is the reason.
-  max: Math.max(Number(config.security.rateLimit.max) || 0, 600),
+  max: share(Math.max(Number(config.security.rateLimit.max) || 0, 600), 300),
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: keyFor,
@@ -75,7 +92,9 @@ const rateLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  // Five per worker rather than ten in one place: a person who has forgotten
+  // their password still gets several tries, and a script still runs out.
+  max: share(10, 5),
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,

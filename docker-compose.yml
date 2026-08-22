@@ -71,7 +71,10 @@ services:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
     restart: unless-stopped
     logging: *logging
-    mem_limit: ${API_MEM_LIMIT:-512m}
+    # Room for the workers below: each Node process carries its own heap and
+    # runtime, and two of them under the old 512m ceiling would have been one
+    # busy afternoon away from the kernel killing the container.
+    mem_limit: ${API_MEM_LIMIT:-640m}
     env_file: .env
     environment:
       # Built from the same credentials the database container uses, so the two
@@ -98,7 +101,16 @@ services:
       # when it approaches its heap limit, so without this it happily grows
       # past the container's ceiling and gets killed by the kernel with no
       # warning. Told the real budget, it collects instead of dying.
-      NODE_OPTIONS: --max-old-space-size=384
+      #
+      # Divided between the workers below: the ceiling is per process, and two
+      # processes each allowed 384 MiB would together outgrow the container.
+      NODE_OPTIONS: --max-old-space-size=192
+      # Processes serving the API. Node runs JavaScript on one thread, so one
+      # process uses one core however many the machine has — under load this
+      # server sat at that limit with two cores idle. Two, not three: nginx and
+      # Postgres live on the same cores and must not be starved by the API.
+      # Set WEB_CONCURRENCY in .env to change it on a bigger machine.
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     # No published port: the API is reachable through nginx and from nowhere
     # else. Publishing 3000 would leave a second door with no TLS on it.
     expose:
