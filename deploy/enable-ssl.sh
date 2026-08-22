@@ -144,6 +144,17 @@ server {
     gzip on;
     gzip_types application/json text/plain text/css application/javascript image/svg+xml;
     gzip_min_length 1024;
+    # Compression is nginx's alone now — the API stopped doing it, because zlib
+    # on the event loop was the most expensive thing that process did.
+    #
+    # `gzip_proxied any` matters more here than it looks: nginx decides a
+    # request is «proxied» by the presence of a Via header, and the default is
+    # to send those responses uncompressed. Plenty of people reach this site
+    # through a company proxy or a filtering middlebox that adds one — and
+    # those are exactly the connections that can least afford an uncompressed
+    # payload.
+    gzip_proxied any;
+    gzip_vary on;
 
     # Two years, and only now that HTTPS is known to work: a browser that has
     # seen this refuses plain HTTP for that long, including if you roll back.
