@@ -315,6 +315,19 @@ function toSeatOrder(order) {
     adminNote: order.adminNote,
     createdAt: order.createdAt,
     reviewedAt: order.reviewedAt,
+    // Present when the caller asked for orders across agencies — the admin
+    // queue. An agency listing its own orders already knows who it is.
+    buyer: order.buyer
+      ? {
+          id: order.buyer.id,
+          name: order.buyer.agencyName,
+          code: order.buyer.agencyCode,
+          manager: order.buyer.fullName,
+          city: order.buyer.city,
+          seatCredits: order.buyer.seatCredits,
+          subAgents: order.buyer._count?.children ?? 0,
+        }
+      : null,
   };
 }
 

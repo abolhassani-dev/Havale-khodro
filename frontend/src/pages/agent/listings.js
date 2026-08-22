@@ -6,6 +6,7 @@ import {
   PAYMENT_TYPES, PAYMENT_TYPE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
+import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { enDigits } from '../../ui/format.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
@@ -72,29 +73,29 @@ export function havaleFormPage(kind) {
     <div class="fields">
       <div class="field">
         <label for="brand">برند</label>
-        <input class="in sel-q" type="search" data-sel-search
-               placeholder="جستجوی برند — مثلاً پژو" aria-label="جستجوی برند">
-        <select class="in" id="brand" name="brand" required>
-          <option value="">انتخاب کنید</option>
-          <!-- The company is a suffix, not a prefix, and is dropped when the
-               brand has none. Leading with it sorted «ایران خودرو — پژو» under
-               «الف» rather than «پ», so somebody looking for پژو had to know
-               who makes it first. Most brands have no company at all. -->
-          ${brands.map(
-            (b) => html`<option value="${b.id}" data-search="${b.slug || ''}">
-              ${b.name}${b.company ? ` — ${b.company.name}` : ''}
-            </option>`
-          )}
-        </select>
+        <!-- One control, with the search inside it. The company is a suffix,
+             not a prefix, and is dropped when the brand has none: leading with
+             it sorted «ایران خودرو — پژو» under «الف» rather than «پ», so
+             somebody looking for پژو had to know who makes it first. -->
+        ${pickSelect(
+          'brand',
+          brands.map((b) => ({
+            value: b.id,
+            label: `${b.name}${b.company ? ` — ${b.company.name}` : ''}`,
+            search: b.slug || '',
+          })),
+          { required: true, searchLabel: 'نام برند — مثلاً پژو یا peugeot' }
+        )}
       </div>
 
       <div class="field">
         <label for="carModelId">مدل خودرو</label>
-        <input class="in sel-q" type="search" data-sel-search
-               placeholder="جستجوی مدل…" aria-label="جستجوی مدل">
-        <select class="in" id="carModelId" name="carModelId" required disabled>
-          <option value="">ابتدا برند را انتخاب کنید</option>
-        </select>
+        ${pickSelect('carModelId', [], {
+          required: true,
+          disabled: true,
+          placeholder: 'ابتدا برند را انتخاب کنید',
+          searchLabel: 'نام مدل…',
+        })}
         <div class="hint">اگر مدلی در فهرست نیست، از پشتیبانی بخواهید اضافه شود.</div>
       </div>
 
@@ -206,15 +207,12 @@ export async function onBrandChange(form) {
   const select = form.carModelId;
   select.innerHTML = '';
   select.disabled = true;
-  // A fresh model list voids whatever the model search had stashed and typed.
-  delete select.dataset.all;
-  const modelSearch = select.closest('.field')?.querySelector('[data-sel-search]');
-  if (modelSearch) modelSearch.value = '';
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = brand ? 'در حال بارگذاری…' : 'ابتدا برند را انتخاب کنید';
   select.appendChild(placeholder);
+  syncPickSelect(select);
   if (!brand) return;
 
   let models = [];
@@ -222,6 +220,7 @@ export async function onBrandChange(form) {
     ({ models } = await catalog.brandModels(brandId));
   } catch {
     placeholder.textContent = 'بارگذاری مدل‌ها نشد — دوباره برند را انتخاب کنید';
+    syncPickSelect(select);
     return;
   }
 
@@ -244,57 +243,8 @@ export async function onBrandChange(form) {
     option.textContent = model.name;
     select.appendChild(option);
   });
-}
-
-/**
- * The little search box over a select: typing narrows the options, the select
- * stays a select. The full list is stashed on the element the first time a
- * character is typed, so clearing the box always restores everything — and a
- * chosen value is never filtered out from under the form.
- *
- * When exactly one real option matches, it is chosen outright and a change
- * event fired — typing «پژو» is choosing پژو, and for the brand box that
- * change is what loads the models.
- */
-export function filterSelect(input) {
-  if (!input.matches?.('[data-sel-search]')) return false;
-  const select = input.closest('.field')?.querySelector('select');
-  if (!select || select.disabled) return true;
-
-  if (!select.dataset.all) {
-    select.dataset.all = JSON.stringify(
-      [...select.options].map((o) => ({
-        v: o.value,
-        t: o.textContent.trim(),
-        s: o.dataset.search || '',
-      }))
-    );
-  }
-
-  const all = JSON.parse(select.dataset.all);
-  const q = input.value.trim().toLowerCase();
-  const chosen = select.value;
-  const keep = all.filter(
-    (o) =>
-      !o.v || !q || o.t.toLowerCase().includes(q) || o.s.toLowerCase().includes(q) || o.v === chosen
-  );
-
-  select.textContent = '';
-  for (const o of keep) {
-    const option = document.createElement('option');
-    option.value = o.v;
-    option.textContent = o.t;
-    if (o.s) option.dataset.search = o.s;
-    select.appendChild(option);
-  }
-  select.value = chosen && keep.some((o) => o.v === chosen) ? chosen : '';
-
-  const real = keep.filter((o) => o.v);
-  if (q && real.length === 1 && select.value !== real[0].v) {
-    select.value = real[0].v;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-  return true;
+  // The control catches up with the options that were just written into it.
+  syncPickSelect(select);
 }
 
 export async function submitHavale(form) {

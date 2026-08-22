@@ -12,7 +12,7 @@ import { loadDashboard, dashboardPage } from './pages/agent/dashboard.js';
 import { loadSearch, searchPage, confirmReveal, onSearchBrandChange } from './pages/agent/search.js';
 import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
-  renewModal, confirmFulfill, confirmDelete, havaleDetailModal, filterSelect,
+  renewModal, confirmFulfill, confirmDelete, havaleDetailModal,
 } from './pages/agent/listings.js';
 import {
   loadSubscription, subscriptionPage, orderSeatsModal,
@@ -29,6 +29,9 @@ import {
 import {
   handleBrandPickClick, handleBrandPickChange, handleBrandPickSearch,
 } from './ui/brandPicker.js';
+import {
+  handlePickSelectClick, handlePickSelectSearch, handlePickSelectKey,
+} from './ui/pickSelect.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets, subscription } from './api/index.js';
@@ -228,6 +231,11 @@ function findTarget(node) {
 }
 
 function onClick(event) {
+  // The searchable selects handle themselves and are not in the data-key
+  // registry: their own click closes any that are open, and a click anywhere
+  // else in the app closes them too — which is what a dropdown must do.
+  if (handlePickSelectClick(event.target)) return;
+
   const el = findTarget(event.target);
   if (!el) return;
 
@@ -372,9 +380,8 @@ function onCatalogSearch(event) {
   // input keeps its own caret and the ticked boxes keep themselves.
   if (handleBrandPickSearch(input)) return;
 
-  // The searchable selects on the listing form — same idea, options instead
-  // of rows.
-  if (filterSelect(input)) return;
+  // The search inside a pick-select — options shown and hidden in place.
+  if (handlePickSelectSearch(input)) return;
 
   if (!input.matches?.('[data-catalog-search]')) return;
 
@@ -418,6 +425,11 @@ function onChange(event) {
 }
 
 function onKeydown(event) {
+  // Enter picks the only remaining option, Escape closes the panel — handled
+  // before the app-wide Escape, so closing a dropdown does not also close the
+  // modal it sits in.
+  if (handlePickSelectKey(event)) return;
+
   if (event.key !== 'Escape') return;
   // The modal sits on top of the drawer, so it goes first — one Escape should
   // dismiss one thing, the one the reader is looking at.

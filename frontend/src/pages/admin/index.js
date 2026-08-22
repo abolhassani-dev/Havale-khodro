@@ -794,39 +794,106 @@ export async function showActivityDetail(id) {
 
 // ── seat orders ─────────────────────────────────────────────────────────────
 
+/**
+ * One capacity request, as the person deciding it needs to read it.
+ *
+ * The old table was six columns of numbers that said nothing about *whose*
+ * request it was — three identical rows, no name anywhere. The decision here
+ * is «did this agency pay us?», so the card leads with the agency, states the
+ * amount to look for in the bank, and shows what they already hold.
+ */
+function seatOrderCard(o) {
+  const b = o.buyer;
+  return html`<div class="seat-card">
+    <div class="seat-who">
+      <span class="agent-av" style="--h:${hueOf(b?.code || o.serial)}">
+        ${(b?.name || '؟').slice(0, 1)}
+      </span>
+      <div class="seat-id">
+        <div class="seat-name">
+          <b>${b?.name || 'نمایندگی نامشخص'}</b>
+          <span class="tag n">درخواست <span class="num">#${faDigits(o.serial)}</span></span>
+        </div>
+        <div class="seat-sub">
+          ${b ? html`<span class="num">${b.code}</span> · ${b.manager} · ${b.city}` : ''}
+          · <span class="num">${date(o.createdAt)}</span>
+        </div>
+      </div>
+      ${
+        b
+          ? html`<button class="btn sm" data-go="adm-agent" data-go-params="id=${b.id}">پرونده</button>`
+          : ''
+      }
+    </div>
+
+    <div class="seat-ask">
+      <div class="seat-fig">
+        <span>ظرفیت درخواستی</span>
+        <b class="num">${faDigits(o.seats)}</b>
+      </div>
+      <div class="seat-fig">
+        <span>مبلغ واحد</span>
+        <b class="num">${money(o.unitPriceToman)}</b>
+      </div>
+      <div class="seat-fig is-total">
+        <span>مبلغی که باید واریز شده باشد</span>
+        <b class="num">${money(o.totalToman)}</b>
+      </div>
+      ${
+        b
+          ? html`<div class="seat-fig">
+              <span>وضعیت فعلی او</span>
+              <b><span class="num">${faDigits(b.seatCredits)}</span> ظرفیت ·
+                 <span class="num">${faDigits(b.subAgents)}</span> زیرنمایندگی</b>
+            </div>`
+          : ''
+      }
+    </div>
+
+    ${
+      o.buyerNote
+        ? html`<div class="seat-note"><b>یادداشت نماینده:</b> ${o.buyerNote}</div>`
+        : ''
+    }
+
+    <div class="seat-act">
+      <span class="hint">فقط بعد از دیدن واریز در حساب، تأیید کنید.</span>
+      <span class="tk-gap"></span>
+      <button class="btn sm danger" data-seat-review="${o.id}" data-approve="false">رد درخواست</button>
+      <button class="btn primary sm" data-seat-review="${o.id}" data-approve="true">
+        تأیید و شارژ ${faDigits(o.seats)} ظرفیت
+      </button>
+    </div>
+  </div>`;
+}
+
 function seatsPage() {
   const { data } = getState();
   const pending = data.pending || [];
+  const totalSeats = pending.reduce((sum, o) => sum + o.seats, 0);
+  const totalToman = pending.reduce((sum, o) => sum + o.totalToman, 0);
 
   return html`
   <div class="card">
-    <div class="card-h"><h2>درخواست‌های ظرفیت ${qtip('نماینده برای ساخت زیرنمایندگی ظرفیت می‌خرد. چون پرداخت دستی است، فقط بعد از دریافت وجه «تأیید» بزنید تا ظرفیت شارژ شود.')}</h2>
-      <span class="tag ${pending.length ? 'w' : 'g'}">${faDigits(pending.length)} در انتظار</span></div>
-    <div class="hint" style="padding:8px 14px">
-      ظرفیت پیش‌پرداخت است: فقط بعد از دریافت وجه تأیید کنید.
+    <div class="card-h">
+      <h2>درخواست‌های ظرفیت ${qtip('نماینده برای ساخت زیرنمایندگی ظرفیت می‌خرد. چون پرداخت دستی است، فقط بعد از دریافت وجه «تأیید» بزنید تا ظرفیت شارژ شود.')}</h2>
+      <span class="tag ${pending.length ? 'w' : 'g'}">${faDigits(pending.length)} در انتظار</span>
     </div>
+
     ${
       pending.length
-        ? html`<table>
-            <thead><tr><th>#</th><th>تعداد</th><th>مبلغ واحد</th><th>جمع</th><th>توضیح</th><th>تاریخ</th><th></th></tr></thead>
-            <tbody>
-              ${pending.map(
-                (o) => html`<tr>
-                  <td class="num">${faDigits(o.serial)}</td>
-                  <td class="num">${faDigits(o.seats)}</td>
-                  <td class="num">${money(o.unitPriceToman)}</td>
-                  <td class="num"><b>${money(o.totalToman)}</b></td>
-                  <td>${o.buyerNote || '—'}</td>
-                  <td>${date(o.createdAt)}</td>
-                  <td class="row-actions">
-                    <button class="btn primary sm" data-seat-review="${o.id}" data-approve="true">تأیید</button>
-                    <button class="btn sm danger" data-seat-review="${o.id}" data-approve="false">رد</button>
-                  </td>
-                </tr>`
-              )}
-            </tbody>
-          </table>`
-        : emptyBox('درخواست در انتظاری نیست.')
+        ? html`
+          <div class="stats seat-stats">
+            ${stat('در انتظار بررسی', faDigits(pending.length), 'درخواست', 'layers', 'warn')}
+            ${stat('مجموع ظرفیت', faDigits(totalSeats), 'اگر همه تأیید شوند', 'users')}
+            ${stat('مجموع مبلغ', money(totalToman), 'باید در حساب دیده شود', 'ticket')}
+          </div>
+          <div class="seat-list">${pending.map(seatOrderCard)}</div>`
+        : html`<div class="tk-empty">
+            ${icon('layers', 30)}
+            <b>درخواست در انتظاری نیست</b>
+            <span>هر وقت نمایندگی‌ای ظرفیت زیرنمایندگی بخرد، این‌جا برای تأیید می‌آید.</span>
+          </div>`
     }
   </div>`;
 }

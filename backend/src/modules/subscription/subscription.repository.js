@@ -92,6 +92,22 @@ const subscriptionRepository = {
       where: { ...(buyerId ? { buyerId } : {}), ...(status ? { status } : {}) },
       orderBy: { createdAt: 'desc' },
       take,
+      // The buyer rides along: an admin deciding these has to know whose
+      // request it is and how much capacity they already hold. Without it the
+      // queue was rows of identical numbers with no name on them.
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            agencyName: true,
+            agencyCode: true,
+            fullName: true,
+            city: true,
+            seatCredits: true,
+            _count: { select: { children: true } },
+          },
+        },
+      },
     });
   },
 
