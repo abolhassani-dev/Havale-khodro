@@ -132,8 +132,15 @@ WATCHER=$!
 echo "→ اجرای آزمون"
 echo
 set +e
+# In its own throwaway container rather than inside the running API.
+#
+# `exec` put the load generator inside feranocar-api-1, so the CPU it burned
+# generating the traffic — and the client half of every TLS handshake, which is
+# not cheap — was counted against the API's own peak. The first runs read as if
+# the API needed two cores to serve 190 requests a second. A separate container
+# is measured separately, and the API's line finally means what it says.
 printf '%s\n' "${SPECS[@]}" |
-  docker compose exec -T api node scripts/loadtest.js \
+  docker compose run --rm --no-deps -T --entrypoint node api scripts/loadtest.js \
     --accounts-stdin ${PASSTHRU[@]+"${PASSTHRU[@]}"}
 RESULT=$?
 set -e
@@ -144,6 +151,8 @@ wait "$WATCHER" 2>/dev/null || true
 
 echo
 echo "─── مصرف منابع در طول آزمون (اوج هر کانتینر) ───"
+# The generator's own container appears here too, named «…-api-run-…»: that
+# line is the test itself, not the deployment.
 # The peak is what matters: an average hides the moment that would have killed
 # the container.
 awk -F'|' '
