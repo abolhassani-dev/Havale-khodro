@@ -10,34 +10,79 @@
 # Traffic goes through nginx, so the path measured is the real one — nginx,
 # API, Prisma's pool, Postgres — everything except TLS and the public internet.
 #
-#   ./deploy/loadtest.sh --account نام‌کاربری:رمز
-#   ./deploy/loadtest.sh --users 100 --requests 2000 --account a:x --account b:y
+#   ./deploy/loadtest.sh                       # asks for the account
+#   ./deploy/loadtest.sh --users 100 --requests 2000
+#   ./deploy/loadtest.sh --account نام‌کاربری   # asks only for the password
+#
+# The password is typed at a prompt and handed to the container on standard
+# input. It is never an argument, so it appears neither in the shell history
+# nor in `ps` output, which anybody with a login on the machine can read.
 #
 # Read-only unless you pass --write N. Never reveals a contact.
-#
-# The password is typed on this server and never leaves it. Prefer a real
-# agency account you own, on a quiet hour.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if ! printf '%s\n' "$@" | grep -q -- '--account'; then
-  cat >&2 <<'USAGE'
-یک حساب نماینده لازم است:
+# ── accounts ────────────────────────────────────────────────────────────────
+# Collected here and passed on stdin; everything else goes through to the
+# script inside the container untouched.
+ACCOUNTS=()
+PASSTHRU=()
 
-  ./deploy/loadtest.sh --account نام‌کاربری:رمز
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --account)
+      [ $# -ge 2 ] || { echo "پس از --account نام کاربری لازم است" >&2; exit 1; }
+      ACCOUNTS+=("$2")
+      shift 2
+      ;;
+    -h|--help)
+      cat <<'USAGE'
+آزمون بار روی همین سروری که سایت رویش بالاست.
+
+  ./deploy/loadtest.sh [گزینه‌ها]
 
 گزینه‌ها:
   --users N       کاربر هم‌زمان (پیش‌فرض ۵۰)
   --requests N    مجموع درخواست (پیش‌فرض ۱۰۰۰)
   --write N       N درخواست خرید هم ثبت و بعد پاک می‌کند (پیش‌فرض ۰)
-  --account a:b   می‌توانید چند بار بدهید تا بار روی چند نشست پخش شود
+  --account نام   حساب نماینده؛ رمز جداگانه پرسیده می‌شود.
+                  می‌توانید چند بار بدهید تا بار روی چند نشست پخش شود.
 
 نکته: محافظ نرخ روی هر نشست ۱۲۰۰ درخواست در ۱۵ دقیقه است. برای آزمون
 سنگین‌تر از یک حساب، چند حساب بدهید.
 USAGE
-  exit 1
+      exit 0
+      ;;
+    *)
+      PASSTHRU+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [ ${#ACCOUNTS[@]} -eq 0 ]; then
+  read -rp "نام کاربری نماینده برای آزمون: " ONE
+  [ -n "$ONE" ] || { echo "نام کاربری لازم است" >&2; exit 1; }
+  ACCOUNTS+=("$ONE")
 fi
+
+# One prompt per account. `read -s` keeps the password off the screen; the
+# pairs live in this shell's memory only, and go to the container on stdin.
+SPECS=()
+for NAME in "${ACCOUNTS[@]}"; do
+  if [[ "$NAME" == *:* ]]; then
+    # Given as user:pass on the command line — accepted, but say why not to.
+    echo "  ⚠ رمز را در خط فرمان ندهید؛ در تاریخچه‌ی شل و خروجی ps می‌ماند." >&2
+    SPECS+=("$NAME")
+    continue
+  fi
+  read -rsp "رمز «$NAME»: " PASS
+  echo
+  [ -n "$PASS" ] || { echo "رمز خالی بود" >&2; exit 1; }
+  SPECS+=("$NAME:$PASS")
+done
+unset PASS
 
 SAMPLES="$(mktemp)"
 DBPEAK="$(mktemp)"
@@ -48,21 +93,25 @@ echo "→ نمونه‌برداری از منابع در پس‌زمینه شر�
   while true; do
     docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}' 2>/dev/null >> "$SAMPLES" || true
     # Connections actually in use, which is what a pool exhaustion looks like
-    # from the database's side.
+    # from the database's side. Reads nothing from stdin — the accounts are on
+    # their way to the other container.
     docker compose exec -T db psql -U "${POSTGRES_USER:-havale}" -d "${POSTGRES_DB:-havale}" \
       -tAc "select count(*) from pg_stat_activity where datname = current_database();" \
-      2>/dev/null >> "$DBPEAK" || true
+      </dev/null 2>/dev/null >> "$DBPEAK" || true
     sleep 2
   done
-) &
+) </dev/null &
 WATCHER=$!
 
 echo "→ اجرای آزمون"
 echo
 set +e
-docker compose exec -T api node scripts/loadtest.js --target http://web "$@"
+printf '%s\n' "${SPECS[@]}" |
+  docker compose exec -T api node scripts/loadtest.js \
+    --target http://web --accounts-stdin ${PASSTHRU[@]+"${PASSTHRU[@]}"}
 RESULT=$?
 set -e
+unset SPECS
 
 kill "$WATCHER" 2>/dev/null || true
 wait "$WATCHER" 2>/dev/null || true

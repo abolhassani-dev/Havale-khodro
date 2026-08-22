@@ -32,6 +32,11 @@
  * Usage (inside the api container, through nginx):
  *   node scripts/loadtest.js --target http://web --users 50 --requests 1000 \
  *        --account username:password
+ *
+ * Or, better on a server somebody else can run `ps` on: pass
+ * `--accounts-stdin` and feed «username:password» lines on standard input, so
+ * no password ever appears in an argument list or a shell history. That is
+ * what deploy/loadtest.sh does.
  */
 
 const TARGET = argValue('--target', 'http://web');
@@ -39,6 +44,7 @@ const USERS = Number(argValue('--users', '50'));
 const REQUESTS = Number(argValue('--requests', '1000'));
 const WRITES = Number(argValue('--write', '0'));
 const ACCOUNTS = argAll('--account');
+const ACCOUNTS_FROM_STDIN = process.argv.includes('--accounts-stdin');
 
 function argValue(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -156,7 +162,20 @@ async function writeOnce(session, catalogue) {
   return id;
 }
 
+/** «username:password» lines, one per account, read to the end. */
+async function readAccountsFromStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return Buffer.concat(chunks)
+    .toString('utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && line.includes(':'));
+}
+
 async function main() {
+  if (ACCOUNTS_FROM_STDIN) ACCOUNTS.push(...(await readAccountsFromStdin()));
+
   if (!ACCOUNTS.length) {
     console.error('یک حساب نماینده لازم است:  --account نام‌کاربری:رمز');
     console.error('برای پخش بار روی چند نشست، چند بار --account بدهید.');
