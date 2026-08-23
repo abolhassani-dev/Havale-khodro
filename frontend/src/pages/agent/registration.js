@@ -6,6 +6,7 @@ import {
   emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError,
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
+import { jalaliDate } from '../../ui/dateInput.js';
 import { go, resolve } from '../../router.js';
 
 /**
@@ -178,8 +179,15 @@ function regCard(r) {
       ${field(offer ? 'تعداد ظرفیت' : 'تعداد', r.capacity ? faDigits(r.capacity) : '—')}
       ${field('مبلغ واریزی ثبت‌نام', r.depositToman ? money(r.depositToman) : '—')}
       ${field(offer ? 'مبلغ امتیاز' : 'سقف مبلغ امتیاز', r.premiumToman ? money(r.premiumToman) : '—')}
-      ${field('مهلت ثبت‌نام', r.registerDeadline ? date(r.registerDeadline) : '—')}
-      ${field('موعد تحویل', r.deliveryEstimate || '—')}
+      ${
+        // A request is not asked for these, so it has nothing to print — two
+        // rows of «—» in every card only make the ones that do carry a date
+        // harder to spot.
+        offer
+          ? html`${field('مهلت ثبت‌نام', r.registerDeadline ? date(r.registerDeadline) : '—')}
+            ${field('موعد تحویل', r.deliveryEstimate || '—')}`
+          : ''
+      }
       ${field('طرح', r.planName || (offer ? '—' : 'هر طرحی'))}
     </dl>
 
@@ -362,23 +370,34 @@ export function regFormPage(kind) {
         offer ? 'پولی که بابت واگذاری این ظرفیت می‌گیرید.' : 'تا چه مبلغی حاضرید بپردازید.'
       )}
 
-      <div class="field">
-        <label for="registerDeadline">مهلت ثبت‌نام <span class="opt">(اختیاری)</span></label>
-        <input class="in" id="registerDeadline" name="registerDeadline" type="date">
-        <div class="hint">اگر طرح مهلت ندارد خالی بگذارید — آگهی ۳۰ روزه می‌شود و قابل تمدید است.</div>
-      </div>
+      ${
+        // The deadline, the delivery date and the registrant's conditions are
+        // facts about a factory scheme, and only the side holding capacity
+        // knows them. On a request they were three empty boxes asking the
+        // buyer to describe an offer they are still looking for — and a
+        // deadline typed here was discarded outright, because a request's life
+        // is a fixed window regardless (see closingDate on the server).
+        offer
+          ? html`
+            <div class="field">
+              <label for="registerDeadline-day">مهلت ثبت‌نام <span class="opt">(اختیاری)</span></label>
+              ${jalaliDate('registerDeadline')}
+              <div class="hint">اگر طرح مهلت ندارد خالی بگذارید — آگهی ۳۰ روزه می‌شود و قابل تمدید است.</div>
+            </div>
 
-      <div class="field">
-        <label for="deliveryEstimate">موعد تحویل <span class="opt">(اختیاری)</span></label>
-        <input class="in" id="deliveryEstimate" name="deliveryEstimate" maxlength="60"
-               placeholder="مثلاً اسفند ۱۴۰۵">
-      </div>
+            <div class="field">
+              <label for="deliveryEstimate">موعد تحویل <span class="opt">(اختیاری)</span></label>
+              <input class="in" id="deliveryEstimate" name="deliveryEstimate" maxlength="60"
+                     placeholder="مثلاً اسفند ۱۴۰۵">
+            </div>
 
-      <div class="field wide">
-        <label for="conditions">شرایط ثبت‌نام‌کننده <span class="opt">(اختیاری)</span></label>
-        <input class="in" id="conditions" name="conditions" maxlength="300"
-               placeholder="مثلاً کد ملی بدون سابقه‌ی ثبت‌نام در ۴۸ ماه گذشته">
-      </div>
+            <div class="field wide">
+              <label for="conditions">شرایط ثبت‌نام‌کننده <span class="opt">(اختیاری)</span></label>
+              <input class="in" id="conditions" name="conditions" maxlength="300"
+                     placeholder="مثلاً کد ملی بدون سابقه‌ی ثبت‌نام در ۴۸ ماه گذشته">
+            </div>`
+          : ''
+      }
 
       <div class="field wide">
         <label for="description">توضیحات <span class="opt">(اختیاری)</span></label>
@@ -454,19 +473,24 @@ export async function submitRegistration(form) {
   const kind = form.dataset.kind;
   const payload = { kind, carModelId: form.carModelId.value };
 
+  // Read through the form rather than by name: three of these fields only
+  // exist on the capacity side, and `form.conditions.value` on a request form
+  // is a TypeError, not an empty string.
+  const entered = (name) => form.elements[name]?.value || '';
+
   // Text stays text; everything else is a number the Persian keyboard typed.
   const text = {
-    planName: form.planName.value,
-    method: form.method.value,
-    saleType: form.saleType.value,
-    deliveryEstimate: form.deliveryEstimate.value,
-    conditions: form.conditions.value,
-    description: form.description.value,
+    planName: entered('planName'),
+    method: entered('method'),
+    saleType: entered('saleType'),
+    deliveryEstimate: entered('deliveryEstimate'),
+    conditions: entered('conditions'),
+    description: entered('description'),
   };
   const numbers = {
-    capacity: form.capacity.value,
-    depositToman: form.depositToman.value,
-    premiumToman: form.premiumToman.value,
+    capacity: entered('capacity'),
+    depositToman: entered('depositToman'),
+    premiumToman: entered('premiumToman'),
   };
 
   Object.entries(text).forEach(([key, value]) => {
@@ -476,10 +500,12 @@ export async function submitRegistration(form) {
     if (value !== '') payload[key] = Number(enDigits(value));
   });
 
-  // A date input hands back «2026-09-01»; the API wants a moment. Sent as the
-  // end of that day so a deadline of «today» is not already in the past.
-  if (form.registerDeadline.value) {
-    payload.registerDeadline = new Date(`${form.registerDeadline.value}T23:59:00`).toISOString();
+  // The Jalali picker hands back «2026-09-01» — the reader chose ۱۰ شهریور
+  // ۱۴۰۵ and the conversion happened in the control. The API wants a moment, so
+  // it is sent as the end of that day: a deadline of «today» is then still
+  // ahead of now rather than already expired.
+  if (entered('registerDeadline')) {
+    payload.registerDeadline = new Date(`${entered('registerDeadline')}T23:59:00`).toISOString();
   }
 
   clearFormError(form);
@@ -602,7 +628,7 @@ function mineRow(r, reseller) {
         // and the server answers 404 to anybody else who tries.
         r.isOwn
           ? html`
-            <button class="btn sm" data-reg-renew="${r.id}">تمدید</button>
+            <button class="btn sm" data-reg-renew="${r.id}" data-reg-kind="${r.kind}">تمدید</button>
             ${r.status === 'ACTIVE' ? html`<button class="btn sm" data-reg-fulfill="${r.id}">واگذار شد</button>` : ''}
             <button class="btn sm danger" data-reg-delete="${r.id}">حذف</button>`
           : html`<span class="sub">آگهی زیرشاخه</span>`
@@ -618,14 +644,36 @@ function statusTag(r) {
   return html`<span class="tag ${until(r.closesAt).includes('روز') ? 'w' : 'n'}">${until(r.closesAt)}</span>`;
 }
 
-export function regRenew(id) {
+export function regRenew(id, kind) {
+  // A request has no scheme behind it and therefore no deadline to move: the
+  // server gives it a fixed window whatever is sent, so asking for a date here
+  // would be a question whose answer is thrown away.
+  if (kind === 'REQUEST') {
+    openModal({
+      type: 'confirm',
+      title: 'تمدید درخواست ثبت‌نام',
+      body: html`<p>درخواست شما دوباره ۷ روز روی سامانه می‌ماند.</p>`,
+      confirmLabel: 'تمدید کن',
+      onConfirm: async () => {
+        try {
+          await registration.renew(id, {});
+          toast('آگهی تمدید شد');
+          await resolve();
+        } catch (err) {
+          toast(err.message, 'danger');
+        }
+      },
+    });
+    return;
+  }
+
   openModal({
     type: 'form',
     title: 'تمدید آگهی ثبت‌نامی',
     body: html`
       <div class="field">
-        <label for="rd">مهلت تازه‌ی ثبت‌نام <span class="opt">(اختیاری)</span></label>
-        <input class="in" id="rd" name="registerDeadline" type="date">
+        <label for="rd-day">مهلت تازه‌ی ثبت‌نام <span class="opt">(اختیاری)</span></label>
+        ${jalaliDate('registerDeadline', { labelId: 'rd-day' })}
         <div class="hint">
           خالی بگذارید تا مهلت فعلی حفظ شود. اگر طرح مهلت ندارد، آگهی ۳۰ روز دیگر زنده می‌ماند.
         </div>

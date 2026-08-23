@@ -91,6 +91,64 @@ function close(wrap) {
   wrap.classList.remove('open');
 }
 
+/**
+ * Put the open panel where it belongs on the screen.
+ *
+ * ── Why this is not left to CSS ─────────────────────────────────────────────
+ *
+ * The panel used to be `position: absolute` under its button, which is the
+ * ordinary way to do it and worked everywhere except the places it was used.
+ * Every one of these controls sits inside a `.card`, and a card is
+ * `overflow: hidden` so its rounded corners actually clip what is inside them.
+ * An absolutely positioned child cannot escape that no matter what z-index it
+ * is given, so the brand list opened and was sliced off at the card's edge —
+ * two rows visible out of a hundred and eighty. The same thing happened inside
+ * a modal, whose body scrolls.
+ *
+ * `position: fixed` is the one kind of positioning an `overflow` ancestor does
+ * not clip, and the price of it is that the browser no longer keeps the panel
+ * attached to its button — so this does it by hand, here and on every scroll.
+ *
+ * It also decides which way to open: below the button normally, above it when
+ * the button is near the bottom of the window, and the list is given whatever
+ * room that leaves rather than a fixed height. A dropdown on the last row of a
+ * table would otherwise open into the fold.
+ */
+function place(wrap) {
+  const button = wrap.querySelector('[data-pk-open]');
+  const pop = wrap.querySelector('[data-pk-pop]');
+  const list = wrap.querySelector('[data-pk-list]');
+  const at = button.getBoundingClientRect();
+
+  const GAP = 4;
+  const EDGE = 10;
+  const below = window.innerHeight - at.bottom - GAP - EDGE;
+  const above = at.top - GAP - EDGE;
+  const up = below < 200 && above > below;
+
+  // Everything in the panel that is not the list itself — the search box and
+  // the padding around it. Measured rather than assumed, so changing the
+  // padding in the stylesheet cannot quietly make this wrong.
+  const chrome = pop.offsetHeight - list.offsetHeight;
+  list.style.maxHeight = `${Math.max(120, Math.min(280, (up ? above : below) - chrome))}px`;
+
+  pop.style.width = `${at.width}px`;
+  pop.style.left = `${at.left}px`;
+  pop.style.top = up ? `${Math.max(EDGE, at.top - pop.offsetHeight - GAP)}px` : `${at.bottom + GAP}px`;
+}
+
+/**
+ * Keep an open panel under its button while the page moves.
+ *
+ * Called from the app's scroll and resize listeners. Scrolling with a dropdown
+ * open is rare, and closing it would be a defensible answer too — but a panel
+ * that stays put while the page slides away under it looks like a rendering
+ * fault, and this is three lines.
+ */
+export function repositionPickSelects() {
+  document.querySelectorAll('[data-pk].open').forEach(place);
+}
+
 export function closeAllPickSelects(except = null) {
   document.querySelectorAll('[data-pk].open').forEach((wrap) => {
     if (wrap !== except) close(wrap);
@@ -161,6 +219,9 @@ export function handlePickSelectClick(target) {
       const q = wrap.querySelector('[data-pk-search]');
       q.value = '';
       filter(wrap, '');
+      // Placed after the filter, never before: the panel has to be showing its
+      // final list before its height can be measured.
+      place(wrap);
       q.focus();
     }
     return true;
@@ -203,7 +264,13 @@ function filter(wrap, q) {
 export function handlePickSelectSearch(input) {
   if (!input.matches?.('[data-pk-search]')) return false;
   const wrap = wrapOf(input);
-  if (wrap) filter(wrap, input.value);
+  if (wrap) {
+    filter(wrap, input.value);
+    // Typing changes how tall the panel is, and one that opened upwards is
+    // anchored by its top edge — without this it would crawl up the screen as
+    // the list shrank.
+    place(wrap);
+  }
   return true;
 }
 

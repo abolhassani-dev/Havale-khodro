@@ -36,8 +36,9 @@ import {
   handleBrandPickClick, handleBrandPickChange, handleBrandPickSearch,
 } from './ui/brandPicker.js';
 import {
-  handlePickSelectClick, handlePickSelectSearch, handlePickSelectKey,
+  handlePickSelectClick, handlePickSelectSearch, handlePickSelectKey, repositionPickSelects,
 } from './ui/pickSelect.js';
+import { handleJalaliDateChange } from './ui/dateInput.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets, subscription } from './api/index.js';
@@ -288,7 +289,7 @@ function onClick(event) {
 
   if (d.reveal) return confirmReveal(d.reveal);
   if (d.regReveal) return confirmRegReveal(d.regReveal);
-  if (d.regRenew) return regRenew(d.regRenew);
+  if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);
   if (d.report) return reportModal(d.report);
@@ -444,6 +445,11 @@ function onChange(event) {
   // would wipe every field the reader had typed.
   if (handleBrandPickChange(event.target)) return;
 
+  // Choosing a day, month or year in a Jalali date field. It writes the
+  // Gregorian value into its own hidden input and trims the day list to the
+  // month — in the DOM, for the same reason as the picker above.
+  if (handleJalaliDateChange(event.target)) return;
+
   // Each market fills its own model list. Dispatched by which form asked
   // rather than shared: the two look alike today, and the whole point of the
   // separation is that one of them can change tomorrow without the other
@@ -499,6 +505,11 @@ async function start() {
   document.addEventListener('change', onChange);
   document.addEventListener('input', onCatalogSearch);
   document.addEventListener('keydown', onKeydown);
+  // An open dropdown is positioned in screen coordinates, so it has to be told
+  // when the screen moves under it. `capture` because the page scrolls inside
+  // .main, not on the window, and a scroll event does not bubble.
+  document.addEventListener('scroll', repositionPickSelects, true);
+  window.addEventListener('resize', repositionPickSelects);
 
   startRouter();
   await boot();

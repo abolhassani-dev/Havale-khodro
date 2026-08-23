@@ -1457,9 +1457,16 @@ button.af-parent:hover { text-decoration: underline; }
 }
 .pk.open .pk-caret { transform: rotate(135deg) translateY(-1px); }
 
+/* fixed، نه absolute — و این تصمیم عمدی است.
+   هر کدام از این کنترل‌ها داخل یک .card است و کارت overflow:hidden دارد تا
+   گوشه‌های گردش واقعاً ببُرد. عنصر absolute از آن بریدگی فرار نمی‌کند، پس
+   فهرست برندها باز می‌شد و لبه‌ی کارت نصفش می‌کرد — دو ردیف از صد و هشتاد
+   ردیف. داخل مودالِ اسکرول‌شونده هم همین اتفاق می‌افتاد.
+   بهایش این است که مرورگر دیگر پنل را به دکمه نمی‌چسباند؛ مختصات را
+   pickSelect.js موقع باز شدن و روی هر اسکرول حساب می‌کند. */
 .pk-pop {
-  position: absolute; inset-inline: 0; top: calc(100% + 4px);
-  z-index: 30;
+  position: fixed;
+  z-index: 60;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
@@ -1469,7 +1476,9 @@ button.af-parent:hover { text-decoration: underline; }
 .pk-pop[hidden] { display: none; }
 .pk-q { font-size: 12.5px; padding: 7px 10px; margin-bottom: 6px; }
 
-.pk-list { max-height: 240px; overflow-y: auto; display: grid; gap: 1px; }
+/* ارتفاع واقعی را جاگذاری تعیین می‌کند — این فقط سقفی است تا قبل از اولین
+   اندازه‌گیری، پنل کل صفحه را نگیرد. */
+.pk-list { max-height: 280px; overflow-y: auto; display: grid; gap: 1px; }
 .pk-opt {
   text-align: start;
   padding: 8px 10px;
@@ -1709,3 +1718,24 @@ button.af-parent:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) {
   .navbar-load::after { animation: none; background: var(--primary-3); opacity: .5; }
 }
+
+/* ================================================================
+   تاریخ شمسی — سه انتخابگر، نه تقویم میلادیِ مرورگر
+   ================================================================ */
+
+/* روز پهن‌تر از سال نیست و ماه از هر دو پهن‌تر است، چون اسم ماه‌ها
+   («اردیبهشت») بلندترین متن این ردیف است و نباید سه‌نقطه بخورد. */
+.jdt-row { display: grid; grid-template-columns: 1fr 1.5fr 1.2fr; gap: 6px; }
+.jdt-row .in { padding-inline: 9px; }
+
+/* روزی که ماهِ انتخاب‌شده ندارد (۳۱ مهر، ۳۰ اسفندِ سال عادی) از فهرست
+   برداشته می‌شود؛ نه غیرفعال، چون گزینه‌ی خاکستری هم باید خوانده شود
+   تا بفهمی نمی‌شود انتخابش کرد. */
+.jdt-row option[hidden] { display: none; }
+
+.jdt-warn {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--danger);
+}
+.jdt-warn[hidden] { display: none; }

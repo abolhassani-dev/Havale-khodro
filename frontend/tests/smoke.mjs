@@ -318,6 +318,52 @@ await step('a refused submit keeps what was typed', async () => {
   }
 });
 
+/**
+ * The deadline on a ثبت‌نامی advertisement is chosen in the Iranian calendar.
+ *
+ * Worth a browser step rather than a unit test, because the failure this
+ * guards against is invisible in the markup: the control is Jalali on screen
+ * and Gregorian in the field the form submits, and only a real browser can say
+ * whether those two agree. The check is a round trip — pick a Jalali day, read
+ * what the form would send, and format it back with the same calendar the rest
+ * of the interface uses.
+ */
+await step('the ثبت‌نامی deadline is picked in the Iranian calendar', async () => {
+  await navigate('reg-offer');
+  await page.waitForSelector('[data-jdt]', { timeout: 8000 });
+
+  if (await page.locator('input[type="date"]').count()) {
+    throw new Error('a Gregorian date input is still on the form');
+  }
+
+  const months = await page.locator('[data-jdt-part="month"] option').allInnerTexts();
+  if (!months.includes('شهریور')) throw new Error('the months are not Iranian months');
+
+  await page.selectOption('[data-jdt-part="year"]', { index: 1 });
+  await page.selectOption('[data-jdt-part="month"]', '5');
+  await page.selectOption('[data-jdt-part="day"]', '31');
+
+  const value = await page.locator('[data-jdt] input[type="hidden"]').inputValue();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error('the form is not carrying a Gregorian date: ' + JSON.stringify(value));
+  }
+  const shown = await page.evaluate(
+    (iso) => new Intl.DateTimeFormat('fa-IR-u-ca-persian', { month: 'long', day: 'numeric' })
+      .format(new Date(`${iso}T12:00:00`)),
+    value
+  );
+  if (!shown.includes('مرداد') || !shown.includes('۳۱')) {
+    throw new Error(`۳۱ مرداد was submitted as ${value}, which reads back as ${shown}`);
+  }
+
+  // مهر has thirty days. Offering a day the month does not have is a form that
+  // argues with the person filling it in.
+  await page.selectOption('[data-jdt-part="month"]', '7');
+  if (await page.locator('[data-jdt-part="day"]').inputValue() !== '30') {
+    throw new Error('۳۱ مهر survived the month change');
+  }
+});
+
 await step('subscription page loads with a real invoice', async () => {
   await navigate('subscription');
   // Waits for the data, not just the frame: the previous version read the DOM
