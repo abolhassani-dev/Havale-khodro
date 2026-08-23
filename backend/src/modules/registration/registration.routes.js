@@ -10,6 +10,10 @@ const { attachAccess, requireActiveSubscription } = require('../../middlewares/a
 const { ROLES } = require('../../constants/roles');
 const { MESSAGES } = require('../../constants/messages');
 
+// Announces this market to the shared moderation desk — see
+// modules/listing/marketRegistry.
+require('./registration.market');
+
 const router = Router();
 
 /**

@@ -407,6 +407,35 @@ await step('timeline entry explains itself in a sentence', async () => {
 
 await page.click('[data-close-modal]');
 
+/**
+ * One moderation screen per market.
+ *
+ * The desk shares its code across markets, so the mistake to catch is the
+ * cheap one: a filter that silently stops filtering and puts every market's
+ * rows on both screens. Asserted through the menu and the table, because that
+ * is where somebody would notice it — or fail to.
+ */
+await step('each market has its own moderation screen', async () => {
+  // Waited on by title rather than by table: both screens draw the same
+  // table, so a wait on `tr` is satisfied by the page already on screen and
+  // the assertion then reads the wrong one.
+  await page.click('[data-go="adm-havales"]');
+  await page.waitForSelector('.card-h h2:has-text("حواله‌ها")', { timeout: 8000 });
+  const havales = await page.textContent('.content');
+  if (!havales.includes('کل حواله‌ها')) throw new Error('the حواله desk lost its header');
+
+  await page.click('[data-go="adm-registrations"]');
+  await page.waitForSelector('.card-h h2:has-text("آگهی‌های ثبت‌نامی")', { timeout: 8000 });
+  const registrations = await page.textContent('.content');
+  if (!registrations.includes('آگهی‌های ثبت‌نامی')) {
+    throw new Error('the ثبت‌نامی desk did not open');
+  }
+  // Nothing from the other market's vocabulary on this screen.
+  if (/حواله فروش|واگذاری/.test(registrations)) {
+    throw new Error('a حواله row is showing on the ثبت‌نامی desk');
+  }
+});
+
 await step('catalogue editor shows the brand grid', async () => {
   await page.click('[data-go="adm-catalog"]');
   await page.waitForSelector('.cat-grid .cat-tile', { timeout: 8000 });

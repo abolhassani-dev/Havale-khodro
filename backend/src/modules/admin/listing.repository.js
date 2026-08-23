@@ -1,4 +1,5 @@
 const { prisma } = require('../../config/database');
+const { detailInclude } = require('../listing/marketRegistry');
 
 /**
  * Listings, from the admin side.
@@ -22,27 +23,18 @@ const OWNER_SELECT = {
   parentId: true,
 };
 
-const LIST_SELECT = {
-  id: true,
-  serial: true,
-  kind: true,
-  status: true,
-  carType: true,
-  carColor: true,
-  model: true,
-  solh: true,
-  amountToman: true,
-  carPriceToman: true,
-  deliveryDays: true,
-  supplierCompany: true,
-  revealCount: true,
-  reportCount: true,
-  closesAt: true,
-  deletedAt: true,
-  suspendReason: true,
-  createdAt: true,
-  owner: { select: OWNER_SELECT },
-};
+/**
+ * Everything the desk shows for a row, in every market.
+ *
+ * A `select` would have to name each market's columns and grow with every new
+ * one, so the shared columns come whole and each market's own detail rides
+ * along through the registry. The حواله columns are still on this table and so
+ * arrive with the rest; what turns any of it into labelled facts is the
+ * market's own descriptor, not this file.
+ */
+function listInclude() {
+  return { owner: { select: OWNER_SELECT }, ...detailInclude() };
+}
 
 /**
  * What the text box searches.
@@ -96,8 +88,11 @@ function statusFilter(status) {
 }
 
 const listingRepository = {
-  list({ query, kind, status, ownerId, skip = 0, take = 25 }) {
+  list({ query, market, kind, status, ownerId, skip = 0, take = 25 }) {
     const where = {
+      // The desk is one desk, but each market gets its own screen — so the
+      // market is a filter here rather than a separate query.
+      ...(market ? { market } : {}),
       ...(kind ? { kind } : {}),
       ...(ownerId ? { ownerId } : {}),
       ...statusFilter(status),
@@ -107,7 +102,7 @@ const listingRepository = {
     return Promise.all([
       prisma.listing.findMany({
         where,
-        select: LIST_SELECT,
+        include: listInclude(),
         orderBy: { createdAt: 'desc' },
         skip,
         take,
@@ -119,19 +114,14 @@ const listingRepository = {
   findById(id) {
     return prisma.listing.findUnique({
       where: { id },
-      select: {
-        ...LIST_SELECT,
-        paidAmountToman: true,
-        paymentType: true,
-        depositDays: true,
-        description: true,
-        renewedAt: true,
-        renewCount: true,
-        updatedAt: true,
+      include: {
+        ...detailInclude(),
         carModel: { select: { id: true, name: true, brand: { select: { id: true, name: true } } } },
         // The owner's contact, decrypted by the middleware, is added by the
         // service and only for an account allowed to see contact details.
-        owner: { select: { ...OWNER_SELECT, phone: true, coordinatorName: true, coordinatorPhone: true } },
+        owner: {
+          select: { ...OWNER_SELECT, phone: true, coordinatorName: true, coordinatorPhone: true },
+        },
         reports: {
           select: { id: true, reason: true, status: true, createdAt: true },
           orderBy: { createdAt: 'desc' },
@@ -142,16 +132,17 @@ const listingRepository = {
   },
 
   update(id, data) {
-    return prisma.listing.update({ where: { id }, data, select: LIST_SELECT });
+    return prisma.listing.update({ where: { id }, data, include: listInclude() });
   },
 
-  /** The counts the page header shows, in one round trip rather than four. */
-  async summary() {
+  /** The counts the page header shows, for one market, in one round trip. */
+  async summary(market) {
+    const of = (where) => ({ ...(market ? { market } : {}), ...where });
     const [live, suspended, deleted, total] = await Promise.all([
-      prisma.listing.count({ where: { status: 'ACTIVE', deletedAt: null } }),
-      prisma.listing.count({ where: { status: 'SUSPENDED', deletedAt: null } }),
-      prisma.listing.count({ where: { deletedAt: { not: null } } }),
-      prisma.listing.count(),
+      prisma.listing.count({ where: of({ status: 'ACTIVE', deletedAt: null }) }),
+      prisma.listing.count({ where: of({ status: 'SUSPENDED', deletedAt: null }) }),
+      prisma.listing.count({ where: of({ deletedAt: { not: null } }) }),
+      prisma.listing.count({ where: of({}) }),
     ]);
     return { live, suspended, deleted, total };
   },

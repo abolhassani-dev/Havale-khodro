@@ -1,9 +1,11 @@
+const bcrypt = require('bcryptjs');
 const request = require('supertest');
 
 const app = require('../../src/app');
 const { prisma, connectDatabase, disconnectDatabase } = require('../../src/config/database');
 const {
   api,
+  PASSWORD,
   catalog,
   offer,
   createAgent,
@@ -383,6 +385,137 @@ maybe('registration market', () => {
         .post(api(`/registrations/${made.body.data.id}/reveal`))
         .set('Cookie', lapsed.cookie)
         .expect(403);
+    });
+  });
+
+  /**
+   * One desk, one screen per market.
+   *
+   * The moderation code is shared — the same list, the same suspend, the same
+   * soft delete — but an administrator asked to look at ثبت‌نامی must not have
+   * to read past حواله rows, and the fields on the screen must be this
+   * market's own. Both come from the registry, so this is also the test that
+   * fails if a market ever stops announcing itself.
+   */
+  describe('the moderation desk', () => {
+    const staff = async () => {
+      const tag = `${Date.now()}${Math.floor(Math.random() * 999)}`;
+      const user = await prisma.user.create({
+        data: {
+          username: `test_admin_${tag}`,
+          passwordHash: await bcrypt.hash(PASSWORD, 4),
+          phone: `0919${tag.slice(-7)}`,
+          fullName: 'کارمند تست',
+          role: 'SUPER_ADMIN',
+          mustChangePassword: false,
+        },
+      });
+      created.push(user.id);
+      return { user, cookie: await signIn(user) };
+    };
+
+    it('gives each market its own list, with that market’s own fields', async () => {
+      const owner = await agent();
+      const { cookie } = await staff();
+
+      const reg = await post(owner.cookie, capacity()).expect(201);
+      const hav = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', owner.cookie)
+        .send(await offer())
+        .expect(201);
+
+      const regDesk = await request(app)
+        .get(api('/admin/havales?market=REGISTRATION&take=100'))
+        .set('Cookie', cookie)
+        .expect(200);
+      const row = regDesk.body.data.items.find((r) => r.id === reg.body.data.id);
+      expect(row).toBeTruthy();
+      expect(regDesk.body.data.items.some((r) => r.id === hav.body.data.id)).toBe(false);
+
+      // The row carries this market's summary, under names the shared table
+      // never had to learn: a plan, a method, and one headline figure.
+      expect(row.marketLabel).toBe('ثبت‌نامی');
+      expect(row.planName).toBe('فروش فوق‌العاده مرداد ۱۴۰۵');
+      expect(row.method).toBe('قرعه‌کشی');
+      expect(row.headlineToman).toBe(180_000_000);
+
+      const havDesk = await request(app)
+        .get(api('/admin/havales?market=HAVALE&take=100'))
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(havDesk.body.data.items.some((h) => h.id === hav.body.data.id)).toBe(true);
+      expect(havDesk.body.data.items.some((h) => h.id === reg.body.data.id)).toBe(false);
+    });
+
+    it('describes one advertisement in the words of its own market', async () => {
+      const owner = await agent();
+      const { cookie } = await staff();
+      const made = await post(owner.cookie, capacity({ conditions: 'کد ملی بدون سابقه' })).expect(201);
+
+      const detail = await request(app)
+        .get(api(`/admin/havales/${made.body.data.id}`))
+        .set('Cookie', cookie)
+        .expect(200);
+
+      const labels = detail.body.data.fields.map((f) => f.label);
+      expect(labels).toContain('روش ثبت‌نام');
+      expect(labels).toContain('نوع فروش');
+      // And nothing from the other market's vocabulary.
+      expect(labels).not.toContain('واگذاری');
+      expect(detail.body.data.fields.find((f) => f.label === 'شرایط ثبت‌نام‌کننده').value).toBe(
+        'کد ملی بدون سابقه'
+      );
+    });
+
+    it('suspends a registration through the same endpoint, and the agency reads why', async () => {
+      const owner = await agent();
+      const viewer = await agent();
+      const { cookie } = await staff();
+      const made = await post(owner.cookie, capacity()).expect(201);
+      const id = made.body.data.id;
+
+      await request(app)
+        .put(api(`/admin/havales/${id}/status`))
+        .set('Cookie', cookie)
+        .send({ status: 'SUSPENDED', reason: 'مبلغ امتیاز با بازار نمی‌خواند' })
+        .expect(200);
+
+      const market = await request(app)
+        .get(api('/registrations?limit=50'))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      expect(market.body.data.items.some((r) => r.id === id)).toBe(false);
+
+      const mine = await request(app)
+        .get(api('/registrations/mine'))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      expect(mine.body.data.items.find((r) => r.id === id).suspendReason).toContain('امتیاز');
+    });
+
+    it('counts only its own market in the header', async () => {
+      const owner = await agent();
+      const { cookie } = await staff();
+      await post(owner.cookie, capacity()).expect(201);
+
+      const [regDesk, allDesk] = await Promise.all([
+        request(app).get(api('/admin/havales?market=REGISTRATION')).set('Cookie', cookie).expect(200),
+        request(app).get(api('/admin/havales')).set('Cookie', cookie).expect(200),
+      ]);
+
+      expect(regDesk.body.data.summary.total).toBeGreaterThan(0);
+      // Every حواله ever posted is in the unscoped count and in neither of the
+      // scoped ones, which is the whole point of scoping the header.
+      expect(allDesk.body.data.summary.total).toBeGreaterThan(regDesk.body.data.summary.total);
+    });
+
+    it('refuses a market nobody registered', async () => {
+      const { cookie } = await staff();
+      await request(app)
+        .get(api('/admin/havales?market=QATAAT'))
+        .set('Cookie', cookie)
+        .expect(422);
     });
   });
 });

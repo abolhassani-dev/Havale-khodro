@@ -120,11 +120,15 @@ export const admin = {
 
   // Listings, from the desk that has to answer for them: every state, whose
   // they are, and the two levers — hide, or take down.
-  havales: (query) => api.get('/admin/havales', query),
-  havale: (id) => api.get(`/admin/havales/${id}`),
-  setHavaleStatus: (id, status, reason) =>
+  //
+  // One set of calls for every market; `query.market` picks which screen is
+  // asking. The path still says «havales» because that is the address the
+  // server has published since the first release and old links point at it.
+  listings: (query) => api.get('/admin/havales', query),
+  listing: (id) => api.get(`/admin/havales/${id}`),
+  setListingStatus: (id, status, reason) =>
     api.put(`/admin/havales/${id}/status`, { status, reason }),
-  setHavaleRemoved: (id, removed, reason) =>
+  setListingRemoved: (id, removed, reason) =>
     api.put(`/admin/havales/${id}/removed`, { removed, reason }),
 
   agents: (query) => api.get('/admin/agents', query),

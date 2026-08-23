@@ -128,12 +128,14 @@ const monitoringRepository = {
     });
   },
 
-  findHavale(id) {
+  /** The few facts a timeline row shows about the listing it points at. */
+  findListing(id) {
     return prisma.listing.findUnique({
       where: { id },
       select: {
         id: true,
         serial: true,
+        market: true,
         carType: true,
         kind: true,
         status: true,

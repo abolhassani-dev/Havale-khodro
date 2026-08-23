@@ -4,7 +4,7 @@ import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
   money, faDigits, date, dateTime, timeOnly, relative, enDigits, fileSize,
-  KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL, PAYMENT_TYPE_LABEL,
+  KIND_LABEL, HAVALE_STATUS_LABEL,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
@@ -14,6 +14,9 @@ import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
 // The conversation row is one component for both panels — the admin's list
 // only adds whose conversation it is.
 import { ticketItem } from '../agent/account.js';
+// Only the market's own words — the ثبت‌نامی pages and this one have to call
+// the same thing by the same name.
+import { REG_KIND_LABEL } from '../agent/registration.js';
 import {
   loadStaff, staffPage, newStaffModal, editStaffModal, staffPasswordModal,
   setStaffStatus, onStaffFormChange, toggleGroup,
@@ -57,16 +60,22 @@ export function registerAdminRoutes(route) {
   // somebody scrolls to the picker.
   route('adm-new-agent', async () => ({ catalog: await admin.catalog() }));
 
-  route('adm-havales', async (params) => ({
-    havales: await admin.havales({
-      query: params.query,
-      status: params.status || 'LIVE',
-      kind: params.kind,
-      take: 50,
-    }),
-  }));
+  // One loader, one page component, one market each. Adding خودرو tomorrow is
+  // a row in MARKETS and a line here — not a second copy of this screen.
+  Object.values(MARKETS).forEach((market) => {
+    route(market.page, async (params) => ({
+      listings: await admin.listings({
+        market: market.key,
+        query: params.query,
+        status: params.status || 'LIVE',
+        kind: params.kind,
+        take: 50,
+      }),
+      market: market.key,
+    }));
+  });
 
-  route('adm-havale', async (params) => ({ havale: await admin.havale(params.id) }));
+  route('adm-listing', async (params) => ({ listing: await admin.listing(params.id) }));
 
   route('adm-reports', async (params) => {
     const [queue, approvals] = await Promise.all([
@@ -110,8 +119,9 @@ export function renderAdminPage(page) {
     case 'adm-agents': return agentsPage();
     case 'adm-agent': return agentPage();
     case 'adm-new-agent': return newAgentPage();
-    case 'adm-havales': return havalesPage();
-    case 'adm-havale': return havalePage();
+    case 'adm-havales': return listingsPage(MARKETS.HAVALE);
+    case 'adm-registrations': return listingsPage(MARKETS.REGISTRATION);
+    case 'adm-listing': return listingPage();
     case 'adm-reports': return reportsPage();
     case 'adm-tickets': return adminTicketsPage();
     case 'adm-monitor': return monitorPage();
@@ -280,6 +290,24 @@ function infoCell(iconName, label, value, num = false) {
       <div class="af-cv ${num ? 'num' : ''}">${value || '—'}</div>
     </div>
   </div>`;
+}
+
+/**
+ * One fact a market sent about its own listing.
+ *
+ * The server labels it and says whether it is money or a date; this side only
+ * has to format it. That is the whole contract — which is why this page can
+ * show a ثبت‌نامی advertisement without knowing the word «طرح».
+ */
+function fieldCell(f) {
+  if (f.money) {
+    return infoCell(f.icon || 'layers', f.label, f.value ? money(f.value) : '—', true);
+  }
+  if (f.date) {
+    return infoCell(f.icon || 'clock', f.label, f.value ? date(f.value) : '—', true);
+  }
+  const num = typeof f.value === 'number';
+  return infoCell(f.icon || 'ticket', f.label, (num ? faDigits(f.value) : f.value) || '—', num);
 }
 
 function agentPage() {
@@ -512,65 +540,119 @@ function field(name, label, type = 'text', dir = 'rtl') {
 
 // ── listings ────────────────────────────────────────────────────────────────
 
+/**
+ * The markets, as the moderation desk shows them.
+ *
+ * One screen per market, because an administrator sent to look at ثبت‌نامی
+ * should not have to read past حواله rows to find it — but one *component*,
+ * because suspending, removing and searching are the same job in every market
+ * and a second copy of this page would drift from the first within a month.
+ *
+ * What differs between markets is only what is in this table: the words on the
+ * screen and which two facts the row shows. Everything the server sends that is
+ * market-specific arrives already labelled, so adding خودرو is an entry here
+ * and a menu line — not an edit to the table, the badge, or the detail page.
+ */
+const MARKETS = {
+  HAVALE: {
+    key: 'HAVALE',
+    page: 'adm-havales',
+    title: 'حواله‌ها',
+    unit: 'حواله',
+    icon: 'file',
+    totalLabel: 'کل حواله‌ها',
+    fulfilledLabel: 'فروخته‌شده',
+    amountHead: 'مبلغ حواله',
+    kinds: [['OFFER', 'حواله فروش'], ['REQUEST', 'درخواست خرید']],
+    kindLabel: (kind) => KIND_LABEL[kind] || kind,
+    searchHint: 'شماره آگهی، خودرو، رنگ، نام یا کد نمایندگی',
+    // The second line of the first column: the two facts that tell one حواله
+    // from another at a glance.
+    detail: (h) => [h.carColor, h.model].filter(Boolean).join(' · '),
+    tip: 'همه‌ی حواله‌های سامانه در هر وضعیتی. «تعلیق» آگهی را با دلیلی که نماینده می‌خواند از بازار خارج می‌کند؛ «برداشتن» همان کار را می‌کند و آگهی را از فهرست‌های نماینده هم بیرون می‌برد. هیچ‌کدام رکورد را پاک نمی‌کند.',
+  },
+  REGISTRATION: {
+    key: 'REGISTRATION',
+    page: 'adm-registrations',
+    title: 'آگهی‌های ثبت‌نامی',
+    unit: 'آگهی ثبت‌نامی',
+    icon: 'clipboard',
+    totalLabel: 'کل آگهی‌ها',
+    fulfilledLabel: 'واگذارشده',
+    amountHead: 'مبلغ امتیاز',
+    kinds: [['OFFER', 'ظرفیت ثبت‌نام'], ['REQUEST', 'درخواست ثبت‌نام']],
+    kindLabel: (kind) => REG_KIND_LABEL[kind] || kind,
+    searchHint: 'شماره آگهی، خودرو، نام یا کد نمایندگی',
+    detail: (h) => [h.planName, h.method].filter(Boolean).join(' · '),
+    tip: 'همه‌ی آگهی‌های ثبت‌نامی سامانه در هر وضعیتی — اعلام ظرفیت و درخواست ظرفیت. «تعلیق» و «برداشتن» دقیقاً مثل حواله کار می‌کنند و رکورد را پاک نمی‌کنند.',
+  },
+};
+
+/** The market a page belongs to, for the screens that are reached from a row. */
+const marketOf = (key) => MARKETS[key] || MARKETS.HAVALE;
+
 /** The five buckets somebody actually sorts listings into. */
-const HAVALE_SCOPES = [
+const LISTING_SCOPES = [
   ['LIVE', 'در بازار'],
   ['SUSPENDED', 'تعلیق‌شده'],
   ['DELETED', 'برداشته‌شده'],
-  ['FULFILLED', 'فروخته‌شده'],
+  ['FULFILLED', null], // named by the market: فروخته‌شده, واگذارشده…
   ['ALL', 'همه'],
 ];
 
 /**
- * Every listing in the system, from the desk that has to answer for them.
+ * Every listing in one market, from the desk that has to answer for them.
  *
  * The agency side of this is a market and shows only what is for sale. Here
  * the question is different — «find the listing this person is complaining
  * about» — so the state comes first, as tabs, and a listing that was hidden or
  * taken down is a row like any other rather than an absence.
  */
-function havalesPage() {
+function listingsPage(market) {
   const { data, params } = getState();
-  const items = data.havales?.items || [];
-  const summary = data.havales?.summary || {};
+  const items = data.listings?.items || [];
+  const summary = data.listings?.summary || {};
   const scope = params.status || 'LIVE';
+  const keep = params.query ? `&query=${encodeURIComponent(params.query)}` : '';
 
   return html`
   <div class="stats">
-    ${stat('در بازار', faDigits(summary.live ?? 0), 'قابل دیدن برای نمایندگی‌ها', 'file', 'ok')}
+    ${stat('در بازار', faDigits(summary.live ?? 0), 'قابل دیدن برای نمایندگی‌ها', market.icon, 'ok')}
     ${stat('تعلیق‌شده', faDigits(summary.suspended ?? 0), summary.suspended ? 'با دلیل، برای نماینده قابل دیدن' : 'خالی', 'flag', summary.suspended ? 'warn' : '')}
     ${stat('برداشته‌شده', faDigits(summary.deleted ?? 0), 'از بازار خارج، در سابقه مانده', 'close')}
-    ${stat('کل حواله‌ها', faDigits(summary.total ?? 0), 'از ابتدا تا امروز', 'layers')}
+    ${stat(market.totalLabel, faDigits(summary.total ?? 0), 'از ابتدا تا امروز', 'layers')}
   </div>
 
   <div class="card">
     <div class="card-h">
-      <h2>حواله‌ها ${qtip('همه‌ی آگهی‌های سامانه در هر وضعیتی. «تعلیق» آگهی را با دلیلی که نماینده می‌خواند از بازار خارج می‌کند؛ «برداشتن» همان کار را می‌کند و آگهی را از فهرست‌های نماینده هم بیرون می‌برد. هیچ‌کدام رکورد را پاک نمی‌کند.')}</h2>
-      <span class="tag">${faDigits(data.havales?.total ?? 0)} مورد</span>
+      <h2>${market.title} ${qtip(market.tip)}</h2>
+      <span class="tag">${faDigits(data.listings?.total ?? 0)} مورد</span>
     </div>
 
     <div class="scope-row">
-      ${HAVALE_SCOPES.map(
+      ${LISTING_SCOPES.map(
         ([key, label]) => html`<button class="tab ${scope === key ? 'on' : ''}"
-          data-go="adm-havales" data-go-params="status=${key}${params.query ? `&query=${encodeURIComponent(params.query)}` : ''}">
-          ${label}
+          data-go="${market.page}" data-go-params="status=${key}${keep}">
+          ${label || market.fulfilledLabel}
         </button>`
       )}
     </div>
 
-    <form class="filters" data-form="havale-search">
+    <form class="filters" data-form="listing-search" data-page="${market.page}">
       <input type="hidden" name="status" value="${scope}">
       <div class="field" style="flex:2">
         <label for="hq">جستجو</label>
         <input class="in" id="hq" name="query" value="${params.query || ''}"
-               placeholder="شماره آگهی، خودرو، رنگ، نام یا کد نمایندگی">
+               placeholder="${market.searchHint}">
       </div>
       <div class="field">
         <label for="hk">نوع</label>
         <select class="in" id="hk" name="kind">
           <option value="">هر دو</option>
-          <option value="OFFER" ${raw(params.kind === 'OFFER' ? 'selected' : '')}>حواله فروش</option>
-          <option value="REQUEST" ${raw(params.kind === 'REQUEST' ? 'selected' : '')}>درخواست خرید</option>
+          ${market.kinds.map(
+            ([key, label]) =>
+              html`<option value="${key}" ${raw(params.kind === key ? 'selected' : '')}>${label}</option>`
+          )}
         </select>
       </div>
       <div class="field" style="align-self:end">
@@ -582,34 +664,35 @@ function havalesPage() {
       items.length
         ? html`<table class="hv-tbl">
             <thead>
-              <tr><th>آگهی</th><th>نمایندگی</th><th>مبلغ</th><th>وضعیت</th>
+              <tr><th>آگهی</th><th>نمایندگی</th><th>${market.amountHead}</th><th>وضعیت</th>
                   <th>بازدید</th><th>ثبت</th><th></th></tr>
             </thead>
             <tbody>
-              ${items.map(havaleRow)}
+              ${items.map((row) => listingRow(row, market))}
             </tbody>
           </table>`
-        : emptyBox('حواله‌ای با این فیلترها پیدا نشد.')
+        : emptyBox(`${market.unit}‌ای با این فیلترها پیدا نشد.`)
     }
   </div>`;
 }
 
 /** The state badge, which is three fields collapsed into the one word people use. */
-function havaleTag(h) {
+function listingTag(h) {
   if (h.removed) return html`<span class="tag r">برداشته شد</span>`;
   if (h.status === 'SUSPENDED') return html`<span class="tag w">تعلیق</span>`;
   if (h.status === 'ACTIVE') return html`<span class="tag g">در بازار</span>`;
   return html`<span class="tag n">${HAVALE_STATUS_LABEL[h.status] || h.status}</span>`;
 }
 
-function havaleRow(h) {
+function listingRow(h, market) {
+  const detail = market.detail(h);
   return html`<tr class="${h.removed || h.status === 'SUSPENDED' ? 'dim' : ''}">
     <td>
       <div class="hv-id">
         <b>${h.carType}</b>
         <span class="sub">
-          <span class="num">#${faDigits(h.serial)}</span> · ${KIND_LABEL[h.kind] || h.kind}
-          ${h.carColor ? ` · ${h.carColor}` : ''}${h.model ? ` · ${h.model}` : ''}
+          <span class="num">#${faDigits(h.serial)}</span> · ${market.kindLabel(h.kind)}
+          ${detail ? ` · ${detail}` : ''}
         </span>
       </div>
     </td>
@@ -623,12 +706,12 @@ function havaleRow(h) {
           : html`<span class="sub">—</span>`
       }
     </td>
-    <td class="num">${h.amountToman ? money(h.amountToman) : '—'}</td>
-    <td>${havaleTag(h)}</td>
+    <td class="num">${h.headlineToman ? money(h.headlineToman) : '—'}</td>
+    <td>${listingTag(h)}</td>
     <td class="num">${faDigits(h.revealCount ?? 0)}</td>
     <td>${relative(h.createdAt)}</td>
     <td style="text-align:left">
-      <button class="btn sm" data-go="adm-havale" data-go-params="id=${h.id}">پرونده</button>
+      <button class="btn sm" data-go="adm-listing" data-go-params="id=${h.id}">پرونده</button>
     </td>
   </tr>`;
 }
@@ -639,11 +722,12 @@ function havaleRow(h) {
  * Written as a page rather than a modal because it is where somebody lands
  * from a violation report or a support ticket, and a modal cannot be linked to.
  */
-function havalePage() {
+function listingPage() {
   const { data } = getState();
-  const h = data.havale;
-  if (!h) return emptyBox('حواله پیدا نشد.');
+  const h = data.listing;
+  if (!h) return emptyBox('آگهی پیدا نشد.');
 
+  const market = marketOf(h.market);
   const owner = h.owner || {};
 
   return html`
@@ -656,16 +740,16 @@ function havalePage() {
       <div class="af-who">
         <div class="af-name">
           <h2>${h.carType}</h2>
-          ${havaleTag(h)}
+          ${listingTag(h)}
         </div>
         <div class="af-sub">
-          <span class="num">#${faDigits(h.serial)}</span> · ${KIND_LABEL[h.kind] || h.kind}
-          · ${SOLH_LABEL[h.solh] || h.solh}
+          <span class="num">#${faDigits(h.serial)}</span> · ${h.marketLabel || market.unit}
+          · ${market.kindLabel(h.kind)}
           ${h.brand ? ` · ${h.brand}` : ''}
         </div>
       </div>
       <div class="af-cta">
-        <button class="btn sm" data-go="adm-havales">فهرست حواله‌ها</button>
+        <button class="btn sm" data-go="${market.page}">فهرست ${market.title}</button>
       </div>
     </div>
 
@@ -679,14 +763,7 @@ function havalePage() {
     }
 
     <div class="af-grid">
-      ${infoCell('layers', 'مبلغ حواله', h.amountToman ? money(h.amountToman) : '—')}
-      ${infoCell('car', 'قیمت خودرو', h.carPriceToman ? money(h.carPriceToman) : '—')}
-      ${infoCell('ticket', 'واریزشده', h.paidAmountToman ? money(h.paidAmountToman) : '—')}
-      ${infoCell('clock', 'زمان تحویل', h.deliveryDays ? `${faDigits(h.deliveryDays)} روز` : '—')}
-      ${infoCell('clock', 'مهلت واریز', h.depositDays ? `${faDigits(h.depositDays)} روز` : '—')}
-      ${infoCell('car', 'رنگ و سال', [h.carColor, h.model].filter(Boolean).join(' · ') || '—')}
-      ${infoCell('ticket', 'نحوه پرداخت', PAYMENT_TYPE_LABEL[h.paymentType] || '—')}
-      ${infoCell('shield', 'تأمین‌کننده', h.supplierCompany || '—')}
+      ${(h.fields || []).map(fieldCell)}
       ${infoCell('eye', 'بازدید مشخصات', faDigits(h.revealCount ?? 0), true)}
       ${infoCell('flag', 'گزارش تخلف', faDigits(h.reportCount ?? 0), true)}
       ${infoCell('clock', 'انقضای آگهی', h.closesAt ? date(h.closesAt) : '—')}
@@ -787,7 +864,7 @@ function havalePage() {
   </div>`;
 }
 
-function suspendHavaleModal(id) {
+function suspendListingModal(id) {
   openModal({
     type: 'form',
     title: 'تعلیق آگهی',
@@ -801,14 +878,14 @@ function suspendHavaleModal(id) {
       </div>`,
     confirmLabel: 'تعلیق کن',
     onSubmit: async (form) => {
-      await admin.setHavaleStatus(id, 'SUSPENDED', form.reason.value.trim());
+      await admin.setListingStatus(id, 'SUSPENDED', form.reason.value.trim());
       toast('آگهی تعلیق شد');
       await resolve();
     },
   });
 }
 
-function removeHavaleModal(id) {
+function removeListingModal(id) {
   openModal({
     type: 'form',
     title: 'برداشتن آگهی از سامانه',
@@ -825,17 +902,17 @@ function removeHavaleModal(id) {
       </div>`,
     confirmLabel: 'بردار',
     onSubmit: async (form) => {
-      await admin.setHavaleRemoved(id, true, form.reason.value.trim());
+      await admin.setListingRemoved(id, true, form.reason.value.trim());
       toast('آگهی از سامانه برداشته شد');
       await resolve();
     },
   });
 }
 
-async function setHavaleBack(id, kind) {
+async function setListingBack(id, kind) {
   try {
-    if (kind === 'removed') await admin.setHavaleRemoved(id, false);
-    else await admin.setHavaleStatus(id, 'ACTIVE');
+    if (kind === 'removed') await admin.setListingRemoved(id, false);
+    else await admin.setListingStatus(id, 'ACTIVE');
     toast('آگهی به بازار برگشت');
     await resolve();
   } catch (err) {
@@ -1438,10 +1515,10 @@ export function handleAdminClick(d, el) {
   if (d.permNone) return toggleGroup(el.closest('form'), d.permNone, false);
   if (d.activity) return showActivityDetail(d.activity);
   if (d.reviewReport) return reviewReportModal(d.reviewReport);
-  if (d.havaleSuspend) return suspendHavaleModal(d.havaleSuspend);
-  if (d.havaleUnsuspend) return setHavaleBack(d.havaleUnsuspend, 'suspended');
-  if (d.havaleRemove) return removeHavaleModal(d.havaleRemove);
-  if (d.havaleRestore) return setHavaleBack(d.havaleRestore, 'removed');
+  if (d.havaleSuspend) return suspendListingModal(d.havaleSuspend);
+  if (d.havaleUnsuspend) return setListingBack(d.havaleUnsuspend, 'suspended');
+  if (d.havaleRemove) return removeListingModal(d.havaleRemove);
+  if (d.havaleRestore) return setListingBack(d.havaleRestore, 'removed');
   if (d.approveSuspension) return approveSuspension(d.approveSuspension);
   if (d.seatReview) return seatReview(d.seatReview, d.approve === 'true');
   if (d.agentStatus) return setAgentStatus(d.agentStatus, d.status);
@@ -1462,17 +1539,19 @@ export function handleAdminSubmit(form) {
   switch (form.dataset.form) {
     case 'new-agent': return submitNewAgent(form);
     case 'agent-search': return submitAgentSearch(form);
-    case 'havale-search': return submitHavaleSearch(form);
+    case 'listing-search': return submitListingSearch(form);
     default: return handleCatalogSubmit(form);
   }
 }
 
-function submitHavaleSearch(form) {
+function submitListingSearch(form) {
   const params = {};
   new FormData(form).forEach((value, key) => {
     if (value !== '') params[key] = value;
   });
-  go('adm-havales', params);
+  // Which market's screen this form belongs to travels on the form itself:
+  // the search must come back to the list the person was already looking at.
+  go(form.dataset.page || MARKETS.HAVALE.page, params);
 }
 
 function submitAgentSearch(form) {

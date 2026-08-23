@@ -122,10 +122,14 @@ const ADMIN_NAV = [
   { group: 'نمایندگی‌ها' },
   { page: 'adm-agents', icon: 'shield', label: 'فهرست نمایندگی‌ها', permission: 'agents' },
   { page: 'adm-new-agent', icon: 'plus', label: 'ساخت نمایندگی', permission: 'agents' },
-  { group: 'حواله‌ها' },
+  { group: 'آگهی‌ها' },
+  // One entry per market. They share the moderation code but not the screen:
+  // somebody sent to look at a ثبت‌نامی complaint should not have to filter
+  // حواله rows out of the way first.
+  { page: 'adm-havales', icon: 'file', label: 'مدیریت حواله‌ها', permission: 'listings' },
+  { page: 'adm-registrations', icon: 'clipboard', label: 'مدیریت ثبت‌نامی‌ها', permission: 'listings' },
   // A report is a complaint about a listing, so it sits with the listings
   // rather than under a heading of its own.
-  { page: 'adm-havales', icon: 'file', label: 'مدیریت حواله‌ها', permission: 'listings' },
   { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
   { page: 'adm-catalog', icon: 'car', label: 'کاتالوگ خودرو', permission: 'catalog' },
   { group: 'پشتیبانی' },

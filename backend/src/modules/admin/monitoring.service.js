@@ -1,6 +1,10 @@
 const monitoringRepository = require('./monitoring.repository');
+const { marketOf } = require('../listing/marketRegistry');
 const { NotFoundError } = require('../../errors/AppError');
 const { toPersianDigits } = require('../../utils/persian');
+
+/** The `targetType` values that mean «a row in Listing», old and new. */
+const LISTING_TARGETS = new Set(['HAVALE', 'REGISTRATION', 'LISTING']);
 
 /**
  * Monitoring: what happened, who did it, and to whom.
@@ -28,9 +32,17 @@ const ACTION_PHRASES = {
   HAVALE_RENEWED: 'آگهی را تمدید کرد',
   HAVALE_FULFILLED: 'حواله را «فروخته شد» علامت زد',
   HAVALE_DELETED: 'حواله را حذف کرد',
-  HAVALE_SUSPENDED_BY_ADMIN: 'حواله را تعلیق کرد',
-  HAVALE_REMOVED_BY_ADMIN: 'حواله را از سامانه برداشت',
-  HAVALE_RESTORED_BY_ADMIN: 'حواله را بازگرداند',
+  // The moderation desk works on every market, so these three are worded for
+  // «آگهی» rather than for حواله. The action strings stay as they are: they
+  // are what years of history is already written under.
+  HAVALE_SUSPENDED_BY_ADMIN: 'آگهی را تعلیق کرد',
+  HAVALE_REMOVED_BY_ADMIN: 'آگهی را از سامانه برداشت',
+  HAVALE_RESTORED_BY_ADMIN: 'آگهی را بازگرداند',
+  REGISTRATION_CREATED: 'آگهی ثبت‌نامی ثبت کرد',
+  REGISTRATION_UPDATED: 'آگهی ثبت‌نامی را ویرایش کرد',
+  REGISTRATION_RENEWED: 'آگهی ثبت‌نامی را تمدید کرد',
+  REGISTRATION_FULFILLED: 'ثبت‌نامی را «واگذار شد» علامت زد',
+  REGISTRATION_DELETED: 'آگهی ثبت‌نامی را حذف کرد',
   CONTACT_REVEALED: 'مشخصات تماس این حواله را دید',
   REPORT_FILED: 'برای این حواله گزارش تخلف ثبت کرد',
   REPORT_CONFIRMED: 'گزارش تخلف را تأیید کرد',
@@ -115,25 +127,29 @@ const monitoringService = {
       target: null,
     };
 
-    if (row.targetType === 'HAVALE' && row.targetId) {
-      const havale = await monitoringRepository.findHavale(row.targetId);
-      if (havale) {
+    // Every market writes its own word into `targetType`, and older rows say
+    // «HAVALE» whatever they meant. They all point at the same table, so they
+    // all resolve the same way — and the market's own name comes off the row.
+    if (LISTING_TARGETS.has(row.targetType) && row.targetId) {
+      const listing = await monitoringRepository.findListing(row.targetId);
+      if (listing) {
+        const label = marketOf(listing.market)?.label || 'آگهی';
         detail.target = {
-          type: 'HAVALE',
-          id: havale.id,
-          label: `حواله #${toPersianDigits(havale.serial)} — ${havale.carType}`,
-          kind: havale.kind,
-          status: havale.status,
-          amountToman: havale.amountToman === null ? null : Number(havale.amountToman),
+          type: listing.market || 'LISTING',
+          id: listing.id,
+          label: `${label} #${toPersianDigits(listing.serial)} — ${listing.carType}`,
+          kind: listing.kind,
+          status: listing.status,
+          amountToman: listing.amountToman === null ? null : Number(listing.amountToman),
           owner: {
-            id: havale.owner.id,
-            name: `${havale.owner.agencyName} (${havale.owner.agencyCode})`,
-            city: havale.owner.city,
+            id: listing.owner.id,
+            name: `${listing.owner.agencyName} (${listing.owner.agencyCode})`,
+            city: listing.owner.city,
           },
         };
         detail.description =
           `${actorName(row.user)} ${ACTION_PHRASES[row.action] || row.action}: ` +
-          `«${havale.carType}» متعلق به ${havale.owner.agencyName} (${havale.owner.agencyCode})`;
+          `«${listing.carType}» متعلق به ${listing.owner.agencyName} (${listing.owner.agencyCode})`;
       }
     }
 

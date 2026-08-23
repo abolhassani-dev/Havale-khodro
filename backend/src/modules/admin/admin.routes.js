@@ -7,6 +7,7 @@ const monitoringService = require('./monitoring.service');
 const catalogAdminRoutes = require('../catalog/catalog.admin.routes');
 const staffRoutes = require('./staff.routes');
 const brandAccess = require('../catalog/brandAccess.service');
+const { allMarkets } = require('../listing/marketRegistry');
 const authRepository = require('../auth/auth.repository');
 const { ticketRepository } = require('../ticket/ticket.repository');
 const subscriptionRepository = require('../subscription/subscription.repository');
@@ -203,6 +204,7 @@ router.get(
  *       The agency-facing list hides suspended listings, removed ones, and
  *       whose they are. This one shows all three, because the question here is
  *       «what is this listing and who posted it», not «what may I buy».
+ *       `market` narrows it to one market; without it the desk sees everything.
  */
 router.get(
   '/havales',
@@ -210,6 +212,15 @@ router.get(
   validate({
     query: Joi.object({
       query: Joi.string().trim().max(120).allow(''),
+      // Checked against the registry at request time rather than against a
+      // list written here: a market added tomorrow must not need this file
+      // edited before its listings can be moderated.
+      market: Joi.string()
+        .trim()
+        .max(24)
+        .custom((value, helpers) =>
+          allMarkets().some((m) => m.key === value) ? value : helpers.error('any.invalid')
+        ),
       kind: Joi.string().valid('OFFER', 'REQUEST'),
       // LIVE and DELETED are not columns — see the repository.
       status: Joi.string().valid('ALL', 'LIVE', 'DELETED', 'ACTIVE', 'FULFILLED', 'EXPIRED', 'SUSPENDED', 'ARCHIVED'),

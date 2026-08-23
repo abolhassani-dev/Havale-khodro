@@ -7,6 +7,10 @@ const { authenticate, requirePasswordChanged, requireRole } = require('../../mid
 const { attachAccess, requireActiveSubscription } = require('../../middlewares/access');
 const { ROLES } = require('../../constants/roles');
 
+// Announces this market to the shared moderation desk — see
+// modules/listing/marketRegistry.
+require('./havale.market');
+
 const router = Router();
 
 /**
