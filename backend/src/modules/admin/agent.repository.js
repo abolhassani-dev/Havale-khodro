@@ -161,11 +161,11 @@ const agentRepository = {
   /** Headline counts for one agency, for the detail page. */
   async stats(userId) {
     const [havales, activeHavales, reveals, reportsFiled, reportsAgainst] = await Promise.all([
-      prisma.havale.count({ where: { ownerId: userId, deletedAt: null } }),
-      prisma.havale.count({ where: { ownerId: userId, deletedAt: null, status: 'ACTIVE' } }),
+      prisma.listing.count({ where: { ownerId: userId, deletedAt: null } }),
+      prisma.listing.count({ where: { ownerId: userId, deletedAt: null, status: 'ACTIVE' } }),
       prisma.contactReveal.count({ where: { viewerId: userId } }),
       prisma.violationReport.count({ where: { reporterId: userId } }),
-      prisma.violationReport.count({ where: { havale: { ownerId: userId }, status: 'CONFIRMED' } }),
+      prisma.violationReport.count({ where: { listing: { ownerId: userId }, status: 'CONFIRMED' } }),
     ]);
     return { havales, activeHavales, reveals, reportsFiled, reportsAgainst };
   },

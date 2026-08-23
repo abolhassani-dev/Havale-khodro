@@ -96,7 +96,7 @@ async function main() {
         continue; // Already retired, or never seeded here. Both are fine.
       }
 
-      const listings = await prisma.havale.count({ where: { carModelId: model.id } });
+      const listings = await prisma.listing.count({ where: { carModelId: model.id } });
       if (apply) {
         await prisma.carModel.update({ where: { id: model.id }, data: { isActive: false } });
       }

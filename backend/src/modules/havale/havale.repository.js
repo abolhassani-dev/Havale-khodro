@@ -24,11 +24,11 @@ const OWNER_SELECT = {
 
 const havaleRepository = {
   create(data) {
-    return prisma.havale.create({ data, include: { owner: OWNER_SELECT } });
+    return prisma.listing.create({ data, include: { owner: OWNER_SELECT } });
   },
 
   findById(id) {
-    return prisma.havale.findFirst({
+    return prisma.listing.findFirst({
       where: { id, deletedAt: null },
       include: { owner: OWNER_SELECT },
     });
@@ -36,11 +36,11 @@ const havaleRepository = {
 
   /** Includes soft-deleted rows — for the admin panel and violation history. */
   findByIdIncludingDeleted(id) {
-    return prisma.havale.findUnique({ where: { id }, include: { owner: OWNER_SELECT } });
+    return prisma.listing.findUnique({ where: { id }, include: { owner: OWNER_SELECT } });
   },
 
   update(id, data) {
-    return prisma.havale.update({ where: { id }, data, include: { owner: OWNER_SELECT } });
+    return prisma.listing.update({ where: { id }, data, include: { owner: OWNER_SELECT } });
   },
 
   /**
@@ -52,7 +52,7 @@ const havaleRepository = {
    * difference that shows up when ten thousand agents are browsing at once.
    */
   list({ where, cursor, take, skip }) {
-    return prisma.havale.findMany({
+    return prisma.listing.findMany({
       where: cursor
         ? {
             AND: [
@@ -77,7 +77,7 @@ const havaleRepository = {
   },
 
   count(where) {
-    return prisma.havale.count({ where });
+    return prisma.listing.count({ where });
   },
 
   /** The accounts of one network: the main agency and every sub-agency under it. */
@@ -89,20 +89,20 @@ const havaleRepository = {
     return rows.map((row) => row.id);
   },
 
-  findReveal(havaleId, viewerId) {
+  findReveal(listingId, viewerId) {
     return prisma.contactReveal.findUnique({
-      where: { havaleId_viewerId: { havaleId, viewerId } },
+      where: { listingId_viewerId: { listingId, viewerId } },
     });
   },
 
   /** Which of these listings this viewer has already opened. */
-  async findRevealedIds(havaleIds, viewerId) {
-    if (!havaleIds.length) return new Set();
+  async findRevealedIds(listingIds, viewerId) {
+    if (!listingIds.length) return new Set();
     const rows = await prisma.contactReveal.findMany({
-      where: { viewerId, havaleId: { in: havaleIds } },
-      select: { havaleId: true },
+      where: { viewerId, listingId: { in: listingIds } },
+      select: { listingId: true },
     });
-    return new Set(rows.map((r) => r.havaleId));
+    return new Set(rows.map((r) => r.listingId));
   },
 
   countRevealsSince(viewerId, since) {
@@ -116,12 +116,12 @@ const havaleRepository = {
    * viewer for nothing or show the owner a view that was never recorded — and
    * the recorded trail is the evidence the whole monitoring feature rests on.
    */
-  createReveal({ havaleId, viewerId, ip, phoneShown, agencyCodeShown }) {
+  createReveal({ listingId, viewerId, ip, phoneShown, agencyCodeShown }) {
     return prisma.$transaction([
       prisma.contactReveal.create({
-        data: { havaleId, viewerId, ip, phoneShown, agencyCodeShown },
+        data: { listingId, viewerId, ip, phoneShown, agencyCodeShown },
       }),
-      prisma.havale.update({ where: { id: havaleId }, data: { revealCount: { increment: 1 } } }),
+      prisma.listing.update({ where: { id: listingId }, data: { revealCount: { increment: 1 } } }),
     ]);
   },
 };

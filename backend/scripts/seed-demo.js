@@ -65,7 +65,7 @@ async function demoAgency(agency, plan, passwordHash, index) {
 }
 
 async function demoHavales(owners, models, colors) {
-  const existing = await prisma.havale.count({ where: { ownerId: { in: owners.map((o) => o.id) } } });
+  const existing = await prisma.listing.count({ where: { ownerId: { in: owners.map((o) => o.id) } } });
   if (existing > 0) return;
 
   const amounts = [1_850_000_000n, 2_400_000_000n, 3_050_000_000n, 4_200_000_000n, 5_600_000_000n];
@@ -74,7 +74,7 @@ async function demoHavales(owners, models, colors) {
     const owner = owners[index % owners.length];
     const depositDays = 3 + (index % 5);
 
-    await prisma.havale.create({
+    await prisma.listing.create({
       data: {
         kind: index % 4 === 3 ? 'REQUEST' : 'OFFER',
         ownerId: owner.id,
@@ -97,28 +97,28 @@ async function demoHavales(owners, models, colors) {
 
 /** A few reveals, so the monitoring screens and the caps are not empty. */
 async function demoReveals(agencies) {
-  const havales = await prisma.havale.findMany({ take: 6, include: { owner: true } });
+  const havales = await prisma.listing.findMany({ take: 6, include: { owner: true } });
 
   for (const havale of havales) {
     const viewer = agencies.find((a) => a.id !== havale.ownerId);
     if (!viewer) continue;
 
     const already = await prisma.contactReveal.findUnique({
-      where: { havaleId_viewerId: { havaleId: havale.id, viewerId: viewer.id } },
+      where: { listingId_viewerId: { listingId: havale.id, viewerId: viewer.id } },
     });
     if (already) continue;
 
     await prisma.$transaction([
       prisma.contactReveal.create({
         data: {
-          havaleId: havale.id,
+          listingId: havale.id,
           viewerId: viewer.id,
           ip: '127.0.0.1',
           phoneShown: havale.owner.coordinatorPhone,
           agencyCodeShown: havale.owner.agencyCode,
         },
       }),
-      prisma.havale.update({ where: { id: havale.id }, data: { revealCount: { increment: 1 } } }),
+      prisma.listing.update({ where: { id: havale.id }, data: { revealCount: { increment: 1 } } }),
       prisma.activityLog.create({
         data: {
           userId: viewer.id,

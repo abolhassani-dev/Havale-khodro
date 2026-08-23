@@ -191,7 +191,7 @@ maybe('havale', () => {
       expect(res.body.data.contact.coordinatorPhone).toBe(owner.user.coordinatorPhone);
 
       const reveal = await prisma.contactReveal.findFirst({
-        where: { havaleId: havale.id, viewerId: viewer.user.id },
+        where: { listingId: havale.id, viewerId: viewer.user.id },
       });
       expect(reveal).not.toBeNull();
       // The number as it read at that moment. Contact details can be corrected
@@ -238,7 +238,7 @@ maybe('havale', () => {
       );
 
       const rows = await prisma.contactReveal.count({
-        where: { havaleId: havale.id, viewerId: viewer.user.id },
+        where: { listingId: havale.id, viewerId: viewer.user.id },
       });
       // Closing the tab and coming back is not a second look.
       expect(rows).toBe(1);
@@ -296,7 +296,7 @@ maybe('havale', () => {
         .set('Cookie', owner.cookie)
         .expect(400);
 
-      const fresh = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const fresh = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(fresh.revealCount).toBe(0);
     });
   });
@@ -436,7 +436,7 @@ maybe('havale', () => {
 
       const [row] = await prisma.$queryRaw`
         SELECT "phoneShown" FROM "ContactReveal"
-        WHERE "havaleId" = ${havale.id} AND "viewerId" = ${viewer.user.id}
+        WHERE "listingId" = ${havale.id} AND "viewerId" = ${viewer.user.id}
       `;
       expect(row.phoneShown).not.toContain(owner.user.coordinatorPhone);
       expect(row.phoneShown.startsWith('v1.')).toBe(true);
@@ -602,7 +602,7 @@ maybe('havale', () => {
       // Still on disk, with its reveal history and any violation reports —
       // otherwise deleting a listing would be a way to escape a report
       // (review round 3, fix 7).
-      const row = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const row = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(row).not.toBeNull();
       expect(row.deletedAt).not.toBeNull();
     });

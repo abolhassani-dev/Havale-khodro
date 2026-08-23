@@ -14,6 +14,7 @@ const {
 const { attachAccess, requireActiveSubscription } = require('../../middlewares/access');
 const { ROLES } = require('../../constants/roles');
 const { MESSAGES } = require('../../constants/messages');
+const { BadRequestError } = require('../../errors/AppError');
 const {
   REPORT_REASON,
   REPORT_STATUS,
@@ -50,7 +51,11 @@ router.post(
   requireActiveSubscription,
   validate({
     body: Joi.object({
-      havaleId: Joi.string().trim().max(40).required(),
+      // The panel still says «havaleId», and will keep working when it starts
+      // saying «listingId»: a report is filed against a listing in any market,
+      // so both names are accepted and mapped to one below.
+      listingId: Joi.string().trim().max(40),
+      havaleId: Joi.string().trim().max(40),
       reason: Joi.string()
         .valid(...Object.values(REPORT_REASON))
         .required(),
@@ -62,7 +67,10 @@ router.post(
     }),
   }),
   asyncHandler(async (req, res) => {
-    const report = await reportService.create({ user: req.user, ...req.body });
+    const listingId = req.body.listingId || req.body.havaleId;
+    if (!listingId) throw new BadRequestError('آگهی مشخص نشده است');
+
+    const report = await reportService.create({ user: req.user, ...req.body, listingId });
     return created(res, report, MESSAGES.REPORT.FILED);
   })
 );

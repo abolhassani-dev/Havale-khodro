@@ -163,23 +163,23 @@ const monitoringService = {
           agencyCode: row.viewer.agencyCode,
         },
         havale: {
-          id: row.havale.id,
-          serial: row.havale.serial,
-          carType: row.havale.carType,
-          kind: row.havale.kind,
+          id: row.listing.id,
+          serial: row.listing.serial,
+          carType: row.listing.carType,
+          kind: row.listing.kind,
         },
         owner: {
-          id: row.havale.owner.id,
-          name: row.havale.owner.agencyName,
-          agencyCode: row.havale.owner.agencyCode,
+          id: row.listing.owner.id,
+          name: row.listing.owner.agencyName,
+          agencyCode: row.listing.owner.agencyCode,
         },
         // What was actually on screen at that moment, not what the profile says
         // today. Contact details can be corrected through a ticket, and without
         // this the log would quietly rewrite history (review round 3, fix 6).
         shown: { phone: row.phoneShown, agencyCode: row.agencyCodeShown },
         description:
-          `${actorName(row.viewer)} مشخصات تماس حواله «${row.havale.carType}» ` +
-          `از ${row.havale.owner.agencyName} را دید`,
+          `${actorName(row.viewer)} مشخصات تماس حواله «${row.listing.carType}» ` +
+          `از ${row.listing.owner.agencyName} را دید`,
       })),
     };
   },

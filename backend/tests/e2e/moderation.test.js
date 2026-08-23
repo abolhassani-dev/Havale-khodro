@@ -63,12 +63,12 @@ maybe('moderation', () => {
     return { owner, reporter, havale: res.body.data };
   }
 
-  const file = (cookie, havaleId, overrides = {}) =>
+  const file = (cookie, listingId, overrides = {}) =>
     request(app)
       .post(api('/reports'))
       .set('Cookie', cookie)
       .send({
-        havaleId,
+        listingId,
         reason: 'FAKE_LISTING',
         description: 'این آگهی جعلی است و خودرویی پشت آن وجود ندارد.',
         ...overrides,
@@ -98,7 +98,7 @@ maybe('moderation', () => {
       const res = await file(reporter.cookie, havale.id).expect(201);
       expect(res.body.data.status).toBe('PENDING');
 
-      const fresh = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const fresh = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(fresh.reportCount).toBe(1);
     });
 
@@ -170,7 +170,7 @@ maybe('moderation', () => {
     it('refuses a report older than the thirty-day window', async () => {
       const { reporter, havale } = await listingAndReporter();
 
-      await prisma.havale.update({
+      await prisma.listing.update({
         where: { id: havale.id },
         data: { closesAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
       });
@@ -213,7 +213,7 @@ maybe('moderation', () => {
         .send({ verdict: 'CONFIRMED', note: 'بررسی شد' })
         .expect(200);
 
-      const listing = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const listing = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(listing.status).toBe('SUSPENDED');
 
       const advertiser = await prisma.user.findUnique({ where: { id: owner.user.id } });
@@ -237,7 +237,7 @@ maybe('moderation', () => {
       const filer = await prisma.user.findUnique({ where: { id: reporter.user.id } });
       expect(filer.falseReportStrikes).toBe(1);
 
-      const listing = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const listing = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(listing.status).toBe('ACTIVE');
     });
 
@@ -267,7 +267,7 @@ maybe('moderation', () => {
         .send({ note: 'نیاز به بررسی بیشتر' })
         .expect(200);
 
-      const listing = await prisma.havale.findUnique({ where: { id: havale.id } });
+      const listing = await prisma.listing.findUnique({ where: { id: havale.id } });
       expect(listing.status).toBe('SUSPENDED');
 
       // Nothing is proven yet, so nothing lands on anyone's record.

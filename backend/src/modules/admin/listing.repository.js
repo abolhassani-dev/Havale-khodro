@@ -105,19 +105,19 @@ const listingRepository = {
     };
 
     return Promise.all([
-      prisma.havale.findMany({
+      prisma.listing.findMany({
         where,
         select: LIST_SELECT,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
-      prisma.havale.count({ where }),
+      prisma.listing.count({ where }),
     ]);
   },
 
   findById(id) {
-    return prisma.havale.findUnique({
+    return prisma.listing.findUnique({
       where: { id },
       select: {
         ...LIST_SELECT,
@@ -142,16 +142,16 @@ const listingRepository = {
   },
 
   update(id, data) {
-    return prisma.havale.update({ where: { id }, data, select: LIST_SELECT });
+    return prisma.listing.update({ where: { id }, data, select: LIST_SELECT });
   },
 
   /** The counts the page header shows, in one round trip rather than four. */
   async summary() {
     const [live, suspended, deleted, total] = await Promise.all([
-      prisma.havale.count({ where: { status: 'ACTIVE', deletedAt: null } }),
-      prisma.havale.count({ where: { status: 'SUSPENDED', deletedAt: null } }),
-      prisma.havale.count({ where: { deletedAt: { not: null } } }),
-      prisma.havale.count(),
+      prisma.listing.count({ where: { status: 'ACTIVE', deletedAt: null } }),
+      prisma.listing.count({ where: { status: 'SUSPENDED', deletedAt: null } }),
+      prisma.listing.count({ where: { deletedAt: { not: null } } }),
+      prisma.listing.count(),
     ]);
     return { live, suspended, deleted, total };
   },

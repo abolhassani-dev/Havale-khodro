@@ -166,16 +166,16 @@ async function purchaseRequest(overrides = {}) {
 /** Removes everything a suite created, children first. */
 async function cleanup(userIds) {
   if (!userIds.length) return;
-  const havales = await prisma.havale.findMany({
+  const havales = await prisma.listing.findMany({
     where: { ownerId: { in: userIds } },
     select: { id: true },
   });
-  const havaleIds = havales.map((h) => h.id);
+  const listingIds = havales.map((h) => h.id);
 
   await prisma.contactReveal.deleteMany({
-    where: { OR: [{ viewerId: { in: userIds } }, { havaleId: { in: havaleIds } }] },
+    where: { OR: [{ viewerId: { in: userIds } }, { listingId: { in: listingIds } }] },
   });
-  await prisma.havale.deleteMany({ where: { ownerId: { in: userIds } } });
+  await prisma.listing.deleteMany({ where: { ownerId: { in: userIds } } });
   await prisma.activityLog.deleteMany({ where: { userId: { in: userIds } } });
   await prisma.authSession.deleteMany({ where: { userId: { in: userIds } } });
   await prisma.subscription.deleteMany({ where: { userId: { in: userIds } } });

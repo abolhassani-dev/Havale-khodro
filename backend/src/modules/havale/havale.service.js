@@ -395,7 +395,7 @@ const havaleService = {
     }
 
     await havaleRepository.createReveal({
-      havaleId: id,
+      listingId: id,
       viewerId: user.id,
       ip,
       // The number as it read at this moment. Contact details can be changed

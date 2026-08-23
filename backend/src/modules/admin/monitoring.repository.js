@@ -14,7 +14,7 @@ const monitoringRepository = {
       await Promise.all([
         prisma.user.count({ where: { role: 'AGENT' } }),
         prisma.user.count({ where: { role: 'AGENT', status: 'ACTIVE' } }),
-        prisma.havale.count({
+        prisma.listing.count({
           where: { deletedAt: null, status: 'ACTIVE', closesAt: { gt: now } },
         }),
         prisma.contactReveal.count({ where: { createdAt: { gte: dayAgo } } }),
@@ -65,10 +65,10 @@ const monitoringRepository = {
    * This is the record the whole monitoring feature exists for. The advertiser
    * only ever sees a count (blueprint 6.9); here the identities are complete.
    */
-  listReveals({ viewerId, havaleId, from, to, skip = 0, take = 50 }) {
+  listReveals({ viewerId, listingId, from, to, skip = 0, take = 50 }) {
     const where = {
       ...(viewerId ? { viewerId } : {}),
-      ...(havaleId ? { havaleId } : {}),
+      ...(listingId ? { listingId } : {}),
       ...(from || to
         ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
         : {}),
@@ -82,7 +82,7 @@ const monitoringRepository = {
         take,
         include: {
           viewer: ACTOR_SELECT,
-          havale: {
+          listing: {
             select: {
               id: true,
               serial: true,
@@ -107,7 +107,7 @@ const monitoringRepository = {
   },
 
   havalesPerAgency(since) {
-    return prisma.havale.groupBy({
+    return prisma.listing.groupBy({
       by: ['ownerId'],
       where: { createdAt: { gte: since }, deletedAt: null },
       _count: { _all: true },
@@ -129,7 +129,7 @@ const monitoringRepository = {
   },
 
   findHavale(id) {
-    return prisma.havale.findUnique({
+    return prisma.listing.findUnique({
       where: { id },
       select: {
         id: true,

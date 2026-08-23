@@ -163,7 +163,7 @@ const catalogRepository = {
 
   /** How many listings already point at a model — shown before deactivating it. */
   countHavalesForModel(modelId) {
-    return prisma.havale.count({ where: { carModelId: modelId } });
+    return prisma.listing.count({ where: { carModelId: modelId } });
   },
 };
 

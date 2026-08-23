@@ -2,7 +2,7 @@
 // دو پنل: نمایندگی‌ها و مدیریت (ادمین)
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // The engine is a compiled binary that links against OpenSSL, so the build it
   // needs depends on the operating system it will run on. Stated explicitly
   // because leaving it to detection is what failed on the first deploy: the
@@ -51,6 +51,13 @@ enum SubscriptionOrigin {
 }
 
 /// نوع حواله: عرضه (فروش) یا درخواست خرید
+/// بازارهای سامانه. هر کدام یک ماژول مستقل است؛ اضافه‌شدن یکی، بقیه را
+/// دست‌نخورده می‌گذارد.
+enum ListingMarket {
+  HAVALE // حواله خودرو
+  REGISTRATION // ثبت‌نامی
+}
+
 enum HavaleKind {
   OFFER
   REQUEST
@@ -129,19 +136,19 @@ enum SessionEndReason {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  username     String     @unique
+  id           String @id @default(cuid())
+  username     String @unique
   passwordHash String
 
   /// رمزنگاری‌شده در پایگاه داده (AES-256-GCM). دامپ لو رفته بدون کلیدِ داخل
   /// .env قابل خواندن نیست. جست‌وجو روی phoneIndex انجام می‌شود، نه این ستون —
   /// چون هر بار نوشتن، متن رمز متفاوتی تولید می‌کند.
-  phone        String
+  phone      String
   /// HMAC کلیددار همان شماره: تنها راه یکتایی و جست‌وجو روی ستون رمزنگاری‌شده.
-  phoneIndex   String?    @unique
-  fullName     String
-  role         Role       @default(AGENT)
-  status       UserStatus @default(ACTIVE)
+  phoneIndex String?    @unique
+  fullName   String
+  role       Role       @default(AGENT)
+  status     UserStatus @default(ACTIVE)
 
   // ---- پروفایل نمایندگی ----
   // برای هر نماینده الزامی است. کد زیرنماینده خودکار از کد مادر ساخته می‌شود.
@@ -196,7 +203,7 @@ model User {
 
   subscriptions       Subscription[]    @relation("SubscriptionOwner")
   grantedSubscription Subscription[]    @relation("SubscriptionCreator")
-  havales             Havale[]
+  listings            Listing[]
   sessions            AuthSession[]
   otpChallenges       OtpChallenge[]
   reveals             ContactReveal[]
@@ -207,7 +214,7 @@ model User {
   seatOrders          SeatOrder[]       @relation("SeatOrderBuyer")
   seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
   activityLogs        ActivityLog[]
-  errors              ErrorLog[]    @relation("UserErrors")
+  errors              ErrorLog[]        @relation("UserErrors")
   smsMessages         SmsMessage[]
   brandAccess         BrandAccess[]
   modelAccess         ModelAccess[]
@@ -308,9 +315,23 @@ model Subscription {
   @@index([userId, status, expiresAt])
 }
 
-model Havale {
-  id     String     @id @default(cuid())
-  serial Int        @unique @default(autoincrement())
+/// یک آگهی، در هر کدام از بازارها.
+///
+/// جدول مشترک است چون هر آگهی — از هر بازاری — همین چیزها را دارد: صاحبش،
+/// خودرویش، وضعیتش، مهلتش، و شمارنده‌ی بازدید و تخلفش. نمایش مشخصات، سقف
+/// روزانه، گزارش تخلف و پنل مدیریت به همین جدول وصل‌اند، پس با اضافه‌شدن هر
+/// بازار تازه، همه‌ی آن‌ها روز اول کار می‌کنند.
+///
+/// جزئیات هر بازار در جدول خودش می‌نشیند (مثل RegistrationDetail)، تا تغییر در
+/// یک بازار به بازار دیگر دست نزند. ستون‌های مخصوص حواله پایین‌تر هنوز این‌جا
+/// هستند — از قبل از این تقسیم‌بندی — و چون هیچ بازار دیگری آن‌ها را نمی‌خواند،
+/// جابه‌جا کردنشان کار امروز نیست.
+model Listing {
+  id     String @id @default(cuid())
+  serial Int    @unique @default(autoincrement())
+
+  /// کدام بازار. هر پرس‌وجوی یک بازار روی همین ستون فیلتر می‌شود.
+  market ListingMarket @default(HAVALE)
   kind   HavaleKind
 
   ownerId String
@@ -320,9 +341,10 @@ model Havale {
   // carModelId مرجع کاتالوگ است و فیلتر روی آن انجام می‌شود؛ carType اسنپ‌شات
   // نام همان لحظه است تا تغییر نام مدل، حواله‌های قدیمی را بازنویسی نکند.
   carModelId String?
-  carModel   CarModel?  @relation(fields: [carModelId], references: [id], onDelete: SetNull)
+  carModel   CarModel?   @relation(fields: [carModelId], references: [id], onDelete: SetNull)
   carType    String
-  solh       SolhStatus
+  /// فقط در بازار حواله معنا دارد — نوع واگذاری سند.
+  solh       SolhStatus?
 
   // در «حواله فروش» الزامی، در «درخواست خرید» اختیاری
   carColor        String?
@@ -368,6 +390,10 @@ model Havale {
   reveals ContactReveal[]
   reports ViolationReport[]
 
+  /// جزئیات بازار ثبت‌نامی. برای آگهی حواله خالی است و برعکس.
+  registration RegistrationDetail?
+
+  @@index([market, status, createdAt])
   @@index([status, closesAt])
   @@index([deletedAt])
   @@index([kind, status, createdAt])
@@ -377,12 +403,61 @@ model Havale {
   @@index([supplierCompany])
 }
 
+/// روش تخصیص ظرفیت در طرح کارخانه
+enum RegistrationMethod {
+  LOTTERY // قرعه‌کشی — اسامی قرعه‌کشی می‌شود
+  TIME_PRIORITY // اولویت زمانی — هر کس زودتر ثبت کند
+}
+
+/// نوع فروش در طرح
+enum RegistrationSaleType {
+  PRESALE // پیش‌فروش
+  CASH_SINGLE // نقدی تک‌مرحله‌ای
+  CASH_STAGED // نقدی چند مرحله‌ای
+  INSTALLMENT // اقساط
+  PRODUCTION_PARTNERSHIP // مشارکت در تولید
+}
+
+/// جزئیات یک آگهی در بازار ثبت‌نامی.
+///
+/// جدا از Listing است تا هر تغییری در این بازار — فیلد تازه، قاعده‌ی تازه —
+/// به حواله و بازارهای بعدی دست نزند. آگهی درخواست ثبت‌نام همین جدول را با
+/// فیلدهای کمتری پر می‌کند؛ چه چیزی الزامی است، در اعتبارسنجی همان ماژول
+/// نوشته شده نه این‌جا.
+model RegistrationDetail {
+  listingId String  @id
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  /// نام طرح کارخانه، همان‌طور که در آگهی نوشته می‌شود
+  planName String?
+  method   RegistrationMethod?
+  saleType RegistrationSaleType?
+
+  /// چند ظرفیت. سامانه آن را نمی‌شمارد و رزرو نمی‌کند — عددی است که در آگهی
+  /// نوشته می‌شود و توافق بیرون از سامانه انجام می‌شود.
+  capacity Int?
+
+  /// پولی که ثبت‌نام‌کننده به کارخانه واریز می‌کند
+  depositToman BigInt?
+  /// پولی که بابت واگذاری این ظرفیت گرفته می‌شود
+  premiumToman BigInt?
+
+  /// مهلت ثبت‌نام در طرح. عمر آگهی از روی همین تعیین می‌شود.
+  registerDeadline DateTime?
+  /// موعد تحویل، همان‌طور که در طرح آمده — متن است چون گاهی «اسفند ۱۴۰۵» است
+  deliveryEstimate String?
+  /// شرایط ثبت‌نام‌کننده، به زبان خود آگهی‌دهنده
+  conditions       String?
+
+  @@index([method, saleType])
+}
+
 /// هر بار که یک نماینده «مشخصات فروشنده» یک حواله را باز می‌کند اینجا ثبت می‌شود
 model ContactReveal {
   id String @id @default(cuid())
 
-  havaleId String
-  havale   Havale @relation(fields: [havaleId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   viewerId String
   viewer   User   @relation(fields: [viewerId], references: [id], onDelete: Cascade)
@@ -394,17 +469,17 @@ model ContactReveal {
   agencyCodeShown String?
   createdAt       DateTime @default(now())
 
-  @@unique([havaleId, viewerId])
+  @@unique([listingId, viewerId])
   @@index([viewerId, createdAt])
-  @@index([havaleId, createdAt])
+  @@index([listingId, createdAt])
 }
 
 model ViolationReport {
   id     String @id @default(cuid())
   serial Int    @unique @default(autoincrement())
 
-  havaleId String
-  havale   Havale @relation(fields: [havaleId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   reporterId String
   reporter   User   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
@@ -427,7 +502,7 @@ model ViolationReport {
 
   createdAt DateTime @default(now())
 
-  @@unique([havaleId, reporterId])
+  @@unique([listingId, reporterId])
   @@index([status, createdAt])
   @@index([needsSuperApproval, createdAt])
   @@index([reporterId, createdAt])
@@ -543,8 +618,8 @@ model SeatOrder {
   totalToman     BigInt
   status         SeatOrderStatus @default(PENDING)
 
-  buyerNote       String?
-  adminNote       String?
+  buyerNote String?
+  adminNote String?
 
   /// فیش واریزی — بدون آن درخواست ثبت نمی‌شود. فایل با نام تصادفی روی دیسک
   /// ذخیره می‌شود؛ receiptName فقط برای نمایش است، هرگز برای ساخت مسیر.
@@ -705,7 +780,7 @@ model CarModel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  havales     Havale[]
+  listings    Listing[]
   modelAccess ModelAccess[]
 
   @@unique([brandId, name])

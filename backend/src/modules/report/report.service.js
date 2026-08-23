@@ -34,8 +34,8 @@ const reportService = {
    * Everything refused here is refused because of a specific way the feature
    * could be abused; none of it is defensive coding for its own sake.
    */
-  async create({ user, havaleId, reason, description }) {
-    const havale = await reportRepository.findHavaleIncludingDeleted(havaleId);
+  async create({ user, listingId, reason, description }) {
+    const havale = await reportRepository.findHavaleIncludingDeleted(listingId);
     if (!havale) throw new NotFoundError('حواله');
 
     if (havale.ownerId === user.id) throw new BadRequestError(MESSAGES.REPORT.OWN_LISTING);
@@ -48,7 +48,7 @@ const reportService = {
       throw new BadRequestError(MESSAGES.REPORT.TOO_OLD);
     }
 
-    const existing = await reportRepository.findByHavaleAndReporter(havaleId, user.id);
+    const existing = await reportRepository.findByHavaleAndReporter(listingId, user.id);
     // One report per agent per listing. Without it, three colleagues could file
     // fifteen reports and manufacture a suspension.
     if (existing) throw new ConflictError(MESSAGES.REPORT.ALREADY_REPORTED);
@@ -63,12 +63,12 @@ const reportService = {
     // "Nobody answers" is a claim only somebody who tried to call can make, and
     // the reveal log is the proof they tried (blueprint 8.2).
     if (REASONS_REQUIRING_CONTACT.includes(reason)) {
-      const revealed = await reportRepository.hasRevealed(havaleId, user.id);
+      const revealed = await reportRepository.hasRevealed(listingId, user.id);
       if (!revealed) throw new BadRequestError(MESSAGES.REPORT.NEEDS_CONTACT_FIRST);
     }
 
     const [report] = await reportRepository.create({
-      havaleId,
+      listingId,
       reporterId: user.id,
       reason,
       description,
@@ -78,7 +78,7 @@ const reportService = {
       userId: user.id,
       action: 'REPORT_FILED',
       targetType: 'HAVALE',
-      targetId: havaleId,
+      targetId: listingId,
       summary: reason,
     });
 
@@ -123,7 +123,7 @@ const reportService = {
 
   /** Upheld: the listing goes down and the advertiser takes a strike. */
   async confirm({ actor, report, note }) {
-    const owner = report.havale.owner;
+    const owner = report.listing.owner;
     const wouldReachThreshold = owner.fakeStrikes + 1 >= STRIKE_THRESHOLD;
     const maySuspend = can(actor.role, 'thirdStrike');
 
@@ -132,7 +132,7 @@ const reportService = {
       reviewerId: actor.id,
       note,
       ownerId: owner.id,
-      havaleId: report.havaleId,
+      listingId: report.listingId,
       needsSuperApproval: wouldReachThreshold && !maySuspend,
     });
 
@@ -190,7 +190,7 @@ const reportService = {
       throw new BadRequestError(MESSAGES.REPORT.ALREADY_REVIEWED);
     }
 
-    await reportRepository.hideHavale(report.havaleId, 'در دست بررسی');
+    await reportRepository.hideHavale(report.listingId, 'در دست بررسی');
     await reportRepository.update(reportId, { adminNote: note });
     await this.log(actor, 'REPORT_HELD', report);
 
@@ -210,7 +210,7 @@ const reportService = {
     if (!report.needsSuperApproval) throw new BadRequestError(MESSAGES.REPORT.NO_APPROVAL_PENDING);
 
     const target =
-      report.status === REPORT_STATUS.ABUSIVE ? report.reporter : report.havale.owner;
+      report.status === REPORT_STATUS.ABUSIVE ? report.reporter : report.listing.owner;
 
     await reportRepository.suspendAccount(target.id);
     await reportRepository.update(reportId, { needsSuperApproval: false });
@@ -268,7 +268,7 @@ const reportService = {
         id: r.id,
         serial: r.serial,
         reason: r.reason,
-        havale: { id: r.havale.id, serial: r.havale.serial, carType: r.havale.carType },
+        havale: { id: r.listing.id, serial: r.listing.serial, carType: r.listing.carType },
         adminNote: r.adminNote,
         createdAt: r.createdAt,
         reviewedAt: r.reviewedAt,
@@ -303,16 +303,16 @@ function toReport(report) {
       falseReportStrikes: report.reporter?.falseReportStrikes,
     },
     havale: {
-      id: report.havale.id,
-      serial: report.havale.serial,
-      carType: report.havale.carType,
-      status: report.havale.status,
+      id: report.listing.id,
+      serial: report.listing.serial,
+      carType: report.listing.carType,
+      status: report.listing.status,
       owner: {
-        id: report.havale.owner.id,
-        agencyCode: report.havale.owner.agencyCode,
-        agencyName: report.havale.owner.agencyName,
-        fakeStrikes: report.havale.owner.fakeStrikes,
-        status: report.havale.owner.status,
+        id: report.listing.owner.id,
+        agencyCode: report.listing.owner.agencyCode,
+        agencyName: report.listing.owner.agencyName,
+        fakeStrikes: report.listing.owner.fakeStrikes,
+        status: report.listing.owner.status,
       },
     },
   };

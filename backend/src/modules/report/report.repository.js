@@ -30,20 +30,20 @@ const reportRepository = {
   create(data) {
     return prisma.$transaction([
       prisma.violationReport.create({ data }),
-      prisma.havale.update({ where: { id: data.havaleId }, data: { reportCount: { increment: 1 } } }),
+      prisma.listing.update({ where: { id: data.listingId }, data: { reportCount: { increment: 1 } } }),
     ]);
   },
 
   findById(id) {
     return prisma.violationReport.findUnique({
       where: { id },
-      include: { reporter: REPORTER_SELECT, havale: HAVALE_SELECT },
+      include: { reporter: REPORTER_SELECT, listing: HAVALE_SELECT },
     });
   },
 
-  findByHavaleAndReporter(havaleId, reporterId) {
+  findByHavaleAndReporter(listingId, reporterId) {
     return prisma.violationReport.findUnique({
-      where: { havaleId_reporterId: { havaleId, reporterId } },
+      where: { listingId_reporterId: { listingId, reporterId } },
     });
   },
 
@@ -60,17 +60,17 @@ const reportRepository = {
       },
       orderBy: { createdAt: 'desc' },
       take,
-      include: { reporter: REPORTER_SELECT, havale: HAVALE_SELECT },
+      include: { reporter: REPORTER_SELECT, listing: HAVALE_SELECT },
     });
   },
 
   /** Reports filed against a given agency's listings — their side of the file. */
   listAgainstOwner(ownerId, take = 50) {
     return prisma.violationReport.findMany({
-      where: { havale: { ownerId }, status: 'CONFIRMED' },
+      where: { listing: { ownerId }, status: 'CONFIRMED' },
       orderBy: { createdAt: 'desc' },
       take,
-      include: { havale: HAVALE_SELECT },
+      include: { listing: HAVALE_SELECT },
     });
   },
 
@@ -78,7 +78,7 @@ const reportRepository = {
     return prisma.violationReport.update({
       where: { id },
       data,
-      include: { reporter: REPORTER_SELECT, havale: HAVALE_SELECT },
+      include: { reporter: REPORTER_SELECT, listing: HAVALE_SELECT },
     });
   },
 
@@ -89,7 +89,7 @@ const reportRepository = {
    * listing suspended with no strike behind it, or a strike nobody can trace to
    * a verdict — and the strike count is what eventually suspends an account.
    */
-  confirmAgainstOwner({ reportId, reviewerId, note, ownerId, needsSuperApproval, havaleId }) {
+  confirmAgainstOwner({ reportId, reviewerId, note, ownerId, needsSuperApproval, listingId }) {
     return prisma.$transaction([
       prisma.violationReport.update({
         where: { id: reportId },
@@ -101,8 +101,8 @@ const reportRepository = {
           needsSuperApproval,
         },
       }),
-      prisma.havale.update({
-        where: { id: havaleId },
+      prisma.listing.update({
+        where: { id: listingId },
         data: { status: 'SUSPENDED', suspendReason: 'گزارش تخلف تأیید شد' },
       }),
       prisma.user.update({ where: { id: ownerId }, data: { fakeStrikes: { increment: 1 } } }),
@@ -143,23 +143,23 @@ const reportRepository = {
     ]);
   },
 
-  hideHavale(havaleId, reason) {
-    return prisma.havale.update({
-      where: { id: havaleId },
+  hideHavale(listingId, reason) {
+    return prisma.listing.update({
+      where: { id: listingId },
       data: { status: 'SUSPENDED', suspendReason: reason },
     });
   },
 
   /** Whether this agent ever opened the contact details on this listing. */
-  hasRevealed(havaleId, viewerId) {
+  hasRevealed(listingId, viewerId) {
     return prisma.contactReveal.findUnique({
-      where: { havaleId_viewerId: { havaleId, viewerId } },
+      where: { listingId_viewerId: { listingId, viewerId } },
     });
   },
 
   /** Includes soft-deleted rows: deleting a listing must not escape a report. */
   findHavaleIncludingDeleted(id) {
-    return prisma.havale.findUnique({ where: { id }, ...HAVALE_SELECT });
+    return prisma.listing.findUnique({ where: { id }, ...HAVALE_SELECT });
   },
 };
 

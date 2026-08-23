@@ -131,7 +131,7 @@ maybe('catalog', () => {
     // advertised — including the ones with violation reports filed against them.
     expect(after.body.data.carType).toBe('test_مدل موقت');
 
-    await prisma.havale.deleteMany({ where: { carModelId: model.id } });
+    await prisma.listing.deleteMany({ where: { carModelId: model.id } });
     await prisma.carModel.delete({ where: { id: model.id } });
   });
 
@@ -165,7 +165,7 @@ maybe('catalog', () => {
       .set('Cookie', cookie)
       .expect(200);
 
-    await prisma.havale.deleteMany({ where: { carModelId: model.id } });
+    await prisma.listing.deleteMany({ where: { carModelId: model.id } });
     await prisma.carModel.delete({ where: { id: model.id } });
   });
 

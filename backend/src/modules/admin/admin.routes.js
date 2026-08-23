@@ -146,6 +146,9 @@ router.get(
   validate({
     query: Joi.object({
       viewerId: Joi.string().trim().max(40),
+      // Accepted under both names while the panel catches up — see the report
+      // route for the same courtesy.
+      listingId: Joi.string().trim().max(40),
       havaleId: Joi.string().trim().max(40),
       from: Joi.date(),
       to: Joi.date(),
@@ -153,7 +156,15 @@ router.get(
       take: Joi.number().integer().min(1).max(200).default(50),
     }),
   }),
-  asyncHandler(async (req, res) => success(res, await monitoringService.reveals(req.query)))
+  asyncHandler(async (req, res) =>
+    success(
+      res,
+      await monitoringService.reveals({
+        ...req.query,
+        listingId: req.query.listingId || req.query.havaleId,
+      })
+    )
+  )
 );
 
 /**

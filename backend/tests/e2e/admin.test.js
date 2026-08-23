@@ -75,7 +75,7 @@ maybe('admin panel', () => {
   });
 
   afterAll(async () => {
-    await prisma.havale.deleteMany({ where: { carModelId: { in: catalogRows.models } } });
+    await prisma.listing.deleteMany({ where: { carModelId: { in: catalogRows.models } } });
     await prisma.carModel.deleteMany({ where: { id: { in: catalogRows.models } } });
     await prisma.carBrand.deleteMany({ where: { id: { in: catalogRows.brands } } });
     await prisma.carCompany.deleteMany({ where: { id: { in: catalogRows.companies } } });

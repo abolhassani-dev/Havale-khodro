@@ -42,7 +42,7 @@ const subagentRepository = {
 
   /** Listing counts per sub-agent, for the parent's overview. */
   async havaleCounts(parentId) {
-    const rows = await prisma.havale.groupBy({
+    const rows = await prisma.listing.groupBy({
       by: ['ownerId'],
       where: { owner: { parentId }, deletedAt: null },
       _count: { _all: true },
