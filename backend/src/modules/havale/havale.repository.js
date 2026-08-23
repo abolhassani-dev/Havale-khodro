@@ -22,21 +22,38 @@ const OWNER_SELECT = {
   },
 };
 
+/**
+ * This market's rows and no other's.
+ *
+ * The listing table holds every market now, so a query written here that forgot
+ * to say which one would quietly return ثبت‌نامی advertisements to somebody
+ * browsing حواله — with empty amounts, because those columns mean nothing over
+ * there. Pinned in the repository rather than in each caller so the rule cannot
+ * be forgotten by a query added later.
+ */
+const MARKET = 'HAVALE';
+
 const havaleRepository = {
   create(data) {
-    return prisma.listing.create({ data, include: { owner: OWNER_SELECT } });
+    return prisma.listing.create({
+      data: { ...data, market: MARKET },
+      include: { owner: OWNER_SELECT },
+    });
   },
 
   findById(id) {
     return prisma.listing.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, market: MARKET, deletedAt: null },
       include: { owner: OWNER_SELECT },
     });
   },
 
   /** Includes soft-deleted rows — for the admin panel and violation history. */
   findByIdIncludingDeleted(id) {
-    return prisma.listing.findUnique({ where: { id }, include: { owner: OWNER_SELECT } });
+    return prisma.listing.findFirst({
+      where: { id, market: MARKET },
+      include: { owner: OWNER_SELECT },
+    });
   },
 
   update(id, data) {
@@ -56,7 +73,7 @@ const havaleRepository = {
       where: cursor
         ? {
             AND: [
-              where,
+              { ...where, market: MARKET },
               {
                 OR: [
                   { createdAt: { lt: cursor.createdAt } },
@@ -65,7 +82,7 @@ const havaleRepository = {
               },
             ],
           }
-        : where,
+        : { ...where, market: MARKET },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       // skip serves the numbered pager the panel shows people; cursor serves
       // depth-proof scanning. The two are never combined: a numbered page is
@@ -77,7 +94,7 @@ const havaleRepository = {
   },
 
   count(where) {
-    return prisma.listing.count({ where });
+    return prisma.listing.count({ where: { ...where, market: MARKET } });
   },
 
   /** The accounts of one network: the main agency and every sub-agency under it. */

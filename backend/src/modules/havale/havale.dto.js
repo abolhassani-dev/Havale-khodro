@@ -127,25 +127,12 @@ function toOwnHavale(havale) {
 }
 
 /** What the reveal endpoint returns — the details, and what it cost. */
-function toRevealResult(owner, usage) {
-  return {
-    contact: {
-      coordinatorName: owner.coordinatorName,
-      coordinatorPhone: owner.coordinatorPhone,
-      phone: owner.phone,
-    },
-    agency: { code: owner.agencyCode, name: owner.agencyName, city: owner.city },
-    usage,
-  };
-}
-
 /** Which fields a purchase request is allowed to carry (blueprint 5.2). */
 const REQUEST_ONLY_REQUIRED = ['carType', 'solh'];
 
 module.exports = {
   toHavaleCard,
   toOwnHavale,
-  toRevealResult,
   HAVALE_KIND,
   REQUEST_ONLY_REQUIRED,
 };

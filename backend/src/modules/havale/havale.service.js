@@ -1,12 +1,12 @@
 const { havaleRepository } = require('./havale.repository');
-const { toHavaleCard, toOwnHavale, toRevealResult } = require('./havale.dto');
+const { toHavaleCard, toOwnHavale } = require('./havale.dto');
 const authRepository = require('../auth/auth.repository');
+const revealService = require('../listing/reveal.service');
 const catalogRepository = require('../catalog/catalog.repository');
 const brandAccess = require('../catalog/brandAccess.service');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
-const { ERROR_CODES } = require('../../constants/errorCodes');
 const { MESSAGES } = require('../../constants/messages');
-const { startOfTehranDay, addDays } = require('../../utils/time');
+const { addDays } = require('../../utils/time');
 const {
   HAVALE_KIND,
   HAVALE_STATUS,
@@ -367,81 +367,19 @@ const havaleService = {
    * number as it read at that moment — which is what the monitoring report, the
    * cap and the "unreachable" violation reason are all built on.
    */
-  async reveal({ user, access, id, ip }) {
-    const havale = await havaleRepository.findById(id);
-    if (!havale) throw new NotFoundError('حواله');
-
-    if (havale.ownerId === user.id) {
-      throw new BadRequestError(MESSAGES.HAVALE.OWN_CONTACT);
-    }
-
-    if (havale.owner.status !== 'ACTIVE') throw new NotFoundError('حواله');
-
-    // Already opened: hand it back without charging again. The unique constraint
-    // on (havale, viewer) makes that the natural behaviour rather than something
-    // to remember — an agent who closes the tab has not used up a second view.
-    const existing = await havaleRepository.findReveal(id, user.id);
-    if (existing) {
-      return toRevealResult(havale.owner, await this.revealUsage({ user, access }));
-    }
-
-    const usage = await this.revealUsage({ user, access });
-
-    if (usage.dailyUsed >= usage.dailyLimit) {
-      throw new ForbiddenError(MESSAGES.HAVALE.DAILY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
-    }
-    if (usage.monthlyUsed >= usage.monthlyLimit) {
-      throw new ForbiddenError(MESSAGES.HAVALE.MONTHLY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
-    }
-
-    await havaleRepository.createReveal({
-      listingId: id,
-      viewerId: user.id,
-      ip,
-      // The number as it read at this moment. Contact details can be changed
-      // later through a ticket, and without this the log would quietly rewrite
-      // history to show the new number (review round 3, fix 6).
-      phoneShown: havale.owner.coordinatorPhone,
-      agencyCodeShown: havale.owner.agencyCode,
-    });
-
-    await authRepository.recordActivity({
-      userId: user.id,
-      action: 'CONTACT_REVEALED',
-      targetType: 'HAVALE',
-      targetId: id,
-      summary: havale.owner.agencyCode,
-      ip,
-    });
-
-    return toRevealResult(havale.owner, {
-      ...usage,
-      dailyUsed: usage.dailyUsed + 1,
-      monthlyUsed: usage.monthlyUsed + 1,
-    });
+  /**
+   * Both of these are the kernel's, not this market's.
+   *
+   * Showing a contact and counting what it cost are the same act in every
+   * market — see modules/listing/reveal.service. Keeping a copy here would
+   * mean two versions of the one rule the business runs on.
+   */
+  reveal({ user, access, id, ip }) {
+    return revealService.reveal({ user, access, id, ip, notFound: 'حواله', targetType: 'HAVALE' });
   },
 
-  /**
-   * How much of the allowance is gone.
-   *
-   * The day is a calendar day in Tehran; the month is this subscription's
-   * thirty-day period rather than a Jalali month, so renewing early cannot be
-   * used to reset the allowance (review round 3, fix 2).
-   */
-  async revealUsage({ user, access }) {
-    const [dailyUsed, monthlyUsed] = await Promise.all([
-      havaleRepository.countRevealsSince(user.id, startOfTehranDay()),
-      access.periodStart
-        ? havaleRepository.countRevealsSince(user.id, access.periodStart)
-        : Promise.resolve(0),
-    ]);
-
-    return {
-      dailyUsed,
-      dailyLimit: access.dailyLimit,
-      monthlyUsed,
-      monthlyLimit: access.monthlyLimit,
-    };
+  revealUsage({ user, access }) {
+    return revealService.usageFor({ user, access });
   },
 
   /**
