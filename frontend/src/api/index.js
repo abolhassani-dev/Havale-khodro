@@ -37,6 +37,22 @@ export const havale = {
   usage: () => api.get('/havales/reveal-usage'),
 };
 
+/**
+ * The ثبت‌نامی market. Its own endpoints, deliberately — one market's change
+ * cannot reach another's page through a shared route.
+ */
+export const registration = {
+  list: (filters) => api.get('/registrations', filters),
+  mine: (filters) => api.get('/registrations/mine', filters),
+  get: (id) => api.get(`/registrations/${id}`),
+  create: (payload) => api.post('/registrations', payload),
+  update: (id, payload) => api.patch(`/registrations/${id}`, payload),
+  renew: (id, payload) => api.post(`/registrations/${id}/renew`, payload),
+  fulfill: (id) => api.post(`/registrations/${id}/fulfill`),
+  remove: (id) => api.delete(`/registrations/${id}`),
+  reveal: (id) => api.post(`/registrations/${id}/reveal`),
+};
+
 export const subscription = {
   me: () => api.get('/subscriptions/me'),
   invoice: () => api.get('/subscriptions/invoice'),

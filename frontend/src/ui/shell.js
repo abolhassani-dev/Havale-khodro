@@ -55,11 +55,10 @@ const AGENT_NAV = [
     id: 'reg',
     icon: 'clipboard',
     label: 'ثبت‌نامی',
-    soon: true,
     children: [
       { page: 'reg-search', icon: 'search', label: 'استعلام ثبت‌نامی' },
-      { page: 'reg-request', icon: 'plus', label: 'ثبت درخواست ثبت‌نام' },
       { page: 'reg-offer', icon: 'inbox', label: 'اعلام ظرفیت ثبت‌نام' },
+      { page: 'reg-request', icon: 'plus', label: 'ثبت درخواست ثبت‌نام' },
       { page: 'reg-mine', icon: 'list', label: 'ثبت‌نامی‌های من' },
     ],
   },

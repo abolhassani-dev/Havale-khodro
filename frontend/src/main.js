@@ -14,6 +14,12 @@ import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
   renewModal, confirmFulfill, confirmDelete, havaleDetailModal,
 } from './pages/agent/listings.js';
+// The ثبت‌نامی market. Its own module, its own pages — see modules/registration
+// on the server for the other half of the same separation.
+import {
+  loadRegSearch, loadRegForm, loadRegMine, regSearchPage, regFormPage, regMinePage,
+  submitRegistration, onRegBrandChange, confirmRegReveal, regRenew, regFulfill, regDelete,
+} from './pages/agent/registration.js';
 import {
   loadSubscription, subscriptionPage, orderSeatsModal,
   loadSubAgents, subAgentsPage, newSubAgentModal, subAgentPasswordModal, subAgentBrandsModal,
@@ -43,6 +49,10 @@ const TITLES = {
   'new-offer': ['ثبت حواله فروش', 'حواله‌ای که دارید و می‌فروشید'],
   'new-request': ['ثبت درخواست خرید', 'حواله‌ای که می‌خواهید بخرید'],
   mine: ['حواله‌های من', 'همه‌ی آگهی‌های شما'],
+  'reg-search': ['استعلام ثبت‌نامی', 'ظرفیت‌ها و درخواست‌های ثبت‌نام'],
+  'reg-offer': ['اعلام ظرفیت ثبت‌نام', 'ظرفیتی که دارید و واگذار می‌کنید'],
+  'reg-request': ['ثبت درخواست ثبت‌نام', 'ظرفیتی که دنبالش هستید'],
+  'reg-mine': ['ثبت‌نامی‌های من', 'همه‌ی آگهی‌های ثبت‌نامی شما'],
   subscription: ['اشتراک من', 'وضعیت، صورتحساب و ظرفیت'],
   'sub-agents': ['زیرنمایندگی‌ها', 'حالت ماژول'],
   tickets: ['پشتیبانی', 'گفتگو با تیم پشتیبانی'],
@@ -67,6 +77,11 @@ function registerRoutes() {
   route('new-offer', loadCatalogForm);
   route('new-request', loadCatalogForm);
   route('mine', loadMine);
+
+  route('reg-search', loadRegSearch);
+  route('reg-offer', loadRegForm);
+  route('reg-request', loadRegForm);
+  route('reg-mine', loadRegMine);
   route('subscription', loadSubscription);
   route('sub-agents', loadSubAgents);
   route('tickets', loadTickets);
@@ -112,6 +127,10 @@ function pageBody() {
     case 'new-offer': return havaleFormPage('OFFER');
     case 'new-request': return havaleFormPage('REQUEST');
     case 'mine': return minePage();
+    case 'reg-search': return regSearchPage();
+    case 'reg-offer': return regFormPage('OFFER');
+    case 'reg-request': return regFormPage('REQUEST');
+    case 'reg-mine': return regMinePage();
     case 'subscription': return subscriptionPage();
     case 'sub-agents': return subAgentsPage();
     case 'tickets': return ticketsPage();
@@ -217,6 +236,7 @@ function adminTitle(page) {
 const CLICK_KEYS = new Set([
   'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
+  'regReveal', 'regRenew', 'regFulfill', 'regDelete',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
   'newTicket', 'closeTicket', 'reopenTicket', 'ticketPriority', 'ackSeat',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
@@ -266,6 +286,10 @@ function onClick(event) {
   if (d.logout !== undefined) return doLogout();
 
   if (d.reveal) return confirmReveal(d.reveal);
+  if (d.regReveal) return confirmRegReveal(d.regReveal);
+  if (d.regRenew) return regRenew(d.regRenew);
+  if (d.regFulfill) return regFulfill(d.regFulfill);
+  if (d.regDelete) return regDelete(d.regDelete);
   if (d.report) return reportModal(d.report);
   if (d.renew) return renewModal(d.renew);
   if (d.fulfill) return confirmFulfill(d.fulfill);
@@ -354,12 +378,22 @@ function onSubmit(event) {
     case 'login': return submitLogin(form);
     case 'change-password': return submitChangePassword(form);
     case 'havale': return submitHavale(form);
+    case 'registration': return submitRegistration(form);
+    case 'reg-filters': return applyRegFilters(form);
     case 'profile-password': return submitProfilePassword(form);
     case 'ticket-reply': return submitTicketReply(form);
     case 'modal': return runModalAction(form);
     case 'search-filters': return applyFilters(form);
     default: return handleAdminSubmit(form);
   }
+}
+
+function applyRegFilters(form) {
+  const params = {};
+  new FormData(form).forEach((value, key) => {
+    if (value !== '') params[key] = value;
+  });
+  go('reg-search', params);
 }
 
 function applyFilters(form) {
@@ -409,8 +443,17 @@ function onChange(event) {
   // would wipe every field the reader had typed.
   if (handleBrandPickChange(event.target)) return;
 
+  // Each market fills its own model list. Dispatched by which form asked
+  // rather than shared: the two look alike today, and the whole point of the
+  // separation is that one of them can change tomorrow without the other
+  // noticing.
   if (event.target.name === 'brand') {
-    onBrandChange(event.target.form);
+    const form = event.target.form;
+    if (form?.dataset.form === 'registration') {
+      onRegBrandChange(form);
+      return;
+    }
+    onBrandChange(form);
   }
   // The ticket composer's paperclip: echo the chosen filenames next to it, so
   // «پیوست شد» is visible before anything is sent.
