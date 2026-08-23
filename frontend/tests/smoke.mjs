@@ -22,6 +22,7 @@
 import { chromium } from 'playwright';
 
 const errors = [];
+const BASE = process.env.BASE_URL || 'http://localhost:5173/';
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 page.on('console', (m) => {
@@ -63,7 +64,7 @@ async function navigate(pageName) {
   await link.click();
 }
 
-await page.goto(process.env.BASE_URL || 'http://localhost:5173/', { waitUntil: 'networkidle' });
+await page.goto(BASE, { waitUntil: 'networkidle' });
 
 await step('login page renders', async () => {
   await page.waitForSelector('form[data-form="login"]', { timeout: 5000 });
@@ -80,6 +81,102 @@ await step('dashboard shows real figures', async () => {
   await page.waitForSelector('.stats .s-v', { timeout: 5000 });
   const t = await page.textContent('.stats');
   if (!/[۰-۹]/.test(t)) throw new Error('no Persian numerals: ' + t.slice(0, 60));
+});
+
+
+/**
+ * A listing this agent has certainly not revealed.
+ *
+ * The masking checks below are the most important in the suite, and they can
+ * only prove something if the market holds at least one listing belonging to
+ * somebody else that this viewer has not already opened. On a dev database
+ * that stops being true after a few runs — a reveal is permanent, so yesterday's
+ * runs quietly turn every card into a revealed one and the assertion passes
+ * vacuously on nothing.
+ *
+ * So the run posts one itself, from a second agency, and takes it away at the
+ * end. Give AGENT2_USER / AGENT2_PASS to enable it; without them the masking
+ * steps still run, but against whatever the database happens to hold.
+ */
+async function postAsSecondAgency() {
+  const user = process.env.AGENT2_USER;
+  const pass = process.env.AGENT2_PASS;
+  if (!user || !pass) return null;
+
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  await other.goto(BASE, { waitUntil: 'networkidle' });
+  await other.fill('input[name="username"]', user);
+  await other.fill('input[name="password"]', pass);
+  await other.click('button[type="submit"]');
+  await other.waitForSelector('.nav', { timeout: 15000 });
+
+  // Posted through the API rather than the form: this is scaffolding for the
+  // masking checks, not the form's own test — that one is further down and
+  // drives every field by hand.
+  const id = await other.evaluate(async () => {
+    const tree = await fetch('/api/v1/catalog', { credentials: 'include' }).then((r) => r.json());
+    const brand = (tree.data?.brands || []).find((b) => b.canPost || b.postableModelIds?.length);
+    if (!brand) return null;
+
+    const models = await fetch(`/api/v1/catalog/brands/${brand.id}/models`, { credentials: 'include' })
+      .then((r) => r.json());
+    const allowed = brand.canPost
+      ? models.data?.models || []
+      : (models.data?.models || []).filter((m) => (brand.postableModelIds || []).includes(m.id));
+    if (!allowed.length) return null;
+
+    const res = await fetch('/api/v1/havales', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'OFFER',
+        carModelId: allowed[0].id,
+        solh: 'SOLH',
+        carColor: tree.data?.colors?.[0]?.name,
+        model: '1405',
+        carPriceToman: 1_200_000_000,
+        amountToman: 950_000_000,
+        paidAmountToman: 300_000_000,
+        paymentType: 'CASH',
+        deliveryDays: 45,
+        depositDays: 7,
+        description: 'آگهی زمینه برای تست ماسک — در پایان اجرا برداشته می‌شود',
+      }),
+    });
+    const body = await res.json();
+    return body?.data?.id || null;
+  });
+
+  await context.close();
+  return id ? { id, user, pass } : null;
+}
+
+/** Takes that listing away again, so the next run starts from the same place. */
+async function removeSecondAgencyListing(posted) {
+  if (!posted) return;
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  await other.goto(BASE, { waitUntil: 'networkidle' });
+  await other.fill('input[name="username"]', posted.user);
+  await other.fill('input[name="password"]', posted.pass);
+  await other.click('button[type="submit"]');
+  await other.waitForSelector('.nav', { timeout: 15000 });
+  await other.evaluate(
+    (id) => fetch(`/api/v1/havales/${id}`, { method: 'DELETE', credentials: 'include' }),
+    posted.id
+  );
+  await context.close();
+}
+
+let backdrop = null;
+
+await step('a second agency has something on the market', async () => {
+  backdrop = await postAsSecondAgency();
+  if (!backdrop && (process.env.AGENT2_USER || process.env.AGENT2_PASS)) {
+    throw new Error('the second agency could not post — check its brands');
+  }
 });
 
 await step('search lists havales with contact hidden', async () => {
@@ -150,6 +247,9 @@ await step('new listing form populates models from the catalogue', async () => {
  *
  * Persian numerals on purpose: that is what an Iranian keyboard produces.
  */
+// Kept so the run can take it away again — see the cleanup step below.
+let postedId = null;
+
 await step('a listing can actually be posted from the form', async () => {
   await navigate('new-offer');
   await page.waitForSelector('#brand', { timeout: 8000 });
@@ -171,6 +271,7 @@ await step('a listing can actually be posted from the form', async () => {
   await page.click('form[data-form="havale"] button[type=submit]');
   await page.waitForFunction(() => location.hash.includes('mine'), null, { timeout: 8000 });
   await page.waitForSelector('table tbody tr', { timeout: 8000 });
+  postedId = await page.getAttribute('table tbody tr [data-open-havale]', 'data-open-havale');
 });
 
 // The three money figures are different things — the car, the transfer
@@ -250,6 +351,36 @@ await step('a not-yet-built section explains itself instead of dead-ending', asy
   const t = await page.textContent('.soon-card');
   if (t.trim().length < 80) throw new Error('placeholder has no explanation: ' + t.trim());
   if (!t.includes('به‌زودی')) throw new Error('placeholder does not say it is coming');
+});
+
+/**
+ * The run takes back what it posted.
+ *
+ * Without this, every smoke run left one more listing owned by the test agency
+ * at the top of the market — and after enough runs the first page of the search
+ * was entirely its own, so «nothing was masked» and four steps went red for a
+ * reason that had nothing to do with the code. A test that degrades the thing
+ * it measures stops measuring it.
+ *
+ * A soft delete, which is what the button in the panel does: the row stays for
+ * the audit trail and leaves the market.
+ */
+await step('the run removes the background listing too', async () => {
+  await removeSecondAgencyListing(backdrop);
+});
+
+await step('the run removes the listing it posted', async () => {
+  if (!postedId) throw new Error('nothing was captured to clean up');
+
+  const status = await page.evaluate(async (id) => {
+    const res = await fetch(`/api/v1/havales/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return res.status;
+  }, postedId);
+
+  if (status !== 200) throw new Error(`cleanup answered ${status}`);
 });
 
 await step('logout returns to sign-in', async () => {

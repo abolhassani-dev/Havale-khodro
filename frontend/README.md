@@ -73,8 +73,17 @@ the agent actually revealed.
 
 ```bash
 npm i playwright     # once
-AGENT_USER=… AGENT_PASS=… ADMIN_USER=… ADMIN_PASS=… node tests/smoke.mjs
+AGENT_USER=… AGENT_PASS=… ADMIN_USER=… ADMIN_PASS=… \
+AGENT2_USER=… AGENT2_PASS=… node tests/smoke.mjs
 ```
+
+`AGENT2_*` is a second agency, and the masking checks are the reason for it: they
+can only prove something if the market holds a listing this viewer has *not*
+revealed, and a reveal is permanent — so after a few runs on the same database
+every card is a revealed one and the most important assertion in the suite
+passes on nothing. The run posts one from that second account and removes it
+again at the end, along with the listing it posts through the form. Two runs in
+a row leave the market exactly as they found it.
 
 Fifteen steps through both panels against a live API. It found the bug that mattered: the
 delegated click handler used a hand-written CSS selector that was one entry short, so every
