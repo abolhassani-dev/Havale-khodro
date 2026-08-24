@@ -95,15 +95,45 @@ export async function resolve() {
     setState({ page: target, params, data: {}, loading: false, navigating: null, error: err });
   }
 
-  // The sidebar's numbers — open tickets, pending capacity orders — refresh
-  // with every navigation, off the page's critical path: a failed count must
-  // never take a working page down with it.
-  if (isAdmin()) {
-    admin
-      .badges()
-      .then((badges) => setState({ badges }))
-      .catch(() => {});
-  }
+  refreshBadges();
+}
+
+/**
+ * The sidebar's numbers — open tickets, pending capacity orders.
+ *
+ * Off the page's critical path: a failed count must never take a working page
+ * down with it. Two things keep it from also being a tax on every click.
+ *
+ * It is fetched at most every twenty seconds. It used to be fetched on every
+ * navigation, which on a slow connection meant a second request competing with
+ * the one the reader is actually waiting for, to redraw two small numbers that
+ * change a few times a day.
+ *
+ * And `setState` is only called when a number actually moved. Every state write
+ * rebuilds the whole document — that is how this renderer works — so an
+ * unchanged answer arriving half a second after a page opened was a third full
+ * rebuild of a screen that already looked finished, for nothing. The reader
+ * feels that as the page «settling» after it has already arrived.
+ */
+const BADGE_TTL_MS = 20_000;
+let badgesAt = 0;
+
+function refreshBadges() {
+  if (!isAdmin()) return;
+  if (Date.now() - badgesAt < BADGE_TTL_MS) return;
+  badgesAt = Date.now();
+
+  admin
+    .badges()
+    .then((badges) => {
+      const now = getState().badges;
+      const same = now && Object.keys(badges).every((k) => now[k] === badges[k]);
+      if (!same) setState({ badges });
+    })
+    .catch(() => {
+      // Let the next navigation try again rather than sitting out the window.
+      badgesAt = 0;
+    });
 }
 
 export function startRouter() {

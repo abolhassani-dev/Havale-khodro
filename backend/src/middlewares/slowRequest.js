@@ -25,6 +25,27 @@ const errorLogService = require('../modules/alert/errorLog.service');
 function slowRequest(req, res, next) {
   const started = process.hrtime.bigint();
 
+  /**
+   * How long the server itself took, on the response.
+   *
+   * The question «is it the server or is it my connection?» cannot be answered
+   * from the outside without this: a request that takes 900ms end to end is a
+   * slow server or a slow route between here and Tehran, and the two need
+   * completely different fixes. With this header, deploy/perf-check.sh subtracts
+   * one from the other and says which.
+   *
+   * Set by wrapping writeHead rather than in the `finish` handler, because by
+   * the time a response has finished its headers are long gone.
+   */
+  const writeHead = res.writeHead;
+  res.writeHead = function withTiming(...args) {
+    if (!res.headersSent) {
+      const ms = Number(process.hrtime.bigint() - started) / 1e6;
+      res.setHeader('X-Response-Time', `${ms.toFixed(1)}ms`);
+    }
+    return writeHead.apply(this, args);
+  };
+
   res.on('finish', () => {
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
     if (ms < config.logging.slowRequestMs) return;
