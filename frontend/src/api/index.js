@@ -114,6 +114,7 @@ export const admin = {
   overview: () => api.get('/admin/overview'),
   badges: () => api.get('/admin/badges'),
   activity: (query) => api.get('/admin/activity', query),
+  activityFamilies: () => api.get('/admin/activity/families'),
   activityDetail: (id) => api.get(`/admin/activity/${id}`),
   reveals: (query) => api.get('/admin/reveals', query),
   suspicious: (query) => api.get('/admin/suspicious', query),

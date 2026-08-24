@@ -454,6 +454,45 @@ await step('timeline entry explains itself in a sentence', async () => {
 await page.click('[data-close-modal]');
 
 /**
+ * The log as something you can search.
+ *
+ * The failure this guards against is the quiet one: a filter that stops
+ * filtering. A search bar that returns the same rows whatever is in it looks
+ * like it works, and every answer it gives is wrong.
+ */
+await step('the log can be searched, not only scrolled', async () => {
+  await page.waitForSelector('form[data-form="activity-filters"]', { timeout: 5000 });
+
+  const families = await page.locator('#family option').count();
+  if (families < 5) throw new Error(`only ${families} event groups reached the filter`);
+
+  await page.selectOption('#family', 'AUTH');
+  await page.click('form[data-form="activity-filters"] button[type=submit]');
+  await page.waitForFunction(() => !document.querySelector('.content.is-busy'), null, { timeout: 8000 });
+  await page.waitForTimeout(300);
+
+  const text = await page.textContent('.tl');
+  if (/حواله ثبت کرد|آگهی ثبت‌نامی ثبت کرد/.test(text)) {
+    throw new Error('a listing event survived the «ورود و خروج» filter');
+  }
+  if (!/وارد سامانه|خارج شد/.test(text)) {
+    throw new Error('the sign-ins did not survive their own filter');
+  }
+
+  // A serial nobody has used must return nothing, not everything — the version
+  // of this bug where an unmatched filter is dropped rather than applied.
+  await page.goto(`${BASE}#adm-monitor?serial=99999999`);
+  await page.waitForFunction(() => !document.querySelector('.content.is-busy'), null, { timeout: 8000 });
+  await page.waitForTimeout(300);
+  if (await page.locator('.tl-row').count()) {
+    throw new Error('an unmatched serial returned rows');
+  }
+
+  await page.goto(`${BASE}#adm-monitor`);
+  await page.waitForSelector('.tl-row', { timeout: 8000 });
+});
+
+/**
  * One moderation screen per market.
  *
  * The desk shares its code across markets, so the mistake to catch is the

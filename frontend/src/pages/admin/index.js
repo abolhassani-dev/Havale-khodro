@@ -11,6 +11,7 @@ import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, show
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
+import { jalaliDate } from '../../ui/dateInput.js';
 // The conversation row is one component for both panels — the admin's list
 // only adds whose conversation it is.
 import { ticketItem } from '../agent/account.js';
@@ -91,11 +92,27 @@ export function registerAdminRoutes(route) {
 
   route('adm-monitor', async (params) => {
     const page = Number(params.page) || 1;
-    const [activity, reveals] = await Promise.all([
-      admin.activity({ take: 50, skip: (page - 1) * 50, userId: params.userId }),
+    const [activity, families, reveals] = await Promise.all([
+      admin.activity({
+        take: 50,
+        skip: (page - 1) * 50,
+        userId: params.userId,
+        family: params.family,
+        q: params.q,
+        serial: params.serial,
+        from: params.from || undefined,
+        // Whoever picked «تا ۱۵ شهریور» means the whole of that day. Sent as a
+        // bare date it is midnight, which silently excludes everything that
+        // happened on the day they asked for.
+        to: params.to ? `${params.to}T23:59:59` : undefined,
+      }),
+      // The event groups come from the server rather than being repeated here:
+      // a list the panel keeps its own copy of is a list that drifts, and the
+      // way it fails is a filter that quietly matches nothing.
+      admin.activityFamilies().catch(() => ({ families: [] })),
       can('bulkContacts') ? admin.reveals({ take: 30 }).catch(() => null) : null,
     ]);
-    return { activity, activityPage: page, reveals };
+    return { activity, activityPage: page, families: families.families, reveals };
   });
 
   route('adm-seats', async () => ({ pending: await subscription.pendingOrders() }));
@@ -1173,6 +1190,71 @@ const TL_ICON = {
   CATALOG_CHANGED: ['car', ''],
 };
 
+/**
+ * The four questions somebody searching a log actually has.
+ *
+ * Who, what kind of thing, when, and — the one that turns a feed into a tool —
+ * which listing. «آگهی شماره ۱۱۳ چه سرگذشتی داشت» used to mean paging until
+ * you saw it.
+ *
+ * The event groups come from the server (`data.families`) rather than being
+ * written out here. A second copy of that list in the panel is a list that
+ * drifts, and the way it fails is a filter that silently matches nothing.
+ */
+function activityFilters(families, params, from) {
+  const value = (k) => params[k] || '';
+
+  return html`
+  <form class="filters tl-filters" data-form="activity-filters">
+    <div class="field">
+      <label for="q">نمایندگی</label>
+      <input class="in" id="q" name="q" maxlength="60" value="${value('q')}"
+             placeholder="نام یا کد نمایندگی">
+    </div>
+
+    <div class="field">
+      <label for="family">نوع رویداد</label>
+      <select class="in" id="family" name="family">
+        <option value="">همه</option>
+        ${families.map(
+          (f) => html`<option value="${f.key}" ${raw(value('family') === f.key ? 'selected' : '')}>${f.label}</option>`
+        )}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="serial">شماره‌ی آگهی</label>
+      <input class="in num" id="serial" name="serial" inputmode="numeric" value="${value('serial')}"
+             placeholder="مثلاً ۱۱۳">
+    </div>
+
+    <div class="field jdt-field">
+      <label for="from-day">از تاریخ</label>
+      ${jalaliDate('from', { value: value('from'), labelId: 'from-day', years: 0, back: 3 })}
+    </div>
+
+    <div class="field jdt-field">
+      <label for="to-day">تا تاریخ</label>
+      ${jalaliDate('to', { value: value('to'), labelId: 'to-day', years: 0, back: 3 })}
+    </div>
+
+    <div class="field" style="align-self:end;display:flex;gap:8px">
+      <button class="btn primary" type="submit">جستجو</button>
+      <button class="btn" type="button" data-go="adm-monitor">پاک کردن</button>
+    </div>
+  </form>
+
+  ${
+    // Said out loud, because a page that quietly hides everything older than a
+    // month reads as a page with nothing in it.
+    from && !value('from')
+      ? html`<div class="hint tl-window">
+          به‌طور پیش‌فرض از ${date(from)} تا امروز نمایش داده می‌شود — برای قدیمی‌تر، تاریخ را انتخاب کنید.
+        </div>`
+      : ''
+  }`;
+}
+
 function tlRow(row) {
   const [ic, tone] = TL_ICON[row.action] || ['clock', ''];
   return html`<div class="tl-row" data-activity="${row.id}">
@@ -1182,6 +1264,12 @@ function tlRow(row) {
       <div class="tl-m">
         <span class="num">${timeOnly(row.createdAt)}</span>${
           row.ip ? html` · <span class="num">${row.ip}</span>` : ''
+        }${row.device ? html` · ${row.device}` : ''}${
+          // The count only. The diff itself is on the detail call — fifty rows
+          // must not carry fifty diffs.
+          row.changeCount
+            ? html` · <span class="tl-chg">${faDigits(row.changeCount)} تغییر</span>`
+            : ''
         }
       </div>
     </div>
@@ -1231,9 +1319,12 @@ function monitorPage() {
   return html`
   <div class="card">
     <div class="card-h">
-      <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر رویداد کلیک کنید تا کامل بگوید چه اتفاقی افتاده.')}</h2>
+      <h2>تایم‌لاین فعالیت ${qtip('هر ورود، خروج، ثبت آگهی و نمایش مشخصات این‌جا ثبت می‌شود. روی هر رویداد کلیک کنید تا کامل بگوید چه اتفاقی افتاده و در ویرایش‌ها، چه چیزی از چه به چه تغییر کرده.')}</h2>
       <span class="tag">صفحه‌ی ${faDigits(data.activityPage || 1)} — ${faDigits(data.activity?.total ?? 0)} رویداد</span>
     </div>
+
+    ${activityFilters(data.families || [], params || {}, data.activity?.from)}
+
     ${
       params?.userId
         ? html`<div class="hint tl-filter">
@@ -1271,6 +1362,39 @@ function monitorPage() {
   }`;
 }
 
+/**
+ * What an edit changed, as two columns.
+ *
+ * The label is the one recorded with the entry, not one looked up now — so a
+ * row written before a field was renamed still reads the way it did then. The
+ * page prints what it is handed and knows nothing about which market the field
+ * belonged to, the same contract the listing file already works under.
+ */
+function changeTable(changes) {
+  if (!changes?.length) return '';
+
+  const show = (value, kind) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (kind === 'money') return money(value);
+    if (kind === 'date') return date(value);
+    if (kind === 'number' || typeof value === 'number') return faDigits(value);
+    return value;
+  };
+
+  return html`
+  <div class="chg">
+    <div class="chg-h">چه چیزی تغییر کرد</div>
+    ${changes.map(
+      (c) => html`<div class="chg-row">
+        <span class="chg-f">${c.label || c.field}</span>
+        <span class="chg-o">${show(c.from, c.kind)}</span>
+        <span class="chg-a" aria-hidden="true">←</span>
+        <span class="chg-n">${show(c.to, c.kind)}</span>
+      </div>`
+    )}
+  </div>`;
+}
+
 export async function showActivityDetail(id) {
   try {
     const detail = await admin.activityDetail(id);
@@ -1284,6 +1408,7 @@ export async function showActivityDetail(id) {
         <div class="drow"><span>انجام‌دهنده</span><b>${detail.actor?.name || 'سیستم'}</b></div>
         ${detail.actor?.role ? html`<div class="drow"><span>نقش</span><b>${ROLE_LABEL[detail.actor.role]}</b></div>` : ''}
         <div class="drow"><span>IP</span><b class="num">${detail.ip || '—'}</b></div>
+        ${detail.device ? html`<div class="drow"><span>دستگاه</span><b>${detail.device}</b></div>` : ''}
         ${detail.target ? html`<div class="drow"><span>هدف</span><b>${detail.target.label}</b></div>` : ''}
         ${
           detail.target?.owner
@@ -1291,7 +1416,8 @@ export async function showActivityDetail(id) {
                    <div class="drow"><span>شهر</span><b>${detail.target.owner.city || '—'}</b></div>`
             : ''
         }
-        ${detail.target?.amountToman ? html`<div class="drow"><span>مبلغ</span><b>${money(detail.target.amountToman)}</b></div>` : ''}`,
+        ${detail.target?.amountToman ? html`<div class="drow"><span>مبلغ</span><b>${money(detail.target.amountToman)}</b></div>` : ''}
+        ${changeTable(detail.changes)}`,
     });
   } catch (err) {
     toast(err.message, 'danger');
@@ -1540,6 +1666,7 @@ export function handleAdminSubmit(form) {
     case 'new-agent': return submitNewAgent(form);
     case 'agent-search': return submitAgentSearch(form);
     case 'listing-search': return submitListingSearch(form);
+    case 'activity-filters': return submitActivitySearch(form);
     default: return handleCatalogSubmit(form);
   }
 }
@@ -1552,6 +1679,22 @@ function submitListingSearch(form) {
   // Which market's screen this form belongs to travels on the form itself:
   // the search must come back to the list the person was already looking at.
   go(form.dataset.page || MARKETS.HAVALE.page, params);
+}
+
+/**
+ * Searching the log.
+ *
+ * A half-entered date is dropped rather than sent: the picker leaves its hidden
+ * field empty until all three parts are chosen and says so on screen, and a
+ * filter that silently narrowed to nothing would be worse than one that ignores
+ * an unfinished answer.
+ */
+function submitActivitySearch(form) {
+  const params = {};
+  new FormData(form).forEach((value, key) => {
+    if (value !== '') params[key] = value;
+  });
+  go('adm-monitor', params);
 }
 
 function submitAgentSearch(form) {

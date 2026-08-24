@@ -44,18 +44,32 @@ const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDa
  * @param {object} [opts]
  * @param {string} [opts.value] current value as `YYYY-MM-DD`, or empty
  * @param {number} [opts.years] how many years forward to offer
+ * @param {number} [opts.back]  how many years back to offer — a deadline looks
+ *                              forward, a log filter looks back, and offering
+ *                              both directions everywhere would put six dead
+ *                              years in the one dropdown people use most
  * @param {string} [opts.labelId] id to put on the first control, for a <label for>
  */
-export function jalaliDate(name, { value = '', years = 2, labelId = `${name}-day` } = {}) {
+export function jalaliDate(
+  name,
+  { value = '', years = 2, back = 0, labelId = `${name}-day` } = {}
+) {
   const now = todayJalali();
   const set = value ? toJalali(value) : null;
 
-  // The offered years are this one and the next couple — a registration
-  // deadline is never five years out. An existing value outside that window is
-  // still offered, so editing an old advertisement cannot silently move it.
+  // A registration deadline is never five years out, and a log search is never
+  // in the future — so each caller says which way it looks. An existing value
+  // outside the window is still offered, so editing an old record cannot
+  // silently move its date.
+  // Built outward from this year so the likely answer is always near the top:
+  // ۱۴۰۵ ۱۴۰۶ ۱۴۰۷ for a deadline, ۱۴۰۵ ۱۴۰۴ ۱۴۰۳ for a search.
   const list = [];
-  for (let jy = now.jy; jy <= now.jy + years; jy += 1) list.push(jy);
-  if (set && !list.includes(set.jy)) list.unshift(set.jy);
+  for (let jy = now.jy + years; jy >= now.jy - back; jy -= 1) list.push(jy);
+  if (!back) list.reverse();
+  if (set && !list.includes(set.jy)) {
+    list.push(set.jy);
+    list.sort((a, b) => (back ? b - a : a - b));
+  }
 
   const days = set ? daysInJalaliMonth(set.jy, set.jm) : 31;
   const chosen = (a, b) => raw(a === b ? 'selected' : '');
