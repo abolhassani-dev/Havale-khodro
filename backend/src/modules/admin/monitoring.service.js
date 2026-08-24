@@ -69,6 +69,64 @@ const ACTION_PHRASES = {
   CATALOG_CHANGED: 'کاتالوگ خودرو را تغییر داد',
 };
 
+/**
+ * Events, grouped the way somebody searching actually thinks.
+ *
+ * Forty action names in a dropdown is a list nobody reads. Six families is a
+ * choice: "I am looking for a login", "I am looking for something an
+ * administrator did". The families are arrays and the reverse lookup is derived
+ * from them, so an action can never end up in two of them — and a test asserts
+ * that every phrase above belongs to exactly one, because the failure mode
+ * otherwise is an event that is invisible to every filter.
+ */
+const ACTION_FAMILIES = [
+  {
+    key: 'AUTH',
+    label: 'ورود و خروج',
+    actions: ['LOGIN', 'LOGOUT', 'PASSWORD_CHANGED'],
+  },
+  {
+    key: 'SECURITY',
+    label: 'امنیت',
+    actions: ['LOGIN_FAILED', 'ACCOUNT_SUSPENDED_BY_STRIKES', 'AGENT_FORCE_LOGGED_OUT',
+      'AGENT_PASSWORD_RESET', 'SUBAGENT_PASSWORD_RESET'],
+  },
+  {
+    key: 'LISTING',
+    label: 'آگهی‌ها',
+    actions: ['HAVALE_CREATED', 'HAVALE_UPDATED', 'HAVALE_RENEWED', 'HAVALE_FULFILLED',
+      'HAVALE_DELETED', 'REGISTRATION_CREATED', 'REGISTRATION_UPDATED', 'REGISTRATION_RENEWED',
+      'REGISTRATION_FULFILLED', 'REGISTRATION_DELETED'],
+  },
+  {
+    key: 'REVEAL',
+    label: 'نمایش مشخصات',
+    actions: ['CONTACT_REVEALED'],
+  },
+  {
+    key: 'MODERATION',
+    label: 'اقدام مدیریتی',
+    actions: ['HAVALE_SUSPENDED_BY_ADMIN', 'HAVALE_REMOVED_BY_ADMIN', 'HAVALE_RESTORED_BY_ADMIN',
+      'REPORT_FILED', 'REPORT_CONFIRMED', 'REPORT_REJECTED', 'REPORT_MARKED_ABUSIVE',
+      'REPORT_HELD', 'CATALOG_CHANGED'],
+  },
+  {
+    key: 'ACCOUNT',
+    label: 'حساب‌ها و اشتراک',
+    actions: ['AGENT_CREATED', 'AGENT_UPDATED', 'AGENT_SUSPENDED', 'AGENT_ACTIVATED',
+      'AGENT_LIMITS_CHANGED', 'SUBAGENT_CREATED', 'SUBAGENT_SUSPENDED', 'SUBAGENT_ACTIVATED',
+      'SUBAGENT_BRANDS_SET', 'SUBSCRIPTION_GRANTED', 'SEAT_ORDER_APPROVED',
+      'SEAT_ORDER_REJECTED', 'TICKET_OPENED'],
+  },
+];
+
+const FAMILY_OF = new Map(
+  ACTION_FAMILIES.flatMap((f) => f.actions.map((action) => [action, f.key]))
+);
+
+/** How far back the timeline looks when nobody said. */
+const DEFAULT_WINDOW_DAYS = 30;
+
 function actorName(user) {
   if (!user) return 'سیستم';
   if (user.agencyName) return `${user.agencyName}${user.agencyCode ? ` (${user.agencyCode})` : ''}`;
@@ -80,13 +138,47 @@ const monitoringService = {
     return monitoringRepository.overview();
   },
 
-  async activity(filters) {
-    const [rows, total] = await monitoringRepository.listActivity(filters);
+  /** The families, for the filter bar. Named here so the panel invents none. */
+  families() {
+    return ACTION_FAMILIES.map(({ key, label }) => ({ key, label }));
+  },
+
+  /** Which actions a family covers. Exposed so the mapping can be tested. */
+  actionsOf(key) {
+    return ACTION_FAMILIES.find((f) => f.key === key)?.actions || [];
+  },
+
+  async activity({ family, action, serial, from, to, ...rest }) {
+    // Always a window. Without one the `count` behind the pager is a full scan,
+    // which is invisible while the table is small and is the reason this page
+    // would have got slower every month.
+    const since = from || new Date(Date.now() - DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+    // A serial nobody has used resolves to nothing — and must return nothing,
+    // not everything. `null` would be dropped by the repository's `if`, so it
+    // is turned into an id that cannot match.
+    const targetId = serial
+      ? (await monitoringRepository.listingIdBySerial(serial)) || '—none—'
+      : undefined;
+
+    const [rows, total] = await monitoringRepository.listActivity({
+      ...rest,
+      from: since,
+      to,
+      targetId,
+      // One exact action beats a family — a link that says «only reveals»
+      // means only reveals, even if the family it belongs to is also named.
+      actions: action ? [action] : ACTION_FAMILIES.find((f) => f.key === family)?.actions,
+    });
+
     return {
       total,
+      from: since,
+      to: to || null,
       items: rows.map((row) => ({
         id: row.id,
         action: row.action,
+        family: FAMILY_OF.get(row.action) || null,
         // A one-line summary for the list. The full story is on the detail call,
         // which is the only one that costs extra queries.
         headline: `${actorName(row.user)} ${ACTION_PHRASES[row.action] || row.action}`,
@@ -94,6 +186,10 @@ const monitoringService = {
         targetType: row.targetType,
         targetId: row.targetId,
         ip: row.ip,
+        device: row.device,
+        // The count, not the diff: the list shows «۲ تغییر» and the detail call
+        // spells them out. A page of fifty rows should not carry fifty diffs.
+        changeCount: Array.isArray(row.changes) ? row.changes.length : 0,
         createdAt: row.createdAt,
       })),
     };
@@ -123,6 +219,9 @@ const monitoringService = {
           }
         : null,
       ip: row.ip,
+      device: row.device,
+      // What the edit actually changed, with the labels recorded at the time.
+      changes: Array.isArray(row.changes) ? row.changes : [],
       createdAt: row.createdAt,
       target: null,
     };

@@ -98,7 +98,15 @@ router.get(
   validate({
     query: Joi.object({
       userId: Joi.string().trim().max(40),
+      // One exact action, still supported — it is how a link from elsewhere in
+      // the panel says «only this». The filter bar offers families instead:
+      // forty action names in a dropdown is a list nobody reads. The service
+      // owns the grouping and publishes it at /admin/activity/families, so the
+      // panel invents none of it.
       action: Joi.string().trim().max(60),
+      family: Joi.string().trim().valid(...monitoringService.families().map((f) => f.key)),
+      q: Joi.string().trim().max(60),
+      serial: Joi.number().integer().min(1),
       from: Joi.date(),
       to: Joi.date(),
       skip: Joi.number().integer().min(0).default(0),
@@ -106,6 +114,19 @@ router.get(
     }),
   }),
   asyncHandler(async (req, res) => success(res, await monitoringService.activity(req.query)))
+);
+
+/**
+ * @openapi
+ * /admin/activity/families:
+ *   get:
+ *     tags: [Admin]
+ *     summary: The event groups the timeline can be filtered by
+ */
+router.get(
+  '/activity/families',
+  requirePermission('monitoring'),
+  asyncHandler(async (req, res) => success(res, { families: monitoringService.families() }))
 );
 
 /**

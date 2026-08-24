@@ -7,6 +7,7 @@ const brandAccess = require('../catalog/brandAccess.service');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
 const { MESSAGES } = require('../../constants/messages');
 const { addDays } = require('../../utils/time');
+const { diffOf } = require('../../utils/diff');
 const {
   HAVALE_KIND,
   HAVALE_STATUS,
@@ -95,6 +96,32 @@ function decodeCursor(cursor) {
 function encodeCursor(row) {
   return Buffer.from(`${row.createdAt.toISOString()}|${row.id}`).toString('base64url');
 }
+
+/**
+ * The fields an edit is worth recording, and what to call them in the log.
+ *
+ * This market's own vocabulary — ثبت‌نامی keeps its own list, and خودرو will
+ * keep a third. The label is stored with each recorded change, so an entry
+ * written today still reads correctly if a field is renamed later.
+ *
+ * `carModelId` is deliberately absent and `carType` is here instead: the id
+ * changing tells a reader nothing, and «از پژو ۲۰۷ به سمند» tells them
+ * everything.
+ */
+const EDIT_FIELDS = {
+  carType: ['مدل خودرو'],
+  carColor: ['رنگ'],
+  model: ['سال'],
+  solh: ['نوع واگذاری'],
+  amountToman: ['مبلغ حواله', 'money'],
+  carPriceToman: ['قیمت خودرو', 'money'],
+  paidAmountToman: ['مبلغ واریزشده', 'money'],
+  paymentType: ['نحوه پرداخت'],
+  deliveryDays: ['زمان تحویل (روز)', 'number'],
+  depositDays: ['مهلت واریز (روز)', 'number'],
+  supplierCompany: ['تأمین‌کننده'],
+  description: ['توضیحات'],
+};
 
 const havaleService = {
   async create({ user, payload }) {
@@ -283,6 +310,10 @@ const havaleService = {
       action: 'HAVALE_UPDATED',
       targetType: 'HAVALE',
       targetId: id,
+      // `catalog` rather than the raw payload for the car, because the payload
+      // carries ids and the log has to be readable without them: what changed
+      // is «پژو ۲۰۷» to «سمند», not one cuid to another.
+      changes: diffOf(havale, { ...rest, ...catalog }, EDIT_FIELDS),
     });
     return toOwnHavale(updated);
   },

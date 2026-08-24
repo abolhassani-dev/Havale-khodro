@@ -6,6 +6,7 @@ const catalogRepository = require('../catalog/catalog.repository');
 const brandAccess = require('../catalog/brandAccess.service');
 const authRepository = require('../auth/auth.repository');
 const { addDays } = require('../../utils/time');
+const { diffOf } = require('../../utils/diff');
 const { LIST_PAGE_SIZE } = require('../../constants/havale');
 const { MESSAGES } = require('../../constants/messages');
 const { NotFoundError, BadRequestError } = require('../../errors/AppError');
@@ -78,6 +79,28 @@ function split(payload) {
 }
 
 /** Only the keys the caller actually sent, so an edit cannot blank a field. */
+/**
+ * The fields an edit is worth recording, and what to call them in the log.
+ *
+ * Here rather than in a shared table because they are this market's own
+ * vocabulary — خودرو and قطعات will have different ones, and neither should
+ * have to know about this list. The label travels with the recorded change, so
+ * an entry written today still reads correctly if a field is renamed later.
+ */
+const LISTING_FIELDS = { description: ['توضیحات'] };
+
+const DETAIL_FIELDS = {
+  planName: ['نام طرح'],
+  method: ['روش ثبت‌نام'],
+  saleType: ['نوع فروش'],
+  capacity: ['تعداد ظرفیت', 'number'],
+  depositToman: ['مبلغ واریزی ثبت‌نام', 'money'],
+  premiumToman: ['مبلغ امتیاز', 'money'],
+  registerDeadline: ['مهلت ثبت‌نام', 'date'],
+  deliveryEstimate: ['موعد تحویل'],
+  conditions: ['شرایط ثبت‌نام‌کننده'],
+};
+
 function detailPatch(payload) {
   const { detail } = split({ ...payload });
   const out = {};
@@ -237,6 +260,13 @@ const registrationService = {
       action: 'REGISTRATION_UPDATED',
       targetType: 'REGISTRATION',
       targetId: id,
+      // What actually moved. The listing's own column and the market's detail
+      // columns live in two records, so they are diffed against two befores and
+      // joined — the log does not care which table a field came from.
+      changes: [
+        ...diffOf(row, payload, LISTING_FIELDS),
+        ...diffOf(row.registration || {}, payload, DETAIL_FIELDS),
+      ],
     });
 
     return toOwn(updated, { viewerId: user.id });

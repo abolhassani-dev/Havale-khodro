@@ -1,5 +1,6 @@
 const { prisma } = require('../../config/database');
 const { isHidden } = require('../../constants/roles');
+const requestContext = require('../../utils/requestContext');
 
 /**
  * Database access for authentication: users by username, sessions, and the
@@ -121,7 +122,20 @@ const authRepository = {
    * process is the right price for not threading the role through twenty-seven
    * call sites.
    */
-  async recordActivity({ userId, action, targetType, targetId, summary, ip }) {
+  async recordActivity({ userId, action, targetType, targetId, summary, changes, ip, device }) {
+    // Where it came from, taken from the request rather than passed in.
+    //
+    // Every caller but the login controller used to leave `ip` undefined,
+    // because they are services and have no `req` — so the panel showed «IP: —»
+    // on almost every row. The context is async-local (see utils/requestContext)
+    // and is null outside a request, which is the right answer for a nightly
+    // job: no address, rather than a wrong one.
+    const at = requestContext.current();
+    const from = { ip: ip ?? at?.ip ?? null, device: device ?? at?.device ?? null };
+    // Only fields that actually moved, and only when there are any. An edit
+    // that changed nothing writes no diff at all.
+    const diff = changes && changes.length ? changes : undefined;
+
     if (userId && (await isHiddenActor(userId))) {
       // Except for the entries the lockout counts.
       //
@@ -136,12 +150,12 @@ const authRepository = {
       // because one is written for every username anybody tries.
       if (!SECURITY_ACTIONS.has(action)) return null;
       return prisma.activityLog.create({
-        data: { userId: null, action, targetType, targetId, summary, ip },
+        data: { userId: null, action, targetType, targetId, summary, ...from, changes: diff },
       });
     }
 
     return prisma.activityLog.create({
-      data: { userId, action, targetType, targetId, summary, ip },
+      data: { userId, action, targetType, targetId, summary, ...from, changes: diff },
     });
   },
 

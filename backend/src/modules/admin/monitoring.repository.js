@@ -34,12 +34,33 @@ const monitoringRepository = {
     };
   },
 
-  listActivity({ userId, action, from, to, skip = 0, take = 50 }) {
+  /**
+   * The searchable timeline.
+   *
+   * `from` is always set by the service, never optional — a `count` with no
+   * date bound is a sequential scan of the whole table, and it is the reason
+   * this page would have got slower every month whether anybody used it or not.
+   *
+   * `q` matches the agency by name or code. It costs a join, which is the right
+   * price: the alternative is denormalising the agency name onto every log row
+   * and then having it go stale when an agency is renamed.
+   */
+  listActivity({ userId, actions, q, targetId, from, to, skip = 0, take = 50 }) {
     const where = {
+      createdAt: { gte: from, ...(to ? { lte: to } : {}) },
       ...(userId ? { userId } : {}),
-      ...(action ? { action } : {}),
-      ...(from || to
-        ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
+      ...(actions?.length ? { action: { in: actions } } : {}),
+      ...(targetId ? { targetId } : {}),
+      ...(q
+        ? {
+            user: {
+              OR: [
+                { agencyName: { contains: q, mode: 'insensitive' } },
+                { agencyCode: { contains: q, mode: 'insensitive' } },
+                { fullName: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          }
         : {}),
     };
 
@@ -53,6 +74,12 @@ const monitoringRepository = {
       }),
       prisma.activityLog.count({ where }),
     ]);
+  },
+
+  /** «آگهی شماره ۱۱۳ چه سرگذشتی داشت» — the serial is what the panel shows. */
+  async listingIdBySerial(serial) {
+    const row = await prisma.listing.findUnique({ where: { serial }, select: { id: true } });
+    return row?.id || null;
   },
 
   findActivity(id) {

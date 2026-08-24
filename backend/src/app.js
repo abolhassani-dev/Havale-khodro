@@ -9,6 +9,7 @@ const logger = require('./utils/logger');
 const routes = require('./routes');
 const swagger = require('./docs/swagger');
 const requestId = require('./middlewares/requestId');
+const { requestContext } = require('./utils/requestContext');
 const rateLimiter = require('./middlewares/rateLimiter');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
@@ -36,6 +37,11 @@ app.use(express.urlencoded({ extended: true, limit: config.security.bodyLimit })
 app.use(cookieParser(config.session.secret));
 
 app.use(requestId);
+// Directly after requestId and before anything that could write a log line:
+// from here down, any code — however deep — can ask where the request came
+// from, which is what puts an address on all thirty-six kinds of activity log
+// instead of only on the one written by the login controller.
+app.use(requestContext);
 app.use(morgan(config.isProduction ? 'combined' : 'dev', { stream: logger.stream }));
 app.use(rateLimiter);
 
