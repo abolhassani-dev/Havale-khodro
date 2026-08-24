@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { threats } = require('../../middlewares/threatDetect');
 
 const config = require('../../config');
 const authRepository = require('./auth.repository');
@@ -46,6 +47,11 @@ const authService = {
         summary: username,
         ip,
       });
+      // Reported from here rather than sniffed from the response, because the
+      // distinction that matters — a wrong password, as against a refused
+      // permission — is one only this branch knows. The address comes from the
+      // request context, so no `req` has to be threaded down into a service.
+      threats.loginFailed(username);
       // One message for both cases — distinguishing them reveals which usernames
       // are registered.
       throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);

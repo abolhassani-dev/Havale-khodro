@@ -145,6 +145,7 @@ const ADMIN_NAV = [
   // drawn when something follows it, «سامانه» does not announce a section
   // nobody else can reach either.
   { page: 'adm-errors', icon: 'wrench', label: 'لاگ فنی', permission: 'errorLog' },
+  { page: 'adm-security', icon: 'shield', label: 'لاگ امنیتی', permission: 'errorLog' },
   { page: 'adm-staff', icon: 'users', label: 'کاربران سیستم', permission: 'staff' },
 ];
 

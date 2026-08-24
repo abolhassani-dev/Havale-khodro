@@ -214,6 +214,7 @@ function adminTitle(page) {
     'adm-settings': 'تنظیمات',
     'adm-staff': 'کاربران سیستم',
     'adm-errors': 'لاگ فنی',
+    'adm-security': 'لاگ امنیتی',
   }[page] || '';
 }
 
@@ -248,6 +249,7 @@ const CLICK_KEYS = new Set([
   'grant', 'editSetting',
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'error', 'resolveError', 'testAlert',
+  'secEvent', 'secResolve', 'block', 'unblock',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',

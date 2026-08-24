@@ -7,6 +7,7 @@ const config = require('./src/config');
 const logger = require('./src/utils/logger');
 const { connectDatabase, disconnectDatabase } = require('./src/config/database');
 const registerShutdown = require('./src/hooks/shutdown');
+const { startBlockList } = require('./src/middlewares/blockedIp');
 
 /**
  * How many processes serve the API. One, on the machine this runs on today.
@@ -24,8 +25,10 @@ const registerShutdown = require('./src/hooks/shutdown');
  * spare it is the right lever, and everything that has to be per-process is.
  * The rate limiter divides its budget by this number (see
  * middlewares/rateLimiter), the heap ceiling is divided below, sessions live
- * in the database rather than in memory, and nothing in the application runs
- * on a timer — so there is no work here that must happen exactly once.
+ * in the database rather than in memory, and the one timer there is — the
+ * blocked-address refresh — is per-process by design, because every worker
+ * turns requests away on its own. So there is no work here that must happen
+ * exactly once.
  */
 const WORKERS = Math.min(Math.max(Number(process.env.WEB_CONCURRENCY) || 1, 1), 8);
 
@@ -46,6 +49,11 @@ function workerHeapArgs() {
 
 async function start() {
   await connectDatabase();
+
+  // The blocked-address list, held in memory and refreshed on a timer. Per
+  // process on purpose: every worker turns requests away on its own, so each
+  // one needs its own copy. Nothing here must happen exactly once.
+  startBlockList();
 
   const server = app.listen(config.port, () => {
     const who = cluster.isWorker ? ` worker ${cluster.worker.id}` : '';

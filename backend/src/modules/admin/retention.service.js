@@ -170,6 +170,7 @@ const retentionService = {
     if (!dryRun) {
       report.archivesRemoved = await this.forgetOldArchives();
       report.errorsRemoved = await this.pruneResolvedErrors();
+      report.securityRemoved = await this.pruneResolvedSecurityEvents();
     }
 
     return report;
@@ -266,6 +267,23 @@ const retentionService = {
       removed += 1;
     }
     return removed;
+  },
+
+  /**
+   * Intrusion attempts somebody has already looked at.
+   *
+   * The open ones are never touched, however old: they are already collapsed to
+   * one row per rule per address, so the table cannot grow the way a raw log
+   * does, and an address that attacked once is worth recognising if it comes
+   * back next year. Only what has been reviewed and closed ages out.
+   */
+  async pruneResolvedSecurityEvents() {
+    const { count } = await prisma.securityEvent.deleteMany({
+      where: {
+        resolvedAt: { not: null, lt: cutoff(config.retention.days.resolvedSecurity) },
+      },
+    });
+    return count;
   },
 
   /**

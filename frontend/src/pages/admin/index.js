@@ -13,6 +13,7 @@ import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit 
 // The owner's own screen. Its own module because it is behind its own
 // permission and answers a different question from everything else here.
 import { systemLogPage, loadSystemLog, handleSystemLogClick } from './systemLog.js';
+import { securityLogPage, loadSecurityLog, handleSecurityClick } from './securityLog.js';
 import { brandPicker, brandPickValue } from '../../ui/brandPicker.js';
 import { jalaliDate } from '../../ui/dateInput.js';
 // The conversation row is one component for both panels — the admin's list
@@ -121,6 +122,7 @@ export function registerAdminRoutes(route) {
   route('adm-seats', async () => ({ pending: await subscription.pendingOrders() }));
 
   route('adm-errors', loadSystemLog);
+  route('adm-security', loadSecurityLog);
 
   route('adm-settings', async () => {
     const [settings, sms, outbox] = await Promise.all([
@@ -151,6 +153,7 @@ export function renderAdminPage(page) {
     case 'adm-settings': return settingsPage();
     case 'adm-catalog': return catalogPage();
     case 'adm-errors': return systemLogPage();
+    case 'adm-security': return securityLogPage();
     case 'adm-staff': return staffPage();
     default: return emptyBox('صفحه پیدا نشد.');
   }
@@ -1641,6 +1644,7 @@ export function handleAdminClick(d, el) {
   // The owner's technical log handles its own buttons — this file should not
   // grow a branch for every screen that exists.
   if (handleSystemLogClick(d, el)) return undefined;
+  if (handleSecurityClick(d)) return undefined;
 
   if (d.newStaff !== undefined) return newStaffModal();
   if (d.editStaff) return editStaffModal(d.editStaff);

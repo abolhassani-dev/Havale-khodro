@@ -33,4 +33,11 @@ chown -R 1001:1001 "$ARCHIVE" 2>/dev/null || true
 # `run --rm`, not `exec`: this must work whether or not the API is up. A night
 # when the container is restarting is exactly the night you do not want the
 # housekeeping skipped, and skipping it silently is how a disk fills.
-docker compose run --rm --no-deps api node src/jobs/nightly.js "$@"
+#
+# `--entrypoint node` matters more than it looks. The image's entrypoint applies
+# migrations, seeds, and — where SEED_DEMO is on — recreates the demo agencies
+# before it runs anything. That is right on startup and wrong at 3:30 every
+# morning: it would re-run a migration check and a seed nightly, forever, to do
+# a job that only reads and deletes. Going straight to `node` runs the script
+# and nothing else.
+docker compose run --rm --no-deps --entrypoint node api src/jobs/nightly.js "$@"

@@ -13,6 +13,7 @@ const reportRoutes = require('../modules/report/report.routes');
 const ticketRoutes = require('../modules/ticket/ticket.routes');
 const adminRoutes = require('../modules/admin/admin.routes');
 const alertRoutes = require('../modules/alert/alert.routes');
+const securityRoutes = require('../modules/security/security.routes');
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use('/subscriptions', subscriptionRoutes);
 router.use('/sub-agents', subagentRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/errors', alertRoutes);
+router.use('/security', securityRoutes);
 router.use('/reports', reportRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/admin', adminRoutes);

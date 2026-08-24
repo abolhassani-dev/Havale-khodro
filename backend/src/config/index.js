@@ -101,6 +101,11 @@ module.exports = {
       listing: Number(process.env.RETAIN_LISTING_DAYS || 365),
       admin: Number(process.env.RETAIN_ADMIN_DAYS || 730),
       resolvedErrors: Number(process.env.RETAIN_RESOLVED_ERROR_DAYS || 90),
+      // Longer than an error, because the question «has this address bothered
+      // us before?» is asked over a much longer span. Open events are never
+      // deleted at all — they are one row per rule per address, so they cannot
+      // grow the way a raw log does.
+      resolvedSecurity: Number(process.env.RETAIN_RESOLVED_SECURITY_DAYS || 180),
     },
   },
 };

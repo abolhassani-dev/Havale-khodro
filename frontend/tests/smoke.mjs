@@ -36,6 +36,11 @@ page.on('console', (m) => {
   // still fails, because the step that caused it would not get what it waits
   // for.
   if (/status of 422/.test(m.text())) return;
+  // And 403/404: the intrusion step below really attacks this server — a SQL
+  // payload, a request for /wp-login.php — and being refused is the behaviour
+  // under test. An unexpected one anywhere else still fails, because the step
+  // that caused it would not get what it waits for.
+  if (/status of (403|404)/.test(m.text())) return;
   errors.push(m.text());
 });
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -673,6 +678,49 @@ if (process.env.OWNER_USER) {
     if (!(await page.locator('.elog-row').count()) && !body.includes('کندتر نبوده')) {
       throw new Error('the slow tab rendered nothing and said nothing');
     }
+  });
+
+  /**
+   * The intrusion log.
+   *
+   * Driven by really attacking the server from inside the browser, because a
+   * detector asserted against a fixture proves the fixture. The payloads below
+   * cannot succeed — parameterised queries, escaped output — and that is the
+   * point: what is being checked is that trying leaves a record somebody can
+   * read.
+   */
+  await step('an attempted intrusion reaches the owner’s screen', async () => {
+    await page.evaluate(async () => {
+      await fetch("/api/v1/havales?carType=' OR 1=1 --", { credentials: 'include' });
+      await fetch('/api/v1/havales', {
+        credentials: 'include',
+        headers: { 'User-Agent': 'x' },
+      });
+    });
+    // A scanner announcing itself — the clearest signal there is.
+    await page.evaluate(() => fetch('/api/v1/../wp-login.php', { credentials: 'include' }));
+
+    await navigate('adm-security');
+    await page.waitForSelector('.card-h h2:has-text("لاگ امنیتی")', { timeout: 8000 });
+    // The record is written after the response is on the wire, so a moment
+    // passes between the attack and the row.
+    await page.waitForSelector('[data-sec-event]', { timeout: 8000 });
+
+    const text = await page.textContent('.content');
+    if (!/تزریق SQL|اسکن مسیرهای شناخته‌شده/.test(text)) {
+      throw new Error('the attempt was not named: ' + text.slice(0, 120));
+    }
+    if (!text.includes('آی‌پی خود شما')) {
+      throw new Error('the reader is not shown their own address beside the block button');
+    }
+
+    await page.locator('[data-sec-event]').first().click();
+    await page.waitForSelector('.modal', { timeout: 5000 });
+    const modal = await page.textContent('.modal');
+    if (!modal.includes('چه چیزی فرستاده شده')) {
+      throw new Error('the entry does not show what was sent');
+    }
+    await page.click('[data-close-modal]');
   });
 }
 

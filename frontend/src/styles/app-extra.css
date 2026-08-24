@@ -1860,3 +1860,43 @@ button.af-parent:hover { text-decoration: underline; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ================================================================
+   لاگ امنیتی
+   ================================================================ */
+
+/* شمارنده و فیلتر یکی‌اند: عددی که می‌بینید همان دکمه‌ای است که رویش
+   کلیک می‌کنید. */
+.sev-chips { display: flex; gap: 7px; }
+.sev-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12.5px; color: var(--ink-2);
+  cursor: pointer;
+}
+.sev-chip b { font-size: 13.5px; }
+.sev-chip.is-w { border-color: #a85a2440; color: var(--copper); }
+.sev-chip.is-r { border-color: #9d2b2140; color: var(--danger); }
+.sev-chip.on { background: var(--primary-08); border-color: var(--primary-3); color: var(--primary); }
+
+.sec-ip {
+  margin-inline-start: 8px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--paper-2);
+  font-size: 11.5px; font-weight: 600;
+}
+
+.sec-sample { margin-top: 12px; }
+.sec-also { margin-top: 14px; }
+.sec-also-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 2px;
+  font-size: 12.5px;
+}
+.sec-also-row + .sec-also-row { border-top: 1px solid var(--line-2); }
+
+.sec-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }

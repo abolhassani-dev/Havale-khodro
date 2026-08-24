@@ -1,6 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const config = require('../config');
 const { ERROR_CODES } = require('../constants/errorCodes');
+const { threats } = require('./threatDetect');
 
 // Users see this text in the interface, so it is in their language.
 const message = {
@@ -61,7 +62,22 @@ function keyFor(req) {
   return sid ? `s:${sid.slice(0, 24)}` : `ip:${req.ip}`;
 }
 
+/**
+ * What to do when somebody is turned away.
+ *
+ * A single rejection is ordinary — a stuck page retrying, a phone on a bad
+ * connection. Twenty in ten minutes from one address is a script, so the
+ * counter in threatDetect decides which of the two this is and only records the
+ * second. The response itself is unchanged: this is a note in a log, not a
+ * different answer.
+ */
+function onLimited(req, res, _next, options) {
+  threats.throttled(req);
+  res.status(options.statusCode).json(options.message);
+}
+
 const rateLimiter = rateLimit({
+  handler: onLimited,
   windowMs: config.security.rateLimit.windowMs,
   // A floor, deliberately. `.env` files outlive the advice that produced them,
   // and the value this project shipped with first — 100 — cannot serve a
@@ -91,6 +107,7 @@ const rateLimiter = rateLimit({
  * key, so spraying many usernames from one machine is also capped.
  */
 const authLimiter = rateLimit({
+  handler: onLimited,
   windowMs: 15 * 60 * 1000,
   // Five per worker rather than ten in one place: a person who has forgotten
   // their password still gets several tries, and a script still runs out.

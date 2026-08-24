@@ -4,6 +4,7 @@ const { AppError } = require('../errors/AppError');
 const { ERROR_CODES } = require('../constants/errorCodes');
 const { failure } = require('../responses/apiResponse');
 const errorLogService = require('../modules/alert/errorLog.service');
+const { threats } = require('./threatDetect');
 
 /**
  * The only place errors become responses.
@@ -16,6 +17,11 @@ const errorLogService = require('../modules/alert/errorLog.service');
 function errorHandler(err, req, res, next) {
   if (err instanceof AppError && err.isOperational) {
     logger.warn(err.message, { code: err.code, path: req.originalUrl, requestId: req.id });
+    // A single refusal is ordinary — a mistyped link, a stale tab. Dozens in
+    // ten minutes is somebody mapping what they can reach, and the counters in
+    // threatDetect are what tell the two apart.
+    if (err.statusCode === 403) threats.forbidden(req);
+    if (err.statusCode === 404) threats.notFound(req);
     return failure(res, {
       message: err.message,
       code: err.code,
@@ -31,6 +37,7 @@ function errorHandler(err, req, res, next) {
   // Left as 500 they inflate the error log and, worse, the parser's own message
   // ("Expected property name…") leaks the framework in non-production.
   if (err.type === 'entity.too.large') {
+    threats.oversize(req);
     return failure(res, {
       message: 'حجم درخواست بیش از حد مجاز است.',
       code: ERROR_CODES.VALIDATION,

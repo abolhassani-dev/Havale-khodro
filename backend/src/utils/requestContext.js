@@ -78,6 +78,11 @@ function requestContext(req, res, next) {
       ip: req.ip || null,
       device: describeDevice(req.headers['user-agent']),
       requestId: req.id || null,
+      // Carried for the security log, which has to say *what* was asked for
+      // and by what — and is written from services that have no `req` either.
+      path: req.originalUrl || null,
+      method: req.method || null,
+      userAgent: req.headers['user-agent'] || null,
     },
     next
   );

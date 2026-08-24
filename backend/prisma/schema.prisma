@@ -215,6 +215,7 @@ model User {
   seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
   activityLogs        ActivityLog[]
   errors              ErrorLog[]        @relation("UserErrors")
+  securityEvents      SecurityEvent[]   @relation("UserSecurityEvents")
   smsMessages         SmsMessage[]
   brandAccess         BrandAccess[]
   modelAccess         ModelAccess[]
@@ -716,6 +717,69 @@ model ErrorLog {
 }
 
 /// تنظیمات قابل ویرایش سامانه (قیمت ظرفیت، سقف گزارش‌ها و ...)
+/// رویدادهای امنیتی — تلاش برای نفوذ، اسکن، و حدس رمز.
+///
+/// چرا جدا از ActivityLog: آن یکی می‌گوید «چه کسی چه کاری کرد» و کاربرانِ
+/// شناخته‌شده را ثبت می‌کند. این یکی درباره‌ی کسانی است که کاربر نیستند و
+/// شناسه‌شان فقط یک آی‌پی است. یک فهرست مشترک، هر دو را غیرقابل استفاده می‌کرد.
+///
+/// چرا اثر انگشت: یک اسکنر در چند دقیقه هزاران درخواست می‌زند. اگر هر کدام یک
+/// ردیف بود، همان حمله‌ای که باید گزارش شود، جدول را پر می‌کرد — یعنی حمله از
+/// طریق سیستمِ گزارشِ حمله. قاعده + آی‌پی یک ردیف است با شمارنده.
+model SecurityEvent {
+  id String @id @default(cuid())
+
+  /// قاعده + آی‌پی. تکرار، ردیف تازه نمی‌سازد.
+  fingerprint String @unique
+
+  /// SQLI, XSS, TRAVERSAL, CMDI, PROTO, SSRF, TEMPLATE, HEADER_INJECT,
+  /// PROBE_PATH, SCANNER_UA, BRUTE_FORCE, PASSWORD_SPRAY, RATE_LIMIT,
+  /// FORBIDDEN_SWEEP, NOT_FOUND_SWEEP, OVERSIZE
+  rule     String
+  severity String @default("medium")
+
+  ip        String
+  /// نمونه‌ی واقعیِ چیزی که فرستاده شده — بریده، تا خودِ لاگ به مشکل تبدیل نشود.
+  sample    String?
+  path      String?
+  method    String?
+  userAgent String?
+
+  /// اگر مهاجم وارد شده بوده. حساب حذف شود، رویداد می‌ماند.
+  userId String?
+  user   User?   @relation("UserSecurityEvents", fields: [userId], references: [id], onDelete: SetNull)
+
+  count     Int      @default(1)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+
+  /// مالک بعد از بررسی علامت می‌زند تا از فهرست فعال برود.
+  resolvedAt DateTime?
+  note       String?
+
+  @@index([lastSeen])
+  @@index([rule, lastSeen])
+  @@index([ip, lastSeen])
+  @@index([resolvedAt, lastSeen])
+}
+
+/// آی‌پی‌هایی که دستی بسته شده‌اند.
+///
+/// هیچ‌وقت خودکار پر نمی‌شود. بستنِ خودکار یعنی یک مهاجم می‌تواند با جعل هدر،
+/// آی‌پی نمایندگی‌های واقعی را جای خودش بگذارد و آن‌ها را از سامانه بیرون کند —
+/// یعنی ابزار دفاع، خودش سلاح حمله می‌شود.
+model BlockedIp {
+  ip     String  @id
+  reason String?
+  /// تا کِی. خالی یعنی بی‌پایان.
+  until  DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([until])
+}
+
 model Setting {
   key       String   @id
   value     String

@@ -12,6 +12,8 @@ const requestId = require('./middlewares/requestId');
 const { requestContext } = require('./utils/requestContext');
 const rateLimiter = require('./middlewares/rateLimiter');
 const slowRequest = require('./middlewares/slowRequest');
+const blockedIp = require('./middlewares/blockedIp');
+const threatDetect = require('./middlewares/threatDetect');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -20,6 +22,10 @@ const app = express();
 // Behind a reverse proxy the client IP arrives in a header; without this the
 // rate limiter would see the proxy's IP for everyone and throttle collectively.
 app.set('trust proxy', 1);
+
+// First of all, and before anything reads the request: an address somebody
+// closed the door on should cost this server as little as possible.
+app.use(blockedIp);
 
 app.use(helmet());
 app.use(cors({ origin: config.security.corsOrigins, credentials: true }));
@@ -45,6 +51,10 @@ app.use(requestId);
 app.use(requestContext);
 app.use(morgan(config.isProduction ? 'combined' : 'dev', { stream: logger.stream }));
 app.use(slowRequest);
+// After the body parsers, because half of what an attack looks like is in the
+// body — and before the routes, so a payload is recorded whether the handler
+// ends up refusing it, validating it away, or answering 404.
+app.use(threatDetect);
 app.use(rateLimiter);
 
 swagger(app);

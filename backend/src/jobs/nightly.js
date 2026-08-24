@@ -42,6 +42,9 @@ function summarise(report) {
   if (report.errorsRemoved) {
     lines.push(`• ${toPersianDigits(report.errorsRemoved)} خطای رسیدگی‌شده پاک شد`);
   }
+  if (report.securityRemoved) {
+    lines.push(`• ${toPersianDigits(report.securityRemoved)} رویداد امنیتی بررسی‌شده پاک شد`);
+  }
   return lines.join('\n');
 }
 

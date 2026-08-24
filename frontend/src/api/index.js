@@ -124,6 +124,17 @@ export const systemLog = {
   testAlert: () => api.post('/errors/test-alert'),
 };
 
+/**
+ * The intrusion log. Owner-only, like the technical log beside it.
+ */
+export const security = {
+  events: (query) => api.get('/security/events', query),
+  event: (id) => api.get(`/security/events/${id}`),
+  resolve: (id, note) => api.post(`/security/events/${id}/resolve`, { note }),
+  block: (body) => api.post('/security/blocks', body),
+  unblock: (ip) => api.delete(`/security/blocks/${encodeURIComponent(ip)}`),
+};
+
 export const admin = {
   overview: () => api.get('/admin/overview'),
   badges: () => api.get('/admin/badges'),
