@@ -646,6 +646,34 @@ if (process.env.OWNER_USER) {
       throw new Error('the owner row offers an edit button');
     }
   });
+
+  /**
+   * The technical log.
+   *
+   * The assertion that matters is the negative one, and it was checked with a
+   * super admin further up: this screen is behind a permission the permissions
+   * table gives to the owner alone. Here we only prove it is reachable and
+   * renders — a page nobody can open is the same as a page that does not exist.
+   */
+  await step('the owner reaches the technical log', async () => {
+    await navigate('adm-errors');
+    await page.waitForSelector('.card-h h2:has-text("لاگ فنی")', { timeout: 8000 });
+
+    const tabs = await page.locator('.card-h .tab').allInnerTexts();
+    if (!tabs.some((t) => t.includes('کند'))) {
+      throw new Error('no tab for slow requests: ' + tabs.join('، '));
+    }
+
+    // Either it lists something or it says why it is empty. What it must never
+    // do is render a blank card, which reads as broken.
+    await page.goto(`${BASE}#adm-errors?tab=slow`);
+    await page.waitForFunction(() => !document.querySelector('.content.is-busy'), null, { timeout: 8000 });
+    await page.waitForTimeout(300);
+    const body = await page.textContent('.content');
+    if (!(await page.locator('.elog-row').count()) && !body.includes('کندتر نبوده')) {
+      throw new Error('the slow tab rendered nothing and said nothing');
+    }
+  });
 }
 
 /**

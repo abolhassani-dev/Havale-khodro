@@ -127,6 +127,17 @@ services:
       # Ticket attachments. A named volume, not the image's filesystem — a
       # redeploy replaces the container and must not take the files with it.
       - uploads:/app/uploads
+      # The audit-trail archive: rows the nightly job writes out before it
+      # removes them from the database.
+      #
+      # A host path rather than a named volume, and one outside the project
+      # directory. Outside, because deploy/update.sh brings the project
+      # directory back in line with the repository on every update — an archive
+      # kept in there would vanish one evening as a side effect of deploying.
+      # A host path, because deploy/backup.sh already collects /var/backups and
+      # somebody investigating an old dispute should be able to reach these
+      # files with zcat and jq rather than through Docker.
+      - ${ACTIVITY_ARCHIVE_DIR:-/var/backups/feranocar/activity}:/archive
     depends_on:
       db:
         condition: service_healthy

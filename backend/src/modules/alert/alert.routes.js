@@ -26,10 +26,13 @@ const router = Router();
  * Recording and Telegram alerting run regardless — those are the parts that
  * matter at 3am, and they need no interface at all.
  *
- * Behind the `settings` permission because a stack trace names internal paths
- * and a message can quote user input.
+ * Behind `errorLog`, which is the owner's alone. A stack trace names internal
+ * paths and a message can quote user input, and the permissions table has said
+ * `errorLog: false` for every other role since it was written — this route
+ * asked for `settings` instead, which quietly handed super admins a view the
+ * policy says they do not have.
  */
-router.use(authenticate, requirePasswordChanged, requirePermission('settings'));
+router.use(authenticate, requirePasswordChanged, requirePermission('errorLog'));
 
 /**
  * @openapi
@@ -43,6 +46,8 @@ router.get(
   validate({
     query: Joi.object({
       resolved: Joi.boolean().default(false),
+      // Errors and slow requests share this table and must not share a list.
+      level: Joi.string().valid('error', 'slow').default('error'),
       skip: Joi.number().integer().min(0).default(0),
       take: Joi.number().integer().min(1).max(200).default(50),
     }),

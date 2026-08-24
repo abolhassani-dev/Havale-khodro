@@ -1790,3 +1790,73 @@ button.af-parent:hover { text-decoration: underline; }
    فلشِ خالی تبدیل می‌شود. ردیف فیلترها flex است، پس پهنا با flex-basis گرفته
    می‌شود نه با grid-column. */
 .filters .field.jdt-field { min-width: 250px; flex: 2; }
+
+/* ================================================================
+   لاگ فنی — خطاها و درخواست‌های کند
+   ================================================================ */
+
+.elog { display: grid; }
+.elog-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-2);
+  cursor: pointer;
+}
+.elog-row:last-child { border-bottom: 0; }
+.elog-row:hover { background: var(--paper-2); }
+
+.elog-i {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  background: var(--paper-2); color: var(--ink-3);
+}
+/* شمارنده رنگ را تعیین می‌کند، نه نوع خطا: تفاوت یک باگ با یک آتش‌سوزی
+   همین عدد است. */
+.elog-i.is-w { background: #a85a2414; color: var(--copper); }
+.elog-i.is-r { background: var(--danger-08); color: var(--danger); }
+
+.elog-b { flex: 1; min-width: 0; }
+.elog-t { font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+.elog-m { font-size: 12px; color: var(--ink-3); margin-top: 3px; overflow-wrap: anywhere; }
+
+.elog-help {
+  display: flex; gap: 9px; align-items: flex-start;
+  margin-top: 12px; padding: 11px 12px;
+  background: var(--primary-08);
+  border: 1px solid var(--primary-15);
+  border-radius: var(--r-sm);
+  font-size: 13px; line-height: 1.9; color: var(--ink);
+}
+.elog-help svg { flex: none; margin-top: 2px; color: var(--primary); }
+
+/* دایرکشن چپ‌به‌راست چون استک‌تریس متن انگلیسی است و در RTL تکه‌تکه
+   خوانده می‌شود. */
+.elog-stack {
+  direction: ltr; text-align: left;
+  margin-top: 12px; padding: 11px;
+  background: #1b2422; color: #d6ded9;
+  border-radius: var(--r-sm);
+  font-size: 11.5px; line-height: 1.8;
+  max-height: 260px; overflow: auto; white-space: pre;
+}
+
+/* متن فنی — پیام خطا، مسیر، استک.
+   انگلیسی است و در جهت راست‌به‌چپ به‌هم می‌ریزد: نقطه‌ی آخرِ جمله می‌آید اول
+   خط، و پرانتزها برعکس می‌شوند. تنها راه درست خوانده شدنش همین است. */
+.is-tech {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+/* در فهرست، دو خط بس است — متن کاملش در پرونده‌ی خطاست و کارت‌های
+   بیست‌خطی، فهرست را غیرقابل مرور می‌کنند. */
+.elog-t.is-tech {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

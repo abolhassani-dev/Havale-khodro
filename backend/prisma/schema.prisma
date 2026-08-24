@@ -699,6 +699,9 @@ model ErrorLog {
   userId String?
   user   User?   @relation("UserErrors", fields: [userId], references: [id], onDelete: SetNull)
 
+  /// برای ردیف‌های «کند»: بدترین زمانی که تا حالا دیده شده، به میلی‌ثانیه.
+  durationMs Int?
+
   count     Int      @default(1)
   firstSeen DateTime @default(now())
   lastSeen  DateTime @default(now())

@@ -140,6 +140,11 @@ const ADMIN_NAV = [
   { page: 'adm-seats', icon: 'layers', label: 'درخواست ظرفیت', permission: 'seats' },
   { group: 'سامانه' },
   { page: 'adm-settings', icon: 'settings', label: 'تنظیمات', permission: 'settings' },
+  // Behind `errorLog`, which the permissions table gives to the owner alone. It
+  // therefore never appears for a super admin — and because a heading is only
+  // drawn when something follows it, «سامانه» does not announce a section
+  // nobody else can reach either.
+  { page: 'adm-errors', icon: 'wrench', label: 'لاگ فنی', permission: 'errorLog' },
   { page: 'adm-staff', icon: 'users', label: 'کاربران سیستم', permission: 'staff' },
 ];
 

@@ -213,6 +213,7 @@ function adminTitle(page) {
     'adm-seats': 'درخواست‌های ظرفیت',
     'adm-settings': 'تنظیمات',
     'adm-staff': 'کاربران سیستم',
+    'adm-errors': 'لاگ فنی',
   }[page] || '';
 }
 
@@ -246,6 +247,7 @@ const CLICK_KEYS = new Set([
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
   'grant', 'editSetting',
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
+  'error', 'resolveError', 'testAlert',
   'newCompany', 'newBrand', 'newModel', 'newColor',
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',

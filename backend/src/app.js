@@ -11,6 +11,7 @@ const swagger = require('./docs/swagger');
 const requestId = require('./middlewares/requestId');
 const { requestContext } = require('./utils/requestContext');
 const rateLimiter = require('./middlewares/rateLimiter');
+const slowRequest = require('./middlewares/slowRequest');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -43,6 +44,7 @@ app.use(requestId);
 // instead of only on the one written by the login controller.
 app.use(requestContext);
 app.use(morgan(config.isProduction ? 'combined' : 'dev', { stream: logger.stream }));
+app.use(slowRequest);
 app.use(rateLimiter);
 
 swagger(app);

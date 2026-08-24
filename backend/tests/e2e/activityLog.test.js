@@ -197,6 +197,49 @@ maybe('the activity log', () => {
     });
   });
 
+  describe('slow requests', () => {
+    const config = require('../../src/config');
+    const errorLogService = require('../../src/modules/alert/errorLog.service');
+
+    it('records a route once, however many times it is slow', async () => {
+      const req = { originalUrl: '/api/v1/havales/cm4x7aaaaaaaaaaaaaaaaaaaa?x=1', method: 'GET', id: 'r1' };
+
+      await errorLogService.recordSlow({ req, ms: 1400 });
+      await errorLogService.recordSlow({ req, ms: 2600 });
+      await errorLogService.recordSlow({ req, ms: 1900 });
+
+      const rows = await prisma.errorLog.findMany({ where: { level: 'slow', method: 'GET' } });
+      const row = rows.find((r) => r.path === '/api/v1/havales/:id');
+      expect(row).toBeTruthy();
+      // One row, not three: the id in the path is normalised away, so every
+      // listing anybody opened slowly does not become its own entry.
+      expect(row.count).toBe(3);
+      // The worst time, not the latest — «how bad does this get?» is the
+      // question, and the last sample is just whichever happened last.
+      expect(row.durationMs).toBe(2600);
+
+      await prisma.errorLog.delete({ where: { id: row.id } });
+    });
+
+    it('stays out of the error list, and the errors stay out of its own', async () => {
+      const req = { originalUrl: '/api/v1/admin/agents', method: 'GET', id: 'r2' };
+      await errorLogService.recordSlow({ req, ms: 1500 });
+
+      const slow = await errorLogService.list({ level: 'slow' });
+      const errs = await errorLogService.list({ level: 'error' });
+
+      expect(slow.items.some((r) => r.path === '/api/v1/admin/agents')).toBe(true);
+      expect(errs.items.some((r) => r.level === 'slow')).toBe(false);
+
+      await prisma.errorLog.deleteMany({ where: { level: 'slow', path: '/api/v1/admin/agents' } });
+    });
+
+    it('has a threshold that is a setting, not a number in the code', () => {
+      expect(typeof config.logging.slowRequestMs).toBe('number');
+      expect(config.logging.slowRequestMs).toBeGreaterThan(0);
+    });
+  });
+
   describe('finding something in it', () => {
     it('filters by event family', async () => {
       const admin = await staff();

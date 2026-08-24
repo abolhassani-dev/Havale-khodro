@@ -180,6 +180,25 @@ if docker volume inspect feranocar_uploads >/dev/null 2>&1; then
     || echo "  ⚠ could not check the attachments volume — uploads may fail"
 fi
 
+# ---- 3.95 the nightly housekeeping run is installed ----
+#
+# Installed here rather than by hand, because the thing it prevents is slow and
+# invisible: without it the audit trail grows forever, and the day anybody
+# notices is the day a query on it starts timing out. Written every update
+# rather than only when absent, so a fixed schedule or a corrected path
+# actually reaches a server that already has an old copy.
+if [ -x ./deploy/nightly.sh ]; then
+  cat > /etc/cron.d/feranocar-nightly <<CRON
+# 03:30 — after the certificate check at 03:17 and before the day starts.
+#
+# Output to a log, not /dev/null: housekeeping that fails quietly is worse than
+# none, because the disk fills while the logs say nothing.
+30 3 * * * root cd $ROOT && ./deploy/nightly.sh >> /var/log/feranocar-nightly.log 2>&1
+CRON
+  chmod 644 /etc/cron.d/feranocar-nightly
+  echo "→ nightly housekeeping scheduled (03:30)"
+fi
+
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
 # A failed build leaves the running containers untouched — the site stays up on

@@ -70,5 +70,37 @@ module.exports = {
 
   logging: {
     level: process.env.LOG_LEVEL || 'info',
+    // Above this, a request is recorded as slow. Measured p95 on this hardware
+    // is around 370ms, so 1200 is «something is wrong» rather than «busy» —
+    // set it lower for a while if you are hunting something specific.
+    slowRequestMs: Number(process.env.SLOW_REQUEST_MS || 1200),
+  },
+
+  /**
+   * How long the audit trail stays in the database, and where the rows go
+   * before they are removed.
+   *
+   * The directory is deliberately outside the project: `deploy/update.sh`
+   * brings the project directory back in line with the repository on every
+   * update, so an archive kept in there would disappear one evening as a side
+   * effect of deploying. `deploy/backup.sh` picks this path up so the archive
+   * travels with the rest of the server.
+   *
+   * The days are settings rather than constants because the right number is a
+   * business decision — how long an argument about a listing can plausibly
+   * arrive — and it should not need a deploy to change.
+   */
+  retention: {
+    archiveDir: process.env.ACTIVITY_ARCHIVE_DIR || '/archive',
+    archiveDays: Number(process.env.ACTIVITY_ARCHIVE_DAYS || 365),
+    // Per family of action. Contact reveals are not here at all: they are the
+    // record the whole masking design exists to produce, and they are kept.
+    days: {
+      auth: Number(process.env.RETAIN_AUTH_DAYS || 90),
+      failedLogin: Number(process.env.RETAIN_FAILED_LOGIN_DAYS || 30),
+      listing: Number(process.env.RETAIN_LISTING_DAYS || 365),
+      admin: Number(process.env.RETAIN_ADMIN_DAYS || 730),
+      resolvedErrors: Number(process.env.RETAIN_RESOLVED_ERROR_DAYS || 90),
+    },
   },
 };

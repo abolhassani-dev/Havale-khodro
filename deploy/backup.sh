@@ -103,6 +103,26 @@ else
   echo "    (no attachments volume yet — skipping)"
 fi
 
+# ---- 2c. the audit-trail archive ----
+#
+# These are the rows the nightly job has already removed from the database, so
+# the dump above does not contain them and nothing else does either. Leaving
+# them out would mean a backup that restores the system but loses the part of
+# the history a dispute six months old is actually about.
+#
+# Only what is not already inside this archive set: the files live under
+# /var/backups/feranocar, which is where these archives are written, so a plain
+# copy of the whole directory would nest every backup inside the next one.
+echo "  activity archive"
+ARCHIVE_DIR="$(grep -E '^ACTIVITY_ARCHIVE_DIR=' .env 2>/dev/null | cut -d= -f2- || true)"
+ARCHIVE_DIR="${ARCHIVE_DIR:-/var/backups/feranocar/activity}"
+if [ -d "$ARCHIVE_DIR" ] && [ -n "$(ls -A "$ARCHIVE_DIR" 2>/dev/null)" ]; then
+  mkdir -p "$WORK/activity"
+  cp "$ARCHIVE_DIR"/*.ndjson.gz "$WORK/activity/" 2>/dev/null || true
+else
+  echo "    (nothing archived yet — skipping)"
+fi
+
 # ---- 3. the TLS certificate ----
 #
 # Re-issuing is possible but rate-limited to five a week per domain, and the

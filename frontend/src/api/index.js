@@ -110,6 +110,20 @@ export const tickets = {
   setPriority: (id, priority) => api.put(`/tickets/${id}/priority`, { priority }),
 };
 
+/**
+ * The technical log — errors and slow requests.
+ *
+ * Its own object rather than a corner of `admin`, because it is behind its own
+ * permission and sits in its own part of the panel. A stack trace is not
+ * operations work.
+ */
+export const systemLog = {
+  list: (query) => api.get('/errors', query),
+  get: (id) => api.get(`/errors/${id}`),
+  resolve: (id, note) => api.post(`/errors/${id}/resolve`, { note }),
+  testAlert: () => api.post('/errors/test-alert'),
+};
+
 export const admin = {
   overview: () => api.get('/admin/overview'),
   badges: () => api.get('/admin/badges'),

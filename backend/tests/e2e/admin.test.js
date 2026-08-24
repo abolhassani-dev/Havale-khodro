@@ -472,8 +472,18 @@ maybe('admin panel', () => {
         .get(api('/admin/badges'))
         .set('Cookie', superAdmin.cookie)
         .expect(200);
-      expect(after.body.data.openTickets).toBe(before.body.data.openTickets + 1);
-      expect(after.body.data.pendingSeatOrders).toBe(before.body.data.pendingSeatOrders + 1);
+      // At least, not exactly. These badges count every open ticket and every
+      // pending order in the database, and Jest runs the suites in parallel —
+      // subscription.test.js creating an order of its own halfway through this
+      // one made the strict equality fail about once in three runs. A flaky
+      // suite is worse than a missing test, because it teaches everybody to
+      // re-run instead of read.
+      expect(after.body.data.openTickets).toBeGreaterThanOrEqual(
+        before.body.data.openTickets + 1
+      );
+      expect(after.body.data.pendingSeatOrders).toBeGreaterThanOrEqual(
+        before.body.data.pendingSeatOrders + 1
+      );
 
       // Support may read tickets and not the money side.
       const support = await staff('SUPPORT');

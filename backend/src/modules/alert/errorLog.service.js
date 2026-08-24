@@ -68,7 +68,7 @@ function helpFor(err) {
   if (/decrypt|DATA_ENCRYPTION_KEY/i.test(text)) {
     return 'کلید رمزنگاری عوض شده یا غایب است. DATA_ENCRYPTION_KEY در .env باید همانی باشد که داده با آن نوشته شده — با کلید اشتباه، شماره‌ها خوانده نمی‌شوند.';
   }
-  return 'لاگ کامل: docker compose logs api --tail 100 — و در پنل مدیریت، بخش «لاگ خطاها» متن و محل دقیق را دارد.';
+  return 'لاگ کامل: docker compose logs api --tail 100 — و همین‌جا، در «لاگ فنی»، متن و محل دقیق هست.';
 }
 
 const errorLogService = {
@@ -121,8 +121,76 @@ const errorLogService = {
     }
   },
 
-  async list({ resolved = false, take = 50, skip = 0 } = {}) {
-    const where = resolved ? { resolvedAt: { not: null } } : { resolvedAt: null };
+  /**
+   * A request that took too long.
+   *
+   * Collapsed by route rather than by exact path, so `/havales/cm4x7…` and
+   * `/havales/cm9z2…` are one entry — otherwise every listing anybody opened
+   * slowly would be its own row and the page would be unreadable within a day.
+   *
+   * `durationMs` keeps the *worst* time seen, not the latest: the answer to
+   * "how bad does this get?" is the one that matters, and the last sample is
+   * whichever happened to be most recent.
+   */
+  async recordSlow({ req, ms }) {
+    try {
+      const route = String(req.originalUrl || '')
+        .split('?')[0]
+        .replace(/\/[0-9a-z]{20,}/gi, '/:id')
+        .slice(0, 300);
+      const method = req.method || 'GET';
+      const fingerprint = crypto
+        .createHash('sha256')
+        .update(`slow|${method}|${route}`)
+        .digest('hex')
+        .slice(0, 32);
+      const worst = Math.round(ms);
+
+      await prisma.errorLog.upsert({
+        where: { fingerprint },
+        create: {
+          fingerprint,
+          level: 'slow',
+          message: `${method} ${route}`,
+          path: route,
+          method,
+          durationMs: worst,
+          statusCode: null,
+          requestId: req.id || null,
+          userId: req.user?.id || null,
+        },
+        update: {
+          count: { increment: 1 },
+          lastSeen: new Date(),
+          // Only when it is actually worse. Prisma has no `GREATEST`, so the
+          // comparison happens here and a slower-than-recorded sample is the
+          // only thing that moves the number.
+          ...(await this.worseThan(fingerprint, worst)),
+        },
+      });
+    } catch {
+      // Recording that something was slow must never be the reason a request
+      // fails. Silence is correct here.
+    }
+  },
+
+  /** `{ durationMs }` when this sample is the worst so far, otherwise `{}`. */
+  async worseThan(fingerprint, ms) {
+    const row = await prisma.errorLog.findUnique({
+      where: { fingerprint },
+      select: { durationMs: true },
+    });
+    return !row || ms > (row.durationMs || 0) ? { durationMs: ms } : {};
+  },
+
+  async list({ resolved = false, level = 'error', take = 50, skip = 0 } = {}) {
+    const where = {
+      // Errors and slow requests share a table and a fingerprint, and must not
+      // share a list: a stack trace and a slow route are different jobs on
+      // different days.
+      level: level === 'slow' ? 'slow' : { not: 'slow' },
+      ...(resolved ? { resolvedAt: { not: null } } : { resolvedAt: null }),
+    };
     const [items, total] = await Promise.all([
       prisma.errorLog.findMany({
         where,
