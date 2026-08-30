@@ -513,11 +513,17 @@ maybe('subscription and module mode', () => {
         .send({ status: 'SUSPENDED' })
         .expect(200);
 
-      // Suspension has to bite now, not when the session happens to expire, and
-      // it has to say why: "your session is invalid" would send them to support
-      // instead of telling them what happened.
-      const after = await request(app).get(api('/auth/me')).set('Cookie', childCookie).expect(403);
-      expect(after.body.error.message).toContain('تعلیق');
+      // Suspension has to bite now, not when the session happens to expire: the
+      // parent ends the live session as it turns the seat off.
+      await request(app).get(api('/auth/me')).set('Cookie', childCookie).expect(401);
+
+      // Signing back in is allowed, and says so plainly. A sub-agency turned off
+      // by its own parent is not a fraud case — it needs to read what happened,
+      // not guess at a rejected password.
+      await request(app)
+        .post(api('/auth/login'))
+        .send({ username: payload.username, password: payload.password })
+        .expect(200);
     });
 
     it('shows the parent counts but not the sub-agency’s listings', async () => {

@@ -40,6 +40,16 @@ async function resolveAccess(user) {
     return { ...EXPIRED, active: true, dailyLimit: Infinity, monthlyLimit: Infinity };
   }
 
+  // A suspended agency can sign in — see auth.service for why — and everything
+  // it could do is refused here, in one place, rather than at each route.
+  //
+  // Expressed as «no entitlement» on purpose: every guard in the system already
+  // asks `access.active`, so posting, renewing, reporting and revealing all say
+  // no from the day this line exists, with nothing else to remember. `suspended`
+  // rides along so the panel can say *why* instead of «اشتراک شما تمام شده»,
+  // which would be a lie and would send them to the payment page.
+  if (user.status !== 'ACTIVE') return { ...EXPIRED, suspended: true };
+
   const own = await subscriptionRepository.findLive(user.id);
   if (!own) return EXPIRED;
 
@@ -97,6 +107,9 @@ async function statusFor(user) {
 
   return {
     active: access.active,
+    // Told apart from an expired subscription, because the two need opposite
+    // answers from the reader: one is «pay us», the other is «appeal».
+    suspended: Boolean(access.suspended),
     expiresAt: access.expiresAt,
     daysLeft: access.expiresAt
       ? Math.max(0, Math.ceil((access.expiresAt - Date.now()) / (24 * 60 * 60 * 1000)))

@@ -296,6 +296,7 @@ export function topbar(title, crumb) {
   const s = getState();
   const agent = isAgent();
   const active = s.access?.active;
+  const suspended = Boolean(s.access?.suspended || s.sub?.suspended);
 
   return html`
   <div class="topbar">
@@ -315,7 +316,17 @@ export function topbar(title, crumb) {
             ? ''
             : html`<span class="tag r">دسترسی غیرفعال</span>`
           : html`<span class="tag ${active ? 'g' : 'r'}">
-              ${active ? `اشتراک فعال تا ${date(s.access?.expiresAt)}` : 'اشتراک منقضی'}
+              ${
+                // Three states, not two. A suspended account is also «not
+                // active», and calling that «اشتراک منقضی» here would contradict
+                // the banner three centimetres below it — the reader would be
+                // told two different reasons for the same lock, on one screen.
+                suspended
+                  ? 'حساب تعلیق‌شده'
+                  : active
+                    ? `اشتراک فعال تا ${date(s.access?.expiresAt)}`
+                    : 'اشتراک منقضی'
+              }
             </span>`
         : ''
     }
@@ -331,11 +342,67 @@ export function topbar(title, crumb) {
 }
 
 /** Blueprint 7.3: a standing explanation, so nobody wonders why buttons are dead. */
+/**
+ * Why the account is suspended, and what the agency can do about it.
+ *
+ * Three things, deliberately: the fact, the reason with its number, and the one
+ * action that is still open to them. A penalty with no stated cause and no way
+ * to answer is not moderation, it is a locked door — and the ticket category
+ * for exactly this appeal already exists.
+ */
+function suspendedBanner() {
+  const s = getState();
+  const strikes = s.data?.strikes;
+
+  // A sub-agency is suspended by its own parent, not by the platform. It has no
+  // strikes to read and no appeal to file here — telling it to open a ticket
+  // with support would send it to people who cannot undo the thing that
+  // happened to it.
+  if (s.user?.parentId) {
+    return html`
+    <div class="banner danger">
+      <span class="b-ico">⚑</span>
+      <div class="b-txt">
+        <b>حساب شما غیرفعال شده است</b>
+        این حساب توسط نمایندگی مرکزی غیرفعال شده است. برای فعال شدن دوباره،
+        با نمایندگی مرکزی خود هماهنگ کنید.
+      </div>
+    </div>`;
+  }
+
+  return html`
+  <div class="banner danger">
+    <span class="b-ico">⚑</span>
+    <div class="b-txt">
+      <b>حساب شما تعلیق شده است</b>
+      ${
+        strikes?.strikes
+          ? html`به دلیل ${faDigits(strikes.strikes)} تخلف تأییدشده روی آگهی‌های شما.
+              فهرست گزارش‌ها را در همین صفحه، بخش «وضعیت حساب»، می‌بینید.`
+          : 'برای دیدن دلیل و اعتراض، از بخش پشتیبانی تیکت بزنید.'
+      }
+      تا زمان رفع تعلیق، ثبت آگهی و نمایش مشخصات برای شما بسته است — ولی
+      آگهی‌های خودتان و سابقه‌تان سر جایشان هستند.
+      <div style="margin-top:8px">
+        <button class="btn sm" data-new-ticket="" data-category="APPEAL">اعتراض به تعلیق</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 export function expiredBanner() {
   const s = getState();
   // Only an agency can have an expired subscription. Asked as `!isAdmin()`,
   // this told a developer account its subscription had run out.
   if (!isAgent() || s.access?.active) return raw('');
+
+  // Suspension first, because it is the reason that overrides the other one.
+  //
+  // A suspended account also has no entitlement, so without this it would be
+  // told «اشتراک شما تمام شده است» and sent to the payment page — where paying
+  // would change nothing. Being told the wrong reason is worse than being told
+  // nothing: it costs them money and still leaves them locked out.
+  if (s.access?.suspended || s.sub?.suspended) return suspendedBanner();
 
   // A sub-agency cannot renew anything — its access follows the parent's
   // subscription. Telling it to «تمدید اشتراک» would send it to a page it does

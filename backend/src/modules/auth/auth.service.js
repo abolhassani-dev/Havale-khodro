@@ -8,7 +8,7 @@ const { toPublicUser } = require('../user/user.dto');
 const { UnauthorizedError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
 const { ERROR_CODES } = require('../../constants/errorCodes');
 const { MESSAGES } = require('../../constants/messages');
-const { ROLES } = require('../../constants/roles');
+const { ROLES, isAdmin } = require('../../constants/roles');
 
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 const LOCKOUT_THRESHOLD = 5;
@@ -57,7 +57,21 @@ const authService = {
       throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
-    if (user.status !== 'ACTIVE') {
+    // A suspended agency is let in. A suspended member of staff is not.
+    //
+    // They are different events wearing the same word. Suspending a staff
+    // account means «you no longer work here», and there is nothing for that
+    // person to read. Suspending an agency is a penalty for three confirmed
+    // violations, and shutting the door on it produces the worst possible
+    // outcome: the agency cannot see the reports, cannot see the count, and
+    // cannot open the appeal ticket the rules give them — so they telephone,
+    // and somebody has to explain by voice what the screen could have said.
+    //
+    // Nothing is opened by this. `resolveAccess` gives a suspended account no
+    // entitlement at all, so every guard in the system already refuses it:
+    // no posting, no renewing, no reporting, and no contact details in any
+    // serialised row. What they get is the reason and a way to answer it.
+    if (user.status !== 'ACTIVE' && isAdmin(user.role)) {
       throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
     }
 
@@ -109,7 +123,7 @@ const authService = {
     // answer "your session is invalid" — sending the user to support to find out
     // why, when the interface could have told them. Nothing is leaked by saying
     // it: the account is theirs.
-    if (session.user.status !== 'ACTIVE') {
+    if (session.user.status !== 'ACTIVE' && isAdmin(session.user.role)) {
       throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
     }
 

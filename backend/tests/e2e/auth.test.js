@@ -215,21 +215,63 @@ maybe('authentication', () => {
   });
 
   describe('suspended accounts', () => {
-    it('refuses to sign in', async () => {
+    it('lets a suspended agency in, with nothing granted', async () => {
       await prisma.user.update({ where: { id: agent.id }, data: { status: 'SUSPENDED' } });
+
+      // Suspension is a penalty for confirmed violations, and the agency has to
+      // be able to read the reason and answer it. Shutting the door instead
+      // leaves them with a login screen and a telephone.
       const res = await login(agent.username, PASSWORD);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+
+      const sub = await request(app)
+        .get(api('/subscriptions/me'))
+        .set('Cookie', cookieFrom(res))
+        .expect(200);
+      expect(sub.body.data.active).toBe(false);
+      expect(sub.body.data.suspended).toBe(true);
     });
 
-    it('kills an already-live session on the next request', async () => {
+    it('refuses a suspended member of staff', async () => {
+      const staff = await prisma.user.create({
+        data: {
+          username: `sus_staff_${Date.now()}`,
+          passwordHash: await bcrypt.hash(PASSWORD, 10),
+          phone: `0914${Math.floor(1000000 + Math.random() * 8999999)}`,
+          fullName: 'کارمند معلق',
+          role: 'SUPPORT',
+          status: 'SUSPENDED',
+          mustChangePassword: false,
+        },
+      });
+
+      try {
+        // The same word, a different event: suspending a staff account means
+        // «you no longer work here», and there is nothing for them to read.
+        const res = await login(staff.username, PASSWORD);
+        expect(res.status).toBe(403);
+      } finally {
+        await prisma.activityLog.deleteMany({ where: { userId: staff.id } });
+        await prisma.user.delete({ where: { id: staff.id } });
+      }
+    });
+
+    it('leaves a live agency session working but powerless', async () => {
       const res = await login(agent.username, PASSWORD);
       await prisma.user.update({ where: { id: agent.id }, data: { status: 'SUSPENDED' } });
 
-      // Suspension has to take effect immediately. If an existing session kept
-      // working until it expired, suspending a fraudulent account would do
-      // nothing for hours.
+      // Suspension bites at once — but at the authorisation layer, not by
+      // throwing the session away. The account keeps its screens and loses
+      // every entitlement, which is what «تعلیق» is supposed to mean.
       const after = await request(app).get(api('/auth/me')).set('Cookie', cookieFrom(res));
-      expect(after.status).toBe(403);
+      expect(after.status).toBe(200);
+
+      const sub = await request(app)
+        .get(api('/subscriptions/me'))
+        .set('Cookie', cookieFrom(res))
+        .expect(200);
+      expect(sub.body.data.active).toBe(false);
+      expect(sub.body.data.suspended).toBe(true);
     });
   });
 

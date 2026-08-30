@@ -1,7 +1,7 @@
-import { html } from '../../ui/html.js';
-import { havale, subscription, reports, tickets } from '../../api/index.js';
+import { html, raw } from '../../ui/html.js';
+import { havale, registration, subscription, reports, tickets } from '../../api/index.js';
 import { getState } from '../../state/store.js';
-import { num, faDigits, date, until, KIND_LABEL } from '../../ui/format.js';
+import { num, faDigits, date, until } from '../../ui/format.js';
 import { emptyBox, qtip } from '../../ui/feedback.js';
 
 export async function loadDashboard() {
@@ -12,8 +12,18 @@ export async function loadDashboard() {
 
   // Fetched together rather than in sequence: the dashboard is the first screen
   // after sign-in, and four round trips one after another is a visible pause.
-  const [mine, usage, sub, strikes, ticketList, seatAlerts] = await Promise.all([
-    havale.mine({ limit: 50, ...(reseller ? { scope: 'all' } : {}) }),
+  const scope = reseller ? { scope: 'all' } : {};
+  const [havales, registrations, usage, sub, strikes, ticketList, seatAlerts] = await Promise.all([
+    havale.mine({ limit: 50, ...scope }),
+    // Every market this agency can post in, not only حواله. The dashboard says
+    // «آگهی‌ها» and it has to mean it: a ثبت‌نامی advertisement expiring
+    // tomorrow belongs in «به‌زودی منقضی می‌شوند» exactly as much as a حواله
+    // does, and a heading that quietly covers one market is worse than one that
+    // admits it covers one.
+    //
+    // Caught rather than awaited bare: this is the first screen after sign-in
+    // and a market being briefly unavailable must dim one card, not the page.
+    registration.mine({ limit: 50, ...scope }).catch(() => ({ items: [] })),
     havale.usage(),
     subscription.me(),
     reports.againstMe(),
@@ -21,8 +31,24 @@ export async function loadDashboard() {
     reseller ? subscription.seatAlerts().catch(() => []) : [],
   ]);
 
-  return { mine, usage, sub, strikes, tickets: ticketList, seatAlerts };
+  // Merged and re-sorted, so «آخرین» means the six most recent things this
+  // agency did — not the six most recent حواله with ثبت‌نامی hidden behind them.
+  const items = [
+    ...(havales.items || []).map((row) => ({ ...row, market: 'HAVALE' })),
+    ...(registrations.items || []).map((row) => ({ ...row, market: 'REGISTRATION' })),
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return { mine: { items }, usage, sub, strikes, tickets: ticketList, seatAlerts };
 }
+
+/**
+ * Which market a row belongs to, for the badge on the dashboard.
+ *
+ * Two markets today and more coming, so the label is looked up rather than
+ * written into the row — see marketRegistry on the server for the same idea in
+ * the other direction.
+ */
+const MARKET_LABEL = { HAVALE: 'حواله', REGISTRATION: 'ثبت‌نامی' };
 
 /** A decided capacity order the buyer has not dismissed — shown until they do. */
 function seatAlertBanner(order) {
@@ -57,7 +83,7 @@ export function dashboardPage() {
   ${(data.seatAlerts || []).map(seatAlertBanner)}
 
   <div class="stats">
-    ${stat('آگهی فعال', num(active.length), reseller ? `کل مجموعه — از ${faDigits(items.length)} حواله` : `از ${faDigits(items.length)} حواله`)}
+    ${stat('آگهی فعال', num(active.length), reseller ? `کل مجموعه — از ${faDigits(items.length)} آگهی` : `از ${faDigits(items.length)} آگهی`)}
     ${stat('بازدید مشخصات', num(totalReveals), 'مجموع روی آگهی‌های شما')}
     ${stat(
       'سقف امروز',
@@ -73,11 +99,16 @@ export function dashboardPage() {
             sub?.active ? 'فعال' : 'غیرفعال',
             sub?.active ? 'زیرمجموعه‌ی نمایندگی مرکزی' : 'با نمایندگی مرکزی هماهنگ کنید'
           )
-        : stat(
-            'اشتراک',
-            sub?.active ? `${faDigits(sub.daysLeft)} روز` : 'منقضی',
-            sub?.active ? `تا ${date(sub.expiresAt)}` : 'برای ادامه تمدید کنید'
-          )
+        : sub?.suspended
+          ? // Not «منقضی», and above all not «برای ادامه تمدید کنید» — paying
+            // would change nothing, and sending them to the payment page for a
+            // penalty is taking money for a door that stays shut.
+            stat('وضعیت حساب', 'تعلیق‌شده', 'برای رفع تعلیق، اعتراض ثبت کنید')
+          : stat(
+              'اشتراک',
+              sub?.active ? `${faDigits(sub.daysLeft)} روز` : 'منقضی',
+              sub?.active ? `تا ${date(sub.expiresAt)}` : 'برای ادامه تمدید کنید'
+            )
     }
   </div>
 
@@ -89,15 +120,23 @@ export function dashboardPage() {
             <span class="tag w">${faDigits(closingSoon.length)} مورد</span>
           </div>
           <table>
-            <thead><tr><th>خودرو</th><th>نوع</th><th>مهلت</th><th></th></tr></thead>
+            <thead><tr><th>خودرو</th><th>بازار</th><th>مهلت</th><th></th></tr></thead>
             <tbody>
               ${closingSoon.slice(0, 5).map(
                 (h) => html`<tr>
                   <td>${h.carType}</td>
-                  <td>${KIND_LABEL[h.kind]}</td>
+                  <td><span class="tag ${h.market === 'HAVALE' ? '' : 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
                   <td><span class="tag w">${until(h.closesAt)}</span></td>
                   <td style="text-align:left">
-                    <button class="btn sm" data-renew="${h.id}">تمدید</button>
+                    ${
+                      // Each market renews through its own module. One button
+                      // calling the حواله endpoint for both would 404 on half
+                      // of them — silently, since a failed renewal looks like a
+                      // click that did nothing.
+                      h.market === 'HAVALE'
+                        ? html`<button class="btn sm" data-renew="${h.id}">تمدید</button>`
+                        : html`<button class="btn sm" data-reg-renew="${h.id}" data-reg-kind="${h.kind}">تمدید</button>`
+                    }
                   </td>
                 </tr>`
               )}
@@ -109,16 +148,17 @@ export function dashboardPage() {
 
   <div class="cols c3">
     <div class="card">
-      <div class="card-h"><h2>${reseller ? 'آخرین حواله‌های مجموعه' : 'آخرین حواله‌های من'} ${qtip(reseller ? 'آخرین آگهی‌های شما و زیرنمایندگی‌هایتان. ستون «زیرشاخه» می‌گوید آگهی مال کدام حساب است. با کلیک روی هر ردیف جزئیات باز می‌شود.' : 'آخرین آگهی‌های خودتان. ستون «بازدید» یعنی چند نمایندگی مشخصات تماس شما را روی آن آگهی دیده‌اند. با کلیک روی هر ردیف جزئیات باز می‌شود.')}</h2>
+      <div class="card-h"><h2>${reseller ? 'آخرین آگهی‌های مجموعه' : 'آخرین آگهی‌های من'} ${qtip(reseller ? 'آخرین آگهی‌های شما و زیرنمایندگی‌هایتان. ستون «زیرشاخه» می‌گوید آگهی مال کدام حساب است. با کلیک روی هر ردیف جزئیات باز می‌شود.' : 'آخرین آگهی‌های خودتان. ستون «بازدید» یعنی چند نمایندگی مشخصات تماس شما را روی آن آگهی دیده‌اند. با کلیک روی هر ردیف جزئیات باز می‌شود.')}</h2>
         <button class="btn sm" data-go="mine">همه</button></div>
       ${
         items.length
           ? html`<table>
-              <thead><tr><th>خودرو</th>${reseller ? html`<th>زیرشاخه</th>` : ''}<th>وضعیت</th><th>بازدید</th></tr></thead>
+              <thead><tr><th>خودرو</th><th>بازار</th>${reseller ? html`<th>زیرشاخه</th>` : ''}<th>وضعیت</th><th>بازدید</th></tr></thead>
               <tbody>
                 ${items.slice(0, 6).map(
-                  (h) => html`<tr data-open-havale="${h.id}" style="cursor:pointer">
+                  (h) => html`<tr ${raw(h.market === 'HAVALE' ? `data-open-havale="${h.id}"` : '')} style="cursor:pointer">
                     <td>${h.carType}</td>
+                    <td><span class="tag ${h.market === 'HAVALE' ? '' : 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
                     ${
                       reseller
                         ? html`<td>${h.isOwn ? html`<span class="tag b">خودم</span>` : html`<span class="num">${h.agency?.code || '—'}</span>`}</td>`
@@ -130,7 +170,7 @@ export function dashboardPage() {
                 )}
               </tbody>
             </table>`
-          : emptyBox('هنوز حواله‌ای ثبت نکرده‌اید.')
+          : emptyBox('هنوز آگهی‌ای ثبت نکرده‌اید.')
       }
     </div>
 

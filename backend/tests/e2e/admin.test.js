@@ -177,7 +177,7 @@ maybe('admin panel', () => {
   });
 
   describe('managing an agency', () => {
-    it('suspends, ends its sessions, and keeps the subscription', async () => {
+    it('suspends, strips every entitlement, and keeps the subscription', async () => {
       const superAdmin = await staff('SUPER_ADMIN');
       const target = await agent();
 
@@ -187,9 +187,28 @@ maybe('admin panel', () => {
         .send({ status: 'SUSPENDED' })
         .expect(200);
 
-      // Suspension has to bite at once — for a fraudulent account, the window
-      // until a session expires is the window that matters.
-      await request(app).get(api('/auth/me')).set('Cookie', target.cookie).expect(403);
+      // Suspension bites at once: whatever the agency had open stops working.
+      await request(app).get(api('/auth/me')).set('Cookie', target.cookie).expect(401);
+
+      // But it can come back in, and when it does it is told what happened
+      // rather than met with a dead login — it has a penalty to read and an
+      // appeal to file. What it does not get is any entitlement at all.
+      const back = await signIn(target.user);
+      await request(app).get(api('/auth/me')).set('Cookie', back).expect(200);
+
+      const sub = await request(app)
+        .get(api('/subscriptions/me'))
+        .set('Cookie', back)
+        .expect(200);
+      expect(sub.body.data.active).toBe(false);
+      expect(sub.body.data.suspended).toBe(true);
+
+      // And «no entitlement» has to be true of the doors, not only of the flag.
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', back)
+        .send(await offer())
+        .expect(403);
 
       const live = await prisma.subscription.count({
         where: { userId: target.user.id, status: 'ACTIVE' },
