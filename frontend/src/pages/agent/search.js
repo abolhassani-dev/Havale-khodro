@@ -1,4 +1,5 @@
 import { html, raw } from '../../ui/html.js';
+import { icon } from '../../ui/icons.js';
 import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import {
@@ -216,7 +217,20 @@ function card(h) {
       ${field('شرکت', h.supplierCompany || '—')}
     </dl>
 
-    ${h.description ? html`<p class="desc">${h.description}</p>` : ''}
+    ${
+      // The description arrives with the contact, not before it.
+      //
+      // Every rule about what may be written in a free-text box is a rule
+      // somebody works out how to write around — a number spelled out, an
+      // agency's own name, a box nobody thought to guard. Not serving the box
+      // ends that argument rather than winning it. What is left on the card is
+      // structured, and structured text cannot carry a telephone number.
+      h.description
+        ? html`<p class="desc">${h.description}</p>`
+        : h.hasDescription
+          ? html`<p class="desc locked">${icon('lock', 13)} توضیحات این آگهی با «نمایش مشخصات» باز می‌شود.</p>`
+          : ''
+    }
 
     <footer>
       <div class="meta">

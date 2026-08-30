@@ -19,6 +19,7 @@ const PATHS = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 15.5c2.4.3 4.3 1.8 5 4.5"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/>',
   bell: '<path d="M18 9.5a6 6 0 10-12 0c0 4.5-2 5.5-2 5.5h16s-2-1-2-5.5z"/><path d="M10.3 19a2 2 0 003.4 0"/>',
   flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
   car: '<path d="M5 16l1.3-5.2A2 2 0 018.2 9h7.6a2 2 0 011.9 1.8L19 16"/><rect x="3.5" y="15.5" width="17" height="4" rx="1.5"/><path d="M7 19.5V21M17 19.5V21"/>',

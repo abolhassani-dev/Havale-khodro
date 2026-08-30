@@ -5,33 +5,125 @@ const ACTOR_SELECT = {
 };
 
 const monitoringRepository = {
-  /** Headline numbers for the dashboard. */
+  /**
+   * Everything the dashboard puts on screen, in one round trip.
+   *
+   * Written as counts rather than as rows on purpose: this is the first page an
+   * admin opens and it must not read a table to tell them how big it is. The
+   * one exception is the daily series, which is a single grouped statement
+   * rather than fourteen counts.
+   *
+   * Grouped the way the screen is: what is waiting for somebody, what state the
+   * market is in, and what the last two weeks looked like.
+   */
   async overview() {
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const [agencies, activeAgencies, liveHavales, revealsToday, pendingReports, openTickets, liveSubs] =
-      await Promise.all([
-        prisma.user.count({ where: { role: 'AGENT' } }),
-        prisma.user.count({ where: { role: 'AGENT', status: 'ACTIVE' } }),
-        prisma.listing.count({
-          where: { deletedAt: null, status: 'ACTIVE', closesAt: { gt: now } },
-        }),
-        prisma.contactReveal.count({ where: { createdAt: { gte: dayAgo } } }),
-        prisma.violationReport.count({ where: { status: 'PENDING' } }),
-        prisma.ticket.count({ where: { status: 'OPEN' } }),
-        prisma.subscription.count({ where: { status: 'ACTIVE', expiresAt: { gt: now } } }),
-      ]);
+    const [
+      agencies,
+      activeAgencies,
+      suspendedAgencies,
+      newAgencies,
+      liveByMarket,
+      revealsToday,
+      revealsWeek,
+      revealsPrevWeek,
+      pendingReports,
+      thirdStrike,
+      openTickets,
+      pendingSeatOrders,
+      liveSubs,
+      expiringSubs,
+      series,
+    ] = await Promise.all([
+      prisma.user.count({ where: { role: 'AGENT' } }),
+      prisma.user.count({ where: { role: 'AGENT', status: 'ACTIVE' } }),
+      prisma.user.count({ where: { role: 'AGENT', status: { not: 'ACTIVE' } } }),
+      prisma.user.count({ where: { role: 'AGENT', createdAt: { gte: monthAgo } } }),
+      // Per market, so the tile stops saying «حواله» about a number that has
+      // ثبت‌نامی in it — the mistake the agency dashboard had until today.
+      prisma.listing.groupBy({
+        by: ['market'],
+        where: { deletedAt: null, status: 'ACTIVE', closesAt: { gt: now } },
+        _count: { _all: true },
+      }),
+      prisma.contactReveal.count({ where: { createdAt: { gte: dayAgo } } }),
+      prisma.contactReveal.count({ where: { createdAt: { gte: weekAgo } } }),
+      // The week before that, so «۲۲ بازدید» can say whether that is up or down.
+      // A number with nothing to compare it to is decoration.
+      prisma.contactReveal.count({
+        where: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } },
+      }),
+      prisma.violationReport.count({ where: { status: 'PENDING' } }),
+      prisma.violationReport.count({ where: { needsSuperApproval: true, status: 'CONFIRMED' } }),
+      prisma.ticket.count({ where: { status: 'OPEN' } }),
+      prisma.seatOrder.count({ where: { status: 'PENDING' } }),
+      prisma.subscription.count({ where: { status: 'ACTIVE', expiresAt: { gt: now } } }),
+      // Who to telephone this week. The one number on this page that is worth
+      // money rather than worth knowing.
+      prisma.subscription.count({
+        where: { status: 'ACTIVE', expiresAt: { gt: now, lte: weekAhead } },
+      }),
+      this.dailyCounts(twoWeeksAgo),
+    ]);
+
+    const byMarket = Object.fromEntries(liveByMarket.map((m) => [m.market, m._count._all]));
 
     return {
       agencies,
       activeAgencies,
-      liveHavales,
+      suspendedAgencies,
+      newAgencies,
+      liveListings: Object.values(byMarket).reduce((sum, n) => sum + n, 0),
+      liveByMarket: byMarket,
       revealsLast24h: revealsToday,
+      revealsLast7d: revealsWeek,
+      revealsPrev7d: revealsPrevWeek,
       pendingReports,
+      thirdStrike,
       openTickets,
+      pendingSeatOrders,
       liveSubscriptions: liveSubs,
+      expiringSubscriptions: expiringSubs,
+      series,
     };
+  },
+
+  /**
+   * Reveals and new listings per day, for the last fourteen.
+   *
+   * Raw SQL because bucketing by day is a database job: the alternative is
+   * reading every row of both tables into node and grouping them there, which
+   * costs more every week the product succeeds. Tehran time, so a «day» on the
+   * chart is the day the people looking at it lived through.
+   */
+  async dailyCounts(since) {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        to_char(d.day, 'YYYY-MM-DD') AS day,
+        COALESCE(r.n, 0)::int AS reveals,
+        COALESCE(l.n, 0)::int AS listings
+      FROM generate_series(
+        date_trunc('day', ${since}::timestamptz AT TIME ZONE 'Asia/Tehran'),
+        date_trunc('day', now() AT TIME ZONE 'Asia/Tehran'),
+        interval '1 day'
+      ) AS d(day)
+      LEFT JOIN (
+        SELECT date_trunc('day', "createdAt" AT TIME ZONE 'Asia/Tehran') AS day, count(*) AS n
+        FROM "ContactReveal" WHERE "createdAt" >= ${since} GROUP BY 1
+      ) r ON r.day = d.day
+      LEFT JOIN (
+        SELECT date_trunc('day', "createdAt" AT TIME ZONE 'Asia/Tehran') AS day, count(*) AS n
+        FROM "Listing" WHERE "createdAt" >= ${since} AND "deletedAt" IS NULL GROUP BY 1
+      ) l ON l.day = d.day
+      ORDER BY d.day
+    `;
+    return rows;
   },
 
   /**

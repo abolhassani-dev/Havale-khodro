@@ -111,19 +111,45 @@ function detailPatch(payload) {
   return Object.keys(out).length ? out : null;
 }
 
+/**
+ * Every box on this market that takes typing, and what to call it in a refusal.
+ *
+ * Written as one list rather than repeated at each call site, because the field
+ * this list forgot was «موعد تحویل» — and a telephone number went out on the
+ * market inside it while three other boxes were being carefully guarded. A new
+ * text field is now guarded by being added here, which is the same place it has
+ * to be added anyway.
+ */
+function freeText(payload) {
+  return {
+    'نام طرح': payload.planName,
+    شرایط: payload.conditions,
+    'موعد تحویل': payload.deliveryEstimate,
+    توضیحات: payload.description,
+  };
+}
+
+/**
+ * What this account is, so the guard can refuse it identifying itself.
+ *
+ * `strictIdentity` names the boxes where the word «نمایندگی» alone is enough:
+ * a factory scheme is never called that, so in the scheme-name box it can only
+ * be somebody signing their advertisement.
+ */
+function identity(user) {
+  return {
+    agencyCode: user.agencyCode,
+    agencyName: user.agencyName,
+    strictIdentity: ['نام طرح'],
+  };
+}
+
 const registrationService = {
   async create({ user, payload }) {
     // Three free-text boxes here rather than one, and the scheme name is the
     // worst of them: it is the field an agency is most tempted to sign, because
     // it reads like a title. See utils/textGuard.
-    assertClean(
-      {
-        'نام طرح': payload.planName,
-        شرایط: payload.conditions,
-        توضیحات: payload.description,
-      },
-      { agencyCode: user.agencyCode }
-    );
+    assertClean(freeText(payload), identity(user));
 
     const { listing, detail } = split(payload);
 
@@ -258,14 +284,7 @@ const registrationService = {
 
     // On the edit too: writing clean text and editing the number in afterwards
     // is the obvious way round a check that only runs once.
-    assertClean(
-      {
-        'نام طرح': payload.planName,
-        شرایط: payload.conditions,
-        توضیحات: payload.description,
-      },
-      { agencyCode: user.agencyCode }
-    );
+    assertClean(freeText(payload), identity(user));
 
     const detail = detailPatch(payload);
     const updated = await registrationRepository.update(id, {

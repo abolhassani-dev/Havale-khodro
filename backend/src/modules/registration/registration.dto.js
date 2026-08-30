@@ -12,7 +12,7 @@
  * to reach for by accident.
  */
 
-const { maskContact } = require('../../utils/textGuard');
+const { maskAllText } = require('../../utils/textGuard');
 
 /** Prisma returns BigInt for money columns, and JSON.stringify throws on those. */
 const toNumber = (value) => (value === null || value === undefined ? null : Number(value));
@@ -40,9 +40,6 @@ function baseFields(row) {
     depositToman: toNumber(d.depositToman),
     premiumToman: toNumber(d.premiumToman),
     registerDeadline: d.registerDeadline || null,
-    deliveryEstimate: d.deliveryEstimate || null,
-    conditions: d.conditions || null,
-    description: row.description,
     closesAt: row.closesAt,
     createdAt: row.createdAt,
     renewedAt: row.renewedAt,
@@ -55,6 +52,27 @@ function baseFields(row) {
 }
 
 /**
+ * The boxes on this market that a person types into, and nothing else.
+ *
+ * Named once, here, and read by every serialiser below — so «which fields are
+ * free text?» has one answer rather than three that can disagree. It is the
+ * question the market got wrong twice: «موعد تحویل» was guarded nowhere and
+ * «نام طرح» was guarded in one place out of two.
+ */
+function typedFields(row) {
+  const d = row.registration || {};
+  return {
+    planName: d.planName || null,
+    deliveryEstimate: d.deliveryEstimate || null,
+    conditions: d.conditions || null,
+    description: row.description || null,
+  };
+}
+
+/** Whether there is anything behind the lock, without saying what. */
+const hasTyped = (row) => Object.values(typedFields(row)).some(Boolean);
+
+/**
  * An advertisement as it appears to somebody who is not its owner.
  *
  * @param {object} row   the listing, with `owner` and `registration` included
@@ -63,18 +81,11 @@ function baseFields(row) {
  * @param {boolean} ctx.revealed            a ContactReveal row exists for this viewer
  */
 function toCard(row, { subscriptionActive, revealed = false } = {}) {
-  const base = baseFields(row);
+  const plain = baseFields(row);
 
-  // Three free-text boxes on this market, so three to blank. The submit check
-  // refuses the obvious cases, but no text filter is complete and rows written
-  // before it existed are still in the table — this is the layer that does not
-  // have to be complete to be worth having. Skipped for a viewer who already
-  // revealed: they have the number.
-  if (!revealed) {
-    base.description = maskContact(base.description);
-    base.conditions = maskContact(base.conditions);
-    base.planName = maskContact(base.planName);
-  }
+  // Belt and braces on what is left: the typed boxes are not on the card at
+  // all (below), so this only ever sees the catalogue's own words.
+  const base = revealed ? plain : maskAllText(plain);
 
   const card = {
     ...base,
@@ -85,6 +96,22 @@ function toCard(row, { subscriptionActive, revealed = false } = {}) {
     agency: null,
     contact: null,
     contactRevealed: false,
+
+    // Four typed boxes on this market, and none of them is on the card.
+    //
+    // The scheme name most of all: it reads like a title, so it is the field an
+    // agency is most tempted to sign — «طرح نمایندگی پارس» — and no rule about
+    // what may be written in it survives contact with somebody determined. Not
+    // serving it ends that argument instead of winning it.
+    //
+    // The card keeps everything structured, which is everything the market is
+    // searched by: the car, the method, the sale type, the capacity, both
+    // figures, the deadline.
+    planName: null,
+    deliveryEstimate: null,
+    conditions: null,
+    description: null,
+    hasNotes: hasTyped(row),
   };
 
   // Identity is confidential exactly like the phone number — name, code and
@@ -96,6 +123,9 @@ function toCard(row, { subscriptionActive, revealed = false } = {}) {
 
   if (revealed && row.owner) {
     card.contactRevealed = true;
+    // Paid for, so handed over whole and unmasked: somebody holding the
+    // telephone number gains nothing from a blanked copy of it.
+    Object.assign(card, typedFields(row));
     card.agency = { name: row.owner.agencyName, code: row.owner.agencyCode, city: row.owner.city };
     card.contact = {
       coordinatorName: row.owner.coordinatorName,
@@ -120,6 +150,10 @@ function toOwn(row, { viewerId } = {}) {
   const mine = !viewerId || row.ownerId === viewerId;
   return {
     ...baseFields(row),
+    // The family's own words, unconditionally — hiding them from the people who
+    // wrote them would be theatre rather than security.
+    ...typedFields(row),
+    hasNotes: hasTyped(row),
     isOwn: mine,
     ownerId: row.ownerId,
     revealCount: row.revealCount,

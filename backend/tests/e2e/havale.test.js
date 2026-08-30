@@ -816,7 +816,7 @@ maybe('havale', () => {
         .expect(422);
     });
 
-    it('blanks a number that reached the table anyway', async () => {
+    it('does not serve the text at all to somebody who has not paid', async () => {
       const owner = await agent();
       const viewer = await agent();
 
@@ -840,8 +840,11 @@ maybe('havale', () => {
 
       const row = list.body.data.items.find((h) => h.id === posted.body.data.id);
       expect(row).toBeDefined();
-      expect(row.description).not.toMatch(/۰۹۱۲|09123/);
-      expect(row.description).toContain('فوری');
+      // Not «masked», which is what this used to assert — *absent*. The free
+      // text is no longer on a public card at all, which is a rule nobody can
+      // encode their way around: there is nothing to encode into.
+      expect(row.description).toBeNull();
+      expect(row.hasDescription).toBe(true);
     });
 
     it('shows the owner their own words, unblanked', async () => {

@@ -49,6 +49,24 @@ describe('textGuard', () => {
       }
     });
 
+    /**
+     * The first version of this rule looked for «۰۹ and nine more digits», and
+     * the owner beat it the same afternoon by writing «۰۰۹۸۹۳۳۵۵۲۱۴» — a number
+     * a reader will happily dial, and not that shape. Every fixed length has a
+     * neighbour like that, which is why the rule now asks what a *price* looks
+     * like instead of what a phone looks like.
+     */
+    it('a number that is not the exact shape of a mobile', () => {
+      for (const text of [
+        '۰۰۹۸۹۳۳۵۵۲۱۴',
+        '۰۲۱۸۸۷۷۶۶۵۵',
+        '۰۹۱۲۳۴۵۶۷۸',
+        '۹۱۲۳۴۵۶۷۸۹',
+      ]) {
+        expect(hardOf(text)).toContain('PHONE');
+      }
+    });
+
     it('a messenger handle', () => {
       expect(hardOf('آیدی: @alborz_car')).toContain('HANDLE');
     });
@@ -56,6 +74,34 @@ describe('textGuard', () => {
     it('a link or a bare domain', () => {
       expect(hardOf('سایت ما: alborzcar.ir')).toContain('LINK');
       expect(hardOf('https://example.com/x')).toContain('LINK');
+    });
+
+    /**
+     * Their own name, which is the leak the code rule did not cover: «طرح:
+     * نمایندگی پارس» tells the market who is advertising without a digit in
+     * sight, and the reveal it replaces is the one people pay for.
+     */
+    it('the agency’s own name, matched whole', () => {
+      const id = { agencyCode: 'G-1002', agencyName: 'نمایندگی پارس' };
+      expect(hardOf('طرح نمایندگی پارس', id)).toContain('AGENCY_NAME');
+
+      // And the reason it is matched whole rather than word by word: an agency
+      // called «نمایندگی پارس» must still be able to advertise a پژو پارس.
+      expect(hardOf('پژو پارس مدل ۱۴۰۵', id)).toHaveLength(0);
+    });
+
+    it('a short agency name is left alone, because it is also a word', () => {
+      // Four letters is not a name, it is vocabulary. Blocking it would refuse
+      // honest text for ever after.
+      expect(hardOf('سمند مدل ۱۴۰۵', { agencyName: 'سمند' })).toHaveLength(0);
+    });
+
+    it('the word «نمایندگی» in a scheme name, where it can only mean one thing', () => {
+      const strict = { strictIdentity: true };
+      expect(hardOf('فروش ویژه نمایندگی مجاز', strict)).toContain('AGENCY_WORD');
+
+      // In a description it is an ordinary sentence, and stays one.
+      expect(hardOf('با نمایندگی هماهنگ کنید')).toHaveLength(0);
     });
 
     it('the agency’s own code, which is the one identifier we know exactly', () => {
@@ -86,7 +132,21 @@ describe('textGuard', () => {
       expect(hardOf(text, { agencyCode: 'G-1001' })).toHaveLength(0);
     });
 
-    it('a price of eight digits or more only raises a flag, never a refusal', () => {
+    /**
+     * The discriminator, stated as a test: a price is round and a telephone
+     * number is not. If this ever goes red the rule has stopped being usable,
+     * whatever it is catching.
+     */
+    it.each([
+      'قیمت ۱۲۰۰۰۰۰۰۰۰ تومان',
+      'قیمت ۱٬۲۵۰٬۰۰۰٬۰۰۰ تومان',
+      'مجموعاً ۹۵۰۰۰۰۰۰۰ تومان',
+      'تا ۱۲۰۰۰۰۰۰۰۰۰ تومان',
+    ])('a round price is not a phone number: «%s»', (text) => {
+      expect(hardOf(text)).toHaveLength(0);
+    });
+
+    it('a long price still raises the soft flag, so a human can look', () => {
       const { hard, soft } = inspect('قیمت ۱۲۰۰۰۰۰۰۰۰ تومان');
       expect(hard).toHaveLength(0);
       expect(soft).toContain('DIGITS');
@@ -100,6 +160,12 @@ describe('textGuard', () => {
   });
 
   describe('masking on the way out', () => {
+    it('leaves the words around a blanked number readable', () => {
+      // The loose mask regex used to eat the space after the number and glue
+      // the two words together.
+      expect(maskContact('تماس ۰۰۹۸۹۳۳۵۵۲۱۴ فوری')).toBe('تماس ▪▪▪ فوری');
+    });
+
     it('blanks a number that is already stored', () => {
       const masked = maskContact('تماس: ۰۹۱۲۳۴۵۶۷۸۹ فوری');
       expect(masked).not.toMatch(/۰۹۱۲|09123/);

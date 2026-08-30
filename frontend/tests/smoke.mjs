@@ -416,6 +416,35 @@ await step('account settings page loads', async () => {
 });
 
 /**
+ * Typed text is behind the reveal, not behind a filter.
+ *
+ * The rule this replaced was a filter over free text, and it was beaten three
+ * times in one afternoon — a number written «۰۰۹۸…», a box nobody had thought
+ * to guard, a model-year field that took twenty characters. Not serving the box
+ * ends that argument instead of winning it: there is nothing to encode into.
+ *
+ * Worth a browser step because it is a *product* promise as much as a security
+ * one — the card must still be worth reading with the typing taken out of it.
+ */
+await step('a card carries no typed text until the contact is opened', async () => {
+  await navigate('reg-search');
+  await page.waitForSelector('.hcard, .empty', { timeout: 8000 });
+
+  const locked = page.locator('.hcard:has(.desc.locked)').first();
+  if (!(await locked.count())) return; // nothing unrevealed on this database
+
+  const text = (await locked.innerText()).replace(/\s+/g, ' ');
+  if (!/با «نمایش مشخصات» باز می‌شوند/.test(text)) {
+    throw new Error('the card does not say what is behind the reveal');
+  }
+  // And it must not have become a card with nothing on it: the structured
+  // facts — what the market is actually searched by — all stay.
+  for (const label of ['نوع فروش', 'قیمت خودرو', 'مبلغ امتیاز']) {
+    if (!text.includes(label)) throw new Error(`«${label}» left the card too`);
+  }
+});
+
+/**
  * A listing can be corrected, and the correction is not silent.
  *
  * The two halves have to be checked together, because either alone is a bad

@@ -1,4 +1,5 @@
 import { html, raw } from '../../ui/html.js';
+import { icon } from '../../ui/icons.js';
 import { registration, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
 import { money, faDigits, until, date, enDigits } from '../../ui/format.js';
@@ -187,14 +188,33 @@ function regCard(r) {
         // harder to spot.
         offer
           ? html`${field('مهلت ثبت‌نام', r.registerDeadline ? date(r.registerDeadline) : '—')}
-            ${field('موعد تحویل', r.deliveryEstimate || '—')}`
+            ${
+              // Only when it is actually in hand. «موعد تحویل: —» on every card
+              // somebody has not paid for would read as «this listing has no
+              // delivery date», which is a different and untrue statement.
+              r.deliveryEstimate ? field('موعد تحویل', r.deliveryEstimate) : ''
+            }`
           : ''
       }
-      ${field('طرح', r.planName || (offer ? '—' : 'هر طرحی'))}
+      ${
+        // The scheme name is typed, so it is behind the reveal like the rest of
+        // the typing. It reads like a title, which is exactly why it was the
+        // field agencies signed their own name into.
+        r.planName ? field('طرح', r.planName) : ''
+      }
     </dl>
 
     ${r.conditions ? html`<p class="desc"><b>شرایط:</b> ${r.conditions}</p>` : ''}
     ${r.description ? html`<p class="desc">${r.description}</p>` : ''}
+    ${
+      // Four typed boxes on this market — the scheme, the delivery date, the
+      // terms and the note — and none of them is on a card somebody has not
+      // paid for. Said rather than hidden: «there is something here» is itself
+      // a reason to open the contact.
+      r.hasNotes && !r.contactRevealed
+        ? html`<p class="desc locked">${icon('lock', 13)} نام طرح، موعد تحویل، شرایط و توضیحات با «نمایش مشخصات» باز می‌شوند.</p>`
+        : ''
+    }
 
     <footer>
       <div class="meta">

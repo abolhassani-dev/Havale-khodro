@@ -1937,3 +1937,17 @@ button.af-parent:hover { text-decoration: underline; }
   background: var(--paper-2); border-radius: 7px;
 }
 .ntc-act { margin-top: 9px; }
+
+/* ---- متنی که پشت «نمایش مشخصات» است ---- */
+/* گفته می‌شود که هست، ولی مثل خودِ متن دیده نمی‌شود — وگرنه با یک توضیح واقعی
+   اشتباه گرفته می‌شود. */
+.desc.locked {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--ink-3);
+  background: var(--paper-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+.desc.locked svg { flex: none; opacity: .75; }

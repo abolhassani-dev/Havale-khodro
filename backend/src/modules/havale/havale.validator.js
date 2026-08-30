@@ -8,6 +8,7 @@ const {
   DEPOSIT_DAYS,
   LIST_PAGE_SIZE,
 } = require('../../constants/havale');
+const { normalise } = require('../../utils/textGuard');
 
 /**
  * Input rules.
@@ -29,6 +30,26 @@ const requiredForOffer = (schema) =>
     otherwise: schema.allow(null).optional(),
   });
 
+/**
+ * The model year — a year, and nothing else.
+ *
+ * It was twenty characters of free text, which made it the widest unguarded box
+ * on the form: «۰۹۱۲۳۴۵۶۷۸» fits in it and goes out on every card. A year is
+ * two to four digits, so that is what it takes. Persian numerals are folded
+ * first, because that is what an Iranian keyboard produces and refusing them
+ * would blame the user for their keyboard.
+ *
+ * Kept as a string rather than a number on purpose: it is a label, not a
+ * quantity anybody will do arithmetic on.
+ */
+const modelYear = Joi.string()
+  .trim()
+  .custom((value, helpers) => {
+    const digits = normalise(value);
+    if (!/^\d{2,4}$/.test(digits)) return helpers.message('سال مدل باید فقط عدد باشد — مثلاً ۱۴۰۵');
+    return digits;
+  }, 'model year');
+
 const createBody = Joi.object({
   kind: Joi.string()
     .valid(...Object.values(HAVALE_KIND))
@@ -44,7 +65,7 @@ const createBody = Joi.object({
     .required(),
 
   carColor: requiredForOffer(Joi.string().trim().max(60)),
-  model: requiredForOffer(Joi.string().trim().max(20)),
+  model: requiredForOffer(modelYear),
   amountToman: requiredForOffer(toman),
   paidAmountToman: requiredForOffer(toman),
   carPriceToman: requiredForOffer(toman),
@@ -95,7 +116,7 @@ const createBody = Joi.object({
 const updateBody = Joi.object({
   solh: Joi.string().valid(...Object.values(SOLH_STATUS)),
   carColor: Joi.string().trim().max(60).allow(null),
-  model: Joi.string().trim().max(20).allow(null),
+  model: modelYear.allow(null),
   amountToman: toman.allow(null),
   paidAmountToman: toman.allow(null),
   carPriceToman: toman.allow(null),

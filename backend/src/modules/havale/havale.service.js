@@ -130,7 +130,10 @@ const havaleService = {
     // with no shape at all, and a contact number inside it hands the market a
     // free directory — every reveal that would have been paid for, given away
     // in one line. See utils/textGuard for why this is one layer of several.
-    assertClean({ توضیحات: payload.description }, { agencyCode: user.agencyCode });
+    assertClean(
+      { توضیحات: payload.description },
+      { agencyCode: user.agencyCode, agencyName: user.agencyName }
+    );
 
     const { carModelId, carColor, ...rest } = payload;
     const catalog = await this.resolveCatalog({ carModelId, carColor });
@@ -303,7 +306,10 @@ const havaleService = {
     // Checked on an edit as well, and not as an afterthought: posting clean
     // text and editing the number in afterwards is the obvious way round a
     // check that only runs once.
-    assertClean({ توضیحات: payload.description }, { agencyCode: user.agencyCode });
+    assertClean(
+      { توضیحات: payload.description },
+      { agencyCode: user.agencyCode, agencyName: user.agencyName }
+    );
 
     // The car itself is not editable, and neither is the kind. Everything on
     // the card is negotiable except what the card *is*: an advertisement that
