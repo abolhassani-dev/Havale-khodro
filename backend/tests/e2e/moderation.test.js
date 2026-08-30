@@ -708,4 +708,121 @@ maybe('moderation', () => {
         .expect(400);
     });
   });
+
+  /**
+   * The notice box.
+   *
+   * Every moderation decision lands somewhere the agency cannot see: a listing
+   * goes quiet, a counter goes up, and one day the account stops working. These
+   * check that both sides of a verdict are told, in writing, with the facts
+   * needed to argue about it — and that neither side learns who the other is.
+   */
+  describe('the agency notice box', () => {
+    const review = (cookie, id, verdict, note = 'بررسی شد') =>
+      request(app)
+        .post(api(`/reports/${id}/review`))
+        .set('Cookie', cookie)
+        .send({ verdict, note });
+
+    it('tells the accused which listing, on what grounds, and where that leaves them', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner, reporter, havale } = await listingAndReporter();
+
+      const report = await file(reporter.cookie, havale.id).expect(201);
+      await review(superAdmin.cookie, report.body.data.id, 'CONFIRMED', 'با کارخانه نخواند').expect(200);
+
+      const box = await request(app).get(api('/notices')).set('Cookie', owner.cookie).expect(200);
+      const strike = box.body.data.items.find((n) => n.kind === 'STRIKE');
+
+      expect(strike).toBeDefined();
+      expect(strike.listing.serial).toBe(havale.serial);
+      expect(strike.reason).toBe('FAKE_LISTING');
+      expect(strike.note).toBe('با کارخانه نخواند');
+      // The number is the part that matters: «one of three» is a warning, an
+      // unnumbered strike is only a scolding.
+      expect(strike.strikeNumber).toBe(1);
+      expect(strike.strikeLimit).toBeGreaterThan(1);
+      expect(box.body.data.unread).toBeGreaterThan(0);
+    });
+
+    it('never names the agency that reported them', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner, reporter, havale } = await listingAndReporter();
+
+      const report = await file(reporter.cookie, havale.id).expect(201);
+      await review(superAdmin.cookie, report.body.data.id, 'CONFIRMED').expect(200);
+
+      const box = await request(app).get(api('/notices')).set('Cookie', owner.cookie).expect(200);
+      const serialised = JSON.stringify(box.body);
+
+      // Telling an advertiser who reported them turns the feature into a way to
+      // find out who to lean on.
+      expect(serialised).not.toContain(reporter.user.agencyCode);
+      expect(serialised).not.toContain(reporter.user.phone);
+    });
+
+    it('tells the reporter what came of the report they filed', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { reporter, havale } = await listingAndReporter();
+
+      const report = await file(reporter.cookie, havale.id).expect(201);
+      await review(superAdmin.cookie, report.body.data.id, 'REJECTED', 'شواهد کافی نبود').expect(200);
+
+      const box = await request(app).get(api('/notices')).set('Cookie', reporter.cookie).expect(200);
+      const outcome = box.body.data.items.find((n) => n.kind === 'REPORT_REJECTED');
+
+      expect(outcome).toBeDefined();
+      expect(outcome.note).toBe('شواهد کافی نبود');
+    });
+
+    it('says nothing about a report still waiting to be judged', async () => {
+      const { owner, reporter, havale } = await listingAndReporter();
+      await file(reporter.cookie, havale.id).expect(201);
+
+      // Both sides: an open complaint is not a verdict, and announcing it would
+      // be a penalty applied before the decision.
+      for (const who of [owner, reporter]) {
+        const box = await request(app).get(api('/notices')).set('Cookie', who.cookie).expect(200);
+        expect(box.body.data.items).toHaveLength(0);
+      }
+    });
+
+    it('stops counting as unread once the box has been opened', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner, reporter, havale } = await listingAndReporter();
+
+      const report = await file(reporter.cookie, havale.id).expect(201);
+      await review(superAdmin.cookie, report.body.data.id, 'CONFIRMED').expect(200);
+
+      const before = await request(app).get(api('/notices/unread')).set('Cookie', owner.cookie).expect(200);
+      expect(before.body.data.notices).toBe(1);
+
+      await request(app).post(api('/notices/seen')).set('Cookie', owner.cookie).expect(200);
+
+      const after = await request(app).get(api('/notices/unread')).set('Cookie', owner.cookie).expect(200);
+      expect(after.body.data.notices).toBe(0);
+
+      // Read is not deleted: the record is what they come back to when somebody
+      // asks why a listing disappeared.
+      const box = await request(app).get(api('/notices')).set('Cookie', owner.cookie).expect(200);
+      expect(box.body.data.items).toHaveLength(1);
+    });
+
+    it('is still reachable after the account is suspended', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner } = await listingAndReporter();
+
+      await request(app)
+        .put(api(`/admin/agents/${owner.user.id}/status`))
+        .set('Cookie', superAdmin.cookie)
+        .send({ status: 'SUSPENDED' })
+        .expect(200);
+
+      // The whole point: the explanation for a suspension must not sit behind
+      // the suspension. Signing back in is allowed, and the box opens.
+      const back = await signIn(owner.user);
+      const box = await request(app).get(api('/notices')).set('Cookie', back).expect(200);
+      expect(box.body.data.items.some((n) => n.kind === 'ACCOUNT_SUSPENDED')).toBe(true);
+    });
+  });
 });

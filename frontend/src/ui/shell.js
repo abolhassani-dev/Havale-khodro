@@ -21,6 +21,10 @@ import { BRAND } from '../constants.js';
  */
 const AGENT_NAV = [
   { page: 'dash', icon: 'dashboard', label: 'داشبورد' },
+  // Top level, beside the dashboard, rather than buried under the profile: what
+  // is in it is a penalty on their account with a deadline attached, and a
+  // person who does not know it exists will not go looking for it.
+  { page: 'notices', icon: 'bell', label: 'اطلاعیه‌ها' },
 
   {
     id: 'havale',
@@ -191,6 +195,7 @@ const NAV_BADGE = {
   'adm-tickets': 'openTickets',
   'adm-seats': 'pendingSeatOrders',
   'adm-reports': 'pendingReports',
+  notices: 'notices',
 };
 
 function link(item, current) {
@@ -382,13 +387,14 @@ function suspendedBanner() {
       ${
         strikes?.strikes
           ? html`به دلیل ${faDigits(strikes.strikes)} تخلف تأییدشده روی آگهی‌های شما.
-              فهرست گزارش‌ها را در همین صفحه، بخش «وضعیت حساب»، می‌بینید.`
-          : 'برای دیدن دلیل و اعتراض، از بخش پشتیبانی تیکت بزنید.'
+              در بخش <b>اطلاعیه‌ها</b> نوشته شده کدام آگهی، به چه دلیل و در چه تاریخی.`
+          : html`در بخش <b>اطلاعیه‌ها</b> نوشته شده چه تصمیمی و بر چه اساسی گرفته شده است.`
       }
       تا زمان رفع تعلیق، ثبت آگهی و نمایش مشخصات برای شما بسته است — ولی
       آگهی‌های خودتان و سابقه‌تان سر جایشان هستند.
-      <div style="margin-top:8px">
-        <button class="btn sm" data-new-ticket="" data-category="APPEAL">اعتراض به تعلیق</button>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" data-go="notices">دیدن دلیل</button>
+        <button class="btn sm" data-new-ticket="اعتراض به تعلیق حساب" data-category="APPEAL">اعتراض به تعلیق</button>
       </div>
     </div>
   </div>`;

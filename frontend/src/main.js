@@ -40,6 +40,7 @@ import {
 } from './ui/pickSelect.js';
 import { handleJalaliDateChange } from './ui/dateInput.js';
 import { handleMoneyInput } from './ui/moneyInput.js';
+import { loadNotices, noticesPage } from './pages/agent/notices.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets, subscription } from './api/index.js';
@@ -59,6 +60,7 @@ const TITLES = {
   'sub-agents': ['زیرنمایندگی‌ها', 'حالت ماژول'],
   tickets: ['پشتیبانی', 'گفتگو با تیم پشتیبانی'],
   ticket: ['گفتگو', ''],
+  notices: ['اطلاعیه‌ها', 'تصمیم‌هایی که درباره‌ی حساب و آگهی‌های شما گرفته شده'],
   profile: ['تنظیمات حساب', 'مشخصات نمایندگی و رمز عبور'],
   'no-access': ['دسترسی تعیین نشده', ''],
 };
@@ -88,6 +90,7 @@ function registerRoutes() {
   route('sub-agents', loadSubAgents);
   route('tickets', loadTickets);
   route('ticket', loadTicket);
+  route('notices', loadNotices);
   route('profile', async () => ({}));
   // Registered so the router recognises them: an unknown page silently
   // redirects home, which would make every one of these menu items look like
@@ -137,6 +140,7 @@ function pageBody() {
     case 'sub-agents': return subAgentsPage();
     case 'tickets': return ticketsPage();
     case 'ticket': return ticketPage();
+    case 'notices': return noticesPage();
     case 'profile': return profilePage();
     case 'no-access': return noAccessPage();
     default:

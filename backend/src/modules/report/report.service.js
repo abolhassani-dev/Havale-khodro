@@ -254,6 +254,34 @@ const reportService = {
   },
 
   /**
+   * The reports this agency filed, with what came of them.
+   *
+   * The other half of the file: `listAgainstMe` says what was upheld against
+   * them, this says what happened to the ones they raised. Without it a report
+   * is a thing you send into silence — and one of the outcomes carries a strike
+   * of its own, which nobody should learn about only from the count on their
+   * dashboard.
+   *
+   * The accused agency's identity is not on it, exactly as it is not on the
+   * accuser's side.
+   */
+  async listFiledBy(user, take = 50) {
+    const reports = await reportRepository.list({ reporterId: user.id, take });
+    return reports
+      .filter((r) => r.status !== 'PENDING')
+      .map((r) => ({
+        id: r.id,
+        serial: r.serial,
+        status: r.status,
+        reason: r.reason,
+        adminNote: r.adminNote,
+        listing: { serial: r.listing.serial, carType: r.listing.carType },
+        createdAt: r.createdAt,
+        reviewedAt: r.reviewedAt,
+      }));
+  },
+
+  /**
    * What the accused agency sees about itself.
    *
    * Only upheld reports, and without the reporter — telling an advertiser who

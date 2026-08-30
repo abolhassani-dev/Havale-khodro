@@ -1,6 +1,6 @@
 import { getState, setState, isAdmin, isAgent } from './state/store.js';
 import { adminHome } from './ui/shell.js';
-import { admin } from './api/index.js';
+import { admin, notices } from './api/index.js';
 
 /**
  * Routing on the hash.
@@ -118,13 +118,27 @@ export async function resolve() {
 const BADGE_TTL_MS = 20_000;
 let badgesAt = 0;
 
+/**
+ * Forget the cached window, so the next navigation asks again.
+ *
+ * For the case where this session is what changed the number — opening the
+ * notice box marks it read, and a badge that keeps saying «۲» for another
+ * twenty seconds after you have read both is the panel arguing with the page
+ * you are looking at.
+ */
+export function invalidateBadges() {
+  badgesAt = 0;
+}
+
 function refreshBadges() {
-  if (!isAdmin()) return;
+  // Both menus wear numbers now, from different endpoints: an agency has no
+  // moderation queue to count, and an admin has no notice box.
+  const source = isAdmin() ? admin.badges : isAgent() ? notices.unread : null;
+  if (!source) return;
   if (Date.now() - badgesAt < BADGE_TTL_MS) return;
   badgesAt = Date.now();
 
-  admin
-    .badges()
+  source()
     .then((badges) => {
       const now = getState().badges;
       const same = now && Object.keys(badges).every((k) => now[k] === badges[k]);

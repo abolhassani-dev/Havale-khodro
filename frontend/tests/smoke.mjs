@@ -415,6 +415,25 @@ await step('account settings page loads', async () => {
   if (!t.includes('کد نمایندگی')) throw new Error('profile does not show the agency code');
 });
 
+/**
+ * The notice box opens, and marks itself read.
+ *
+ * Whether it has anything in it depends on the database this runs against, so
+ * the step checks the two things that are true either way: the page renders,
+ * and opening it clears the unread badge. The content itself — which listing,
+ * which reason, which strike number — is covered by the backend suite.
+ */
+await step('the notice box opens and marks itself read', async () => {
+  await navigate('notices');
+  await page.waitForSelector('.ntc-list, .empty', { timeout: 8000 });
+
+  await navigate('dash');
+  // Long enough for the badge window to be re-asked after the seen write.
+  await page.waitForTimeout(1200);
+  const badge = await page.locator('.sidebar a:has-text("اطلاعیه‌ها") .nav-badge').count();
+  if (badge) throw new Error('the badge survived reading the box');
+});
+
 // A menu item that goes nowhere reads as broken, so these must render real
 // copy rather than an empty frame — and must not silently bounce home, which
 // is what an unregistered route would do.

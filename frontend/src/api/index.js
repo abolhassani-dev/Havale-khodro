@@ -97,6 +97,12 @@ export const reports = {
   approveSuspension: (id) => api.post(`/reports/${id}/approve-suspension`),
 };
 
+export const notices = {
+  list: () => api.get('/notices'),
+  unread: () => api.get('/notices/unread'),
+  seen: () => api.post('/notices/seen'),
+};
+
 export const tickets = {
   list: (status, category) => api.get('/tickets', { status, category }),
   get: (id) => api.get(`/tickets/${id}`),

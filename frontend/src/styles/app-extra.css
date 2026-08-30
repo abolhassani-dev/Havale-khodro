@@ -1906,3 +1906,34 @@ button.af-parent:hover { text-decoration: underline; }
    وگرنه در چیدمان .field ارتفاع و کشیدگی‌اش فرق می‌کند. */
 .mny { display: block; }
 .mny > .in { width: 100%; }
+
+/* ---- صندوق اطلاعیه‌ها ---- */
+.ntc-list { display: grid; gap: 10px; padding: 12px 14px 14px; }
+
+.ntc {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-inline-start-width: 3px;
+  border-radius: 10px;
+  background: #fdfcf8;
+}
+.ntc.danger { border-inline-start-color: var(--danger, #b3261e); }
+.ntc.warn   { border-inline-start-color: #b98900; }
+.ntc.ok     { border-inline-start-color: var(--primary); }
+
+.ntc-ico { font-size: 15px; line-height: 1.5; }
+.ntc.danger .ntc-ico { color: var(--danger, #b3261e); }
+.ntc.warn .ntc-ico   { color: #b98900; }
+.ntc.ok .ntc-ico     { color: var(--primary); }
+
+.ntc-b { flex: 1; min-width: 0; }
+.ntc-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.ntc-h b { font-size: 13.5px; }
+.ntc-at { color: var(--ink-3); font-size: 11.5px; margin-inline-start: auto; }
+.ntc-b p { margin: 5px 0 0; font-size: 12.5px; line-height: 1.9; color: var(--ink-2); }
+.ntc-note {
+  padding: 7px 9px; margin-top: 8px !important;
+  background: var(--paper-2); border-radius: 7px;
+}
+.ntc-act { margin-top: 9px; }

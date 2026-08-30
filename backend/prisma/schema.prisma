@@ -197,6 +197,11 @@ model User {
   falseReportStrikes Int     @default(0)
   adminNote          String?
 
+  // آخرین باری که صندوق اطلاعیه‌ها را باز کرده. اطلاعیه‌ها جدولِ خودشان را
+  // ندارند — از همان گزارش‌های تخلف ساخته می‌شوند — پس «خوانده‌نشده» یعنی
+  // اطلاعیه‌ای که تاریخش از این تازه‌تر است. یک ستون به‌جای یک جدول.
+  noticesSeenAt DateTime?
+
   lastLoginAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
