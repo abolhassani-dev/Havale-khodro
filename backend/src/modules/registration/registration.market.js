@@ -50,7 +50,7 @@ registerMarket('REGISTRATION', {
       { label: 'نوع فروش', value: SALE_LABEL[d.saleType] || '—', icon: 'ticket' },
       { label: 'تعداد ظرفیت', value: d.capacity ?? '—', icon: 'layers' },
       {
-        label: 'مبلغ واریزی ثبت‌نام',
+        label: 'قیمت خودرو',
         value: toNumber(d.depositToman),
         money: true,
         icon: 'ticket',

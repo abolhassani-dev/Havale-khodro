@@ -1900,3 +1900,9 @@ button.af-parent:hover { text-decoration: underline; }
 .sec-also-row + .sec-also-row { border-top: 1px solid var(--line-2); }
 
 .sec-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---- ورودی قیمت: خودش را سه‌رقم سه‌رقم جدا می‌کند ---- */
+/* یک بسته‌بندی دور دو ورودی (دیدنی و مخفی)، پس باید مثل خودِ ورودی رفتار کند
+   وگرنه در چیدمان .field ارتفاع و کشیدگی‌اش فرق می‌کند. */
+.mny { display: block; }
+.mny > .in { width: 100%; }

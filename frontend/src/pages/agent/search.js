@@ -6,6 +6,7 @@ import {
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager } from '../../ui/feedback.js';
 import { usageChip } from '../../ui/shell.js';
+import { moneyInput } from '../../ui/moneyInput.js';
 import { resolve } from '../../router.js';
 
 /**
@@ -81,9 +82,8 @@ export function searchPage() {
                value="${params.maxDeliveryDays || ''}">
       </div>
       <div class="field">
-        <label for="maxAmount">حداکثر مبلغ (تومان)</label>
-        <input class="in num" id="maxAmount" name="maxAmount" inputmode="numeric"
-               value="${params.maxAmount || ''}">
+        <label for="maxAmount-in">حداکثر مبلغ (تومان)</label>
+        ${moneyInput('maxAmount', { value: params.maxAmount || '' })}
       </div>
       ${
         user?.parentId || user?.isReseller

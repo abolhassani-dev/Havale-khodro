@@ -187,7 +187,11 @@ export function adminHome() {
 
 // Which sidebar entries wear a number, and which count they wear. The counts
 // arrive with every navigation; a missing or null count simply shows nothing.
-const NAV_BADGE = { 'adm-tickets': 'openTickets', 'adm-seats': 'pendingSeatOrders' };
+const NAV_BADGE = {
+  'adm-tickets': 'openTickets',
+  'adm-seats': 'pendingSeatOrders',
+  'adm-reports': 'pendingReports',
+};
 
 function link(item, current) {
   const badgeKey = NAV_BADGE[item.page];

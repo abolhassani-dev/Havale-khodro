@@ -51,6 +51,11 @@ const reportRepository = {
     return prisma.violationReport.count({ where: { reporterId, createdAt: { gte: since } } });
   },
 
+  /** The queue length for the sidebar: reports nobody has ruled on yet. */
+  countPending() {
+    return prisma.violationReport.count({ where: { status: 'PENDING' } });
+  },
+
   list({ status, needsSuperApproval, reporterId, take = 50 }) {
     return prisma.violationReport.findMany({
       where: {

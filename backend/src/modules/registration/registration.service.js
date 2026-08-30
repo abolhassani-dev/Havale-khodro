@@ -94,7 +94,7 @@ const DETAIL_FIELDS = {
   method: ['روش ثبت‌نام'],
   saleType: ['نوع فروش'],
   capacity: ['تعداد ظرفیت', 'number'],
-  depositToman: ['مبلغ واریزی ثبت‌نام', 'money'],
+  depositToman: ['قیمت خودرو', 'money'],
   premiumToman: ['مبلغ امتیاز', 'money'],
   registerDeadline: ['مهلت ثبت‌نام', 'date'],
   deliveryEstimate: ['موعد تحویل'],

@@ -7,6 +7,7 @@ import {
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
+import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import { enDigits } from '../../ui/format.js';
 import { LIMITS } from '../../constants.js';
 import { go, resolve } from '../../router.js';
@@ -116,9 +117,9 @@ export function havaleFormPage(kind) {
       </div>
 
       ${numberField('model', 'مدل (سال)', offer, '۱۴۰۵')}
-      ${numberField('carPriceToman', 'قیمت خودرو (تومان)', offer)}
-      ${numberField('amountToman', 'مبلغ حواله (تومان)', offer)}
-      ${numberField('paidAmountToman', 'مبلغ واریز شده (تومان)', offer)}
+      ${numberField('carPriceToman', 'قیمت خودرو (تومان)', offer, '', true)}
+      ${numberField('amountToman', 'مبلغ حواله (تومان)', offer, '', true)}
+      ${numberField('paidAmountToman', 'مبلغ واریز شده (تومان)', offer, '', true)}
 
       <div class="field">
         <label for="paymentType">
@@ -179,11 +180,17 @@ export function havaleFormPage(kind) {
   </form>`;
 }
 
-function numberField(name, label, required, placeholder = '') {
+function numberField(name, label, required, placeholder = '', money = false) {
   return html`<div class="field">
-    <label for="${name}">${label} ${raw(required ? '' : '<span class="opt">(اختیاری)</span>')}</label>
-    <input class="in num" id="${name}" name="${name}" inputmode="numeric"
-           placeholder="${placeholder}" ${raw(required ? 'required' : '')}>
+    <label for="${money ? moneyFieldId(name) : name}">${label} ${raw(required ? '' : '<span class="opt">(اختیاری)</span>')}</label>
+    ${
+      // A price groups itself as it is typed; a model year or a day count does
+      // not — «۱۴۰۵» must not become «۱٬۴۰۵».
+      money
+        ? moneyInput(name, { required, placeholder })
+        : html`<input class="in num" id="${name}" name="${name}" inputmode="numeric"
+           placeholder="${placeholder}" ${raw(required ? 'required' : '')}>`
+    }
   </div>`;
 }
 

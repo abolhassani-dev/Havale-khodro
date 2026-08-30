@@ -7,6 +7,7 @@ import {
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { jalaliDate } from '../../ui/dateInput.js';
+import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import { go, resolve } from '../../router.js';
 
 /**
@@ -121,9 +122,8 @@ export function regSearchPage() {
       ${filterSelect('saleType', 'نوع فروش', REG_SALE_TYPES, params.saleType)}
 
       <div class="field">
-        <label for="maxPremium">سقف مبلغ امتیاز</label>
-        <input class="in num" id="maxPremium" name="maxPremium" inputmode="numeric"
-               value="${params.maxPremium || ''}" placeholder="تومان">
+        <label for="maxPremium-in">سقف مبلغ امتیاز</label>
+        ${moneyInput('maxPremium', { value: params.maxPremium || '', placeholder: 'تومان' })}
       </div>
 
       <div class="field" style="align-self:end;display:flex;gap:8px">
@@ -177,7 +177,7 @@ function regCard(r) {
     <dl>
       ${field('نوع فروش', SALE_LABEL[r.saleType] || '—')}
       ${field(offer ? 'تعداد ظرفیت' : 'تعداد', r.capacity ? faDigits(r.capacity) : '—')}
-      ${field('مبلغ واریزی ثبت‌نام', r.depositToman ? money(r.depositToman) : '—')}
+      ${field('قیمت خودرو', r.depositToman ? money(r.depositToman) : '—')}
       ${field(offer ? 'مبلغ امتیاز' : 'سقف مبلغ امتیاز', r.premiumToman ? money(r.premiumToman) : '—')}
       ${
         // A request is not asked for these, so it has nothing to print — two
@@ -361,13 +361,14 @@ export function regFormPage(kind) {
       </div>
 
       ${numberField('capacity', offer ? 'تعداد ظرفیت' : 'تعداد', offer, '۴')}
-      ${numberField('depositToman', 'مبلغ واریزی ثبت‌نام (تومان)', offer, '', 'پولی که ثبت‌نام‌کننده به کارخانه واریز می‌کند.')}
+      ${numberField('depositToman', 'قیمت خودرو (تومان)', offer, '', 'مبلغی که بابت خودِ خودرو به کارخانه پرداخت می‌شود.', true)}
       ${numberField(
         'premiumToman',
         offer ? 'مبلغ امتیاز (تومان)' : 'سقف مبلغ امتیاز (تومان)',
         offer,
         '',
-        offer ? 'پولی که بابت واگذاری این ظرفیت می‌گیرید.' : 'تا چه مبلغی حاضرید بپردازید.'
+        offer ? 'پولی که بابت واگذاری این ظرفیت می‌گیرید.' : 'تا چه مبلغی حاضرید بپردازید.',
+        true
       )}
 
       ${
@@ -414,11 +415,17 @@ export function regFormPage(kind) {
   </form>`;
 }
 
-function numberField(name, label, required, placeholder = '', hint = '') {
+function numberField(name, label, required, placeholder = '', hint = '', money = false) {
   return html`<div class="field">
-    <label for="${name}">${label} ${raw(required ? '' : '<span class="opt">(اختیاری)</span>')}</label>
-    <input class="in num" id="${name}" name="${name}" inputmode="numeric"
-           placeholder="${placeholder}" ${raw(required ? 'required' : '')}>
+    <label for="${money ? moneyFieldId(name) : name}">${label} ${raw(required ? '' : '<span class="opt">(اختیاری)</span>')}</label>
+    ${
+      // Prices group themselves by three as they are typed; a capacity of four
+      // does not need it and «۱٬۴۰۵» for a model year would be wrong.
+      money
+        ? moneyInput(name, { required, placeholder })
+        : html`<input class="in num" id="${name}" name="${name}" inputmode="numeric"
+           placeholder="${placeholder}" ${raw(required ? 'required' : '')}>`
+    }
     ${hint ? html`<div class="hint">${hint}</div>` : ''}
   </div>`;
 }

@@ -8,6 +8,7 @@ import {
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager, detailRow, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
+import { moneyInput } from '../../ui/moneyInput.js';
 import { go, resolve } from '../../router.js';
 import { catalogPage, loadAdminCatalog, handleCatalogClick, handleCatalogSubmit } from './catalog.js';
 // The owner's own screen. Its own module because it is behind its own
@@ -2020,7 +2021,12 @@ function editSettingModal(key, type, current) {
                 <option value="true" ${raw(current === 'true' ? 'selected' : '')}>روشن</option>
                 <option value="false" ${raw(current === 'true' ? '' : 'selected')}>خاموش</option>
               </select>`
-            : html`<input class="in num" id="m-val" name="value" value="${current}" required>`
+            : // A price is the one setting where a missing zero is expensive, and
+              // the server marks those `bigint` — so the same grouped field the
+              // listing forms use, rather than a bare box of eleven digits.
+              type === 'bigint'
+              ? moneyInput('value', { id: 'm-val', required: true, value: current })
+              : html`<input class="in num" id="m-val" name="value" value="${current}" required>`
         }
       </div>`,
     confirmLabel: 'ثبت',

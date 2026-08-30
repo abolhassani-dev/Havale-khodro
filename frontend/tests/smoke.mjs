@@ -263,9 +263,9 @@ await step('a listing can actually be posted from the form', async () => {
   await page.selectOption('#carModelId', { index: 1 });
   await page.selectOption('#carColor', { index: 1 });
   await page.fill('#model', '۱۴۰۴');
-  await page.fill('#carPriceToman', '۱۲۰۰۰۰۰۰۰۰');
-  await page.fill('#amountToman', '۹۵۰۰۰۰۰۰۰');
-  await page.fill('#paidAmountToman', '۳۰۰۰۰۰۰۰۰');
+  await page.fill('#carPriceToman-in', '۱۲۰۰۰۰۰۰۰۰');
+  await page.fill('#amountToman-in', '۹۵۰۰۰۰۰۰۰');
+  await page.fill('#paidAmountToman-in', '۳۰۰۰۰۰۰۰۰');
   // An enum, not a number. Sent through the digit conversion the money fields
   // use, `Number(enDigits('CASH'))` is NaN and every sale listing is refused —
   // which is what this step exists to notice.
@@ -304,9 +304,9 @@ await step('a refused submit keeps what was typed', async () => {
   await page.selectOption('#carModelId', { index: 1 });
   await page.selectOption('#carColor', { index: 1 });
   await page.fill('#model', '۱۴۰۴');
-  await page.fill('#carPriceToman', '۲۰۰۰۰۰۰');
-  await page.fill('#amountToman', '۱۰۰۰۰۰۰');
-  await page.fill('#paidAmountToman', '۹۹۹۹۹۹۹۹۹');   // more than the total
+  await page.fill('#carPriceToman-in', '۲۰۰۰۰۰۰');
+  await page.fill('#amountToman-in', '۱۰۰۰۰۰۰');
+  await page.fill('#paidAmountToman-in', '۹۹۹۹۹۹۹۹۹');   // more than the total
   await page.selectOption('#paymentType', 'CASH');
   await page.fill('#deliveryDays', '۳۰');
   await page.fill('#depositDays', '۷');
@@ -321,6 +321,28 @@ await step('a refused submit keeps what was typed', async () => {
   if (/failed custom validation|Validation failed/.test(message)) {
     throw new Error('untranslated validator output reached the user: ' + message);
   }
+});
+
+/**
+ * A price groups itself as it is typed, and still posts as bare digits.
+ *
+ * Both halves matter and only one of them is visible. The field the person
+ * reads carries «۲٬۰۰۰٬۰۰۰»; the field the form submits has to carry
+ * «2000000», because the API takes a number. The first time this was built the
+ * two collided over one name and every price was posted empty — with the
+ * server answering that a filled-in field was required.
+ */
+await step('a price is grouped on screen and bare in the payload', async () => {
+  await page.fill('#carPriceToman-in', '۲۰۰۰۰۰۰');
+
+  const shown = await page.inputValue('#carPriceToman-in');
+  if (shown !== '۲٬۰۰۰٬۰۰۰') throw new Error('the price was not grouped: ' + shown);
+
+  const sent = await page.evaluate(() => {
+    const form = document.querySelector('form[data-form="havale"]');
+    return String(form.carPriceToman.value);
+  });
+  if (sent !== '2000000') throw new Error('the form would post «' + sent + '»');
 });
 
 /**

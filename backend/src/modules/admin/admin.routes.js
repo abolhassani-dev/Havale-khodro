@@ -11,6 +11,7 @@ const { allMarkets } = require('../listing/marketRegistry');
 const authRepository = require('../auth/auth.repository');
 const { ticketRepository } = require('../ticket/ticket.repository');
 const subscriptionRepository = require('../subscription/subscription.repository');
+const reportRepository = require('../report/report.repository');
 const { effectivePermissions } = require('../../constants/roles');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
@@ -62,11 +63,15 @@ router.get(
   '/badges',
   asyncHandler(async (req, res) => {
     const perms = effectivePermissions(req.user);
-    const [openTickets, pendingSeatOrders] = await Promise.all([
+    const [openTickets, pendingSeatOrders, pendingReports] = await Promise.all([
       perms.tickets ? ticketRepository.countOpen() : null,
       perms.seats ? subscriptionRepository.countPendingSeatOrders() : null,
+      // A report sitting unread is a listing the market is still being shown.
+      // The tickets queue has worn its number since the beginning; this queue
+      // is the one with a deadline on it.
+      perms.reports ? reportRepository.countPending() : null,
     ]);
-    return success(res, { openTickets, pendingSeatOrders });
+    return success(res, { openTickets, pendingSeatOrders, pendingReports });
   })
 );
 

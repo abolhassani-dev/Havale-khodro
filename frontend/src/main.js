@@ -39,6 +39,7 @@ import {
   handlePickSelectClick, handlePickSelectSearch, handlePickSelectKey, repositionPickSelects,
 } from './ui/pickSelect.js';
 import { handleJalaliDateChange } from './ui/dateInput.js';
+import { handleMoneyInput } from './ui/moneyInput.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets, subscription } from './api/index.js';
@@ -480,6 +481,11 @@ function applyFilters(form) {
  */
 function onCatalogSearch(event) {
   const input = event.target;
+
+  // Prices group themselves as they are typed. Handled here rather than by a
+  // listener per field, because these forms are rebuilt on every render and a
+  // listener bound to an element would go with it.
+  if (handleMoneyInput(input)) return;
 
   // The brand picker filters by hiding rows in place — no re-render, so the
   // input keeps its own caret and the ticked boxes keep themselves.
