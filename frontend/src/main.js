@@ -144,9 +144,66 @@ function pageBody() {
   }
 }
 
+/**
+ * What the document currently shows.
+ *
+ * Compared by identity, not by value, and that is what makes it cheap: every
+ * one of these is replaced wholesale by `setState` when it really changes —
+ * `data` is a new object per navigation, `openNav` a new array per toggle — so
+ * `===` is both correct and free.
+ */
+function signature(state) {
+  return {
+    user: state.user,
+    page: state.page,
+    params: state.params,
+    data: state.data,
+    error: state.error,
+    badges: state.badges,
+    openNav: state.openNav,
+    sidebarOpen: state.sidebarOpen,
+  };
+}
+
+let drawn = null;
+
+/**
+ * The dim and the loading bar, without rebuilding anything.
+ *
+ * This is the whole point of the fast path below. Marking a navigation as in
+ * progress changes one class and adds one empty div — and it used to do that by
+ * replacing the entire document, up to 67KB of it, with a copy of itself. Every
+ * page change therefore paid for two full rebuilds: one to say «working», one
+ * to show the result. On a fast machine that is invisible. On a phone it is
+ * exactly what «switching pages feels slow» is made of.
+ */
+function paintBusy(busy) {
+  const main = document.querySelector('.main');
+  const content = main?.querySelector('.content');
+  if (!main || !content) return false;
+
+  content.classList.toggle('is-busy', busy);
+  const bar = main.querySelector('.navbar-load');
+  if (busy && !bar) main.insertAdjacentHTML('afterbegin', '<div class="navbar-load"></div>');
+  if (!busy && bar) bar.remove();
+  return true;
+}
+
 function render() {
   const state = getState();
   const root = document.getElementById('root');
+
+  // Nothing that appears in the page has changed — only whether a navigation
+  // is in flight. Patch the two things that show it and stop.
+  const sig = signature(state);
+  const signed = state.user && !state.user.mustChangePassword;
+  if (signed && drawn && Object.keys(sig).every((k) => sig[k] === drawn[k])) {
+    if (paintBusy(Boolean(state.navigating))) {
+      document.getElementById('layer').innerHTML = String(html`${renderModal()}${renderToast()}`);
+      return;
+    }
+  }
+  drawn = sig;
 
   if (!state.user) {
     root.innerHTML = String(loginPage());
