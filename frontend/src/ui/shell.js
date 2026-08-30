@@ -123,6 +123,9 @@ const ADMIN_NAV = [
   { group: 'مرور کلی' },
   { page: 'adm-dash', icon: 'dashboard', label: 'داشبورد', permission: 'monitoring' },
   { page: 'adm-monitor', icon: 'eye', label: 'مانیتورینگ', permission: 'monitoring' },
+  // Two behavioural patterns worth a person's attention. Off the dashboard on
+  // purpose: an investigation is not a morning check.
+  { page: 'adm-review', icon: 'flag', label: 'رفتار قابل بررسی', permission: 'monitoring' },
   { group: 'نمایندگی‌ها' },
   { page: 'adm-agents', icon: 'shield', label: 'فهرست نمایندگی‌ها', permission: 'agents' },
   { page: 'adm-new-agent', icon: 'plus', label: 'ساخت نمایندگی', permission: 'agents' },

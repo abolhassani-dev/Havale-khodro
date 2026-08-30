@@ -41,16 +41,17 @@ export function registerAdminRoutes(route) {
   // Written as a sequence of awaits — which is how these started — a page with
   // three calls waits three round trips for data that has no order between it,
   // and the page arrives three times slower than it needs to.
-  route('adm-dash', async () => {
-    const [overview, suspicious, bypass] = await Promise.all([
-      admin.overview(),
+  route('adm-dash', async () => ({ overview: await admin.overview() }));
+
+  // The two behavioural analyses cost a grouped query each and answer a
+  // question nobody asks every morning. They were on the dashboard and, on a
+  // healthy day, filled two thirds of it with «nothing found».
+  route('adm-review', async () => {
+    const [suspicious, bypass] = await Promise.all([
       admin.suspicious({ days: 7, minReveals: 20 }).catch(() => null),
-      // The mirror image of the line above: not «who is collecting numbers» but
-      // «whose numbers nobody ever asks for». Caught rather than awaited bare —
-      // one card failing must dim that card, not the dashboard.
       admin.contactBypass({ days: 30, minListings: 5 }).catch(() => null),
     ]);
-    return { overview, suspicious, bypass };
+    return { suspicious, bypass };
   });
 
   route('adm-agents', async (params) => ({
@@ -153,6 +154,7 @@ export function renderAdminPage(page) {
     case 'adm-listing': return listingPage();
     case 'adm-reports': return reportsPage();
     case 'adm-tickets': return adminTicketsPage();
+    case 'adm-review': return reviewPage();
     case 'adm-monitor': return monitorPage();
     case 'adm-seats': return seatsPage();
     case 'adm-settings': return settingsPage();
@@ -166,31 +168,34 @@ export function renderAdminPage(page) {
 
 // ── dashboard ───────────────────────────────────────────────────────────────
 
-function dashPage() {
+/**
+ * Two patterns worth a person's attention, on a screen of their own.
+ *
+ * Both are the same kind of thing and neither is an alarm: a shape in the
+ * numbers that a human should look at and then decide about. They lived on the
+ * dashboard and were wrong there — an investigation is not a morning check, and
+ * on a healthy day they filled the first screen with two ways of saying
+ * «nothing found».
+ *
+ * They are opposites, which is why they belong together. One is an agency
+ * opening numbers and never posting: collecting. The other is an agency posting
+ * and never being opened: being contacted somewhere we cannot see.
+ */
+function reviewPage() {
   const { data } = getState();
-  const o = data.overview || {};
   const flagged = data.suspicious?.items || [];
   const bypass = data.bypass?.items || [];
 
   return html`
-  <div class="stats">
-    ${stat('نمایندگی‌ها', faDigits(o.agencies ?? 0), `${faDigits(o.activeAgencies ?? 0)} فعال`, 'shield')}
-    ${stat('حواله‌ی زنده', faDigits(o.liveHavales ?? 0), 'در لیست عمومی', 'file')}
-    ${stat('بازدید ۲۴ ساعت', faDigits(o.revealsLast24h ?? 0), 'نمایش مشخصات', 'eye')}
-    ${stat('اشتراک فعال', faDigits(o.liveSubscriptions ?? 0), '', 'clock', 'ok')}
-    ${stat('گزارش در انتظار', faDigits(o.pendingReports ?? 0), o.pendingReports ? 'نیاز به بررسی' : 'خالی', 'flag', o.pendingReports ? 'warn' : '')}
-    ${stat('تیکت باز', faDigits(o.openTickets ?? 0), '', 'ticket', o.openTickets ? 'warn' : '')}
-  </div>
-
   <div class="card">
     <div class="card-h">
-      <h2>رفتار قابل بررسی ${qtip('الگوهایی که ارزش نگاه دارند: نمایندگی‌ای که آگهی ندارد ولی مشخصات زیاد باز می‌کند، مصرف خیلی بالای سقف، یا اخطار تخلف. این‌ها فقط علامت‌گذاری‌اند — سامانه خودش کسی را مسدود نمی‌کند.')}</h2>
+      <h2>مصرف بدون عرضه ${qtip('نمایندگی‌هایی که مشخصات زیادی باز می‌کنند ولی آگهی نمی‌گذارند. سقف‌ها جلوی حجم را از قبل گرفته‌اند؛ این فقط علامت‌گذاری است و سامانه خودش کسی را مسدود نمی‌کند.')}</h2>
       <span class="tag ${flagged.length ? 'w' : 'g'}">${faDigits(flagged.length)} مورد</span>
     </div>
     ${
       flagged.length
         ? html`<table>
-            <thead><tr><th>نمایندگی</th><th>بازدید</th><th>حواله</th><th>دلیل</th><th></th></tr></thead>
+            <thead><tr><th>نمایندگی</th><th>بازدید</th><th>آگهی</th><th>دلیل</th><th></th></tr></thead>
             <tbody>
               ${flagged.map(
                 (row) => html`<tr>
@@ -209,14 +214,11 @@ function dashPage() {
           </table>`
         : emptyBox('رفتار غیرعادی‌ای در هفت روز گذشته دیده نشد.')
     }
-    <div class="hint" style="padding:10px 14px">
-      این‌ها فقط <b>علامت‌گذاری</b> است، نه مسدودسازی — سقف‌ها جلوی حجم را از قبل گرفته‌اند.
-    </div>
   </div>
 
   <div class="card">
     <div class="card-h">
-      <h2>آگهی زیاد، بازدید صفر ${qtip('نمایندگی‌هایی که آگهی زیادی دارند ولی حتی یک بار هم کسی مشخصات تماسشان را باز نکرده است. معمولاً یعنی شماره‌ی تماس جایی در متن آگهی نوشته شده — چون وقتی شماره روی صفحه باشد، کسی سهمیه‌اش را خرج نمی‌کند. متن آگهی‌هایشان را نگاه کنید. این فقط یک فهرست است؛ چیزی مسدود نمی‌شود.')}</h2>
+      <h2>آگهی زیاد، بازدید صفر ${qtip('نمایندگی‌هایی که آگهی زیادی دارند ولی حتی یک بار هم کسی مشخصات تماسشان را باز نکرده است. معمولاً یعنی راهی برای تماس مستقیم در آگهی گذاشته‌اند — وقتی شماره روی صفحه باشد، کسی سهمیه‌اش را خرج نمی‌کند. آگهی‌هایشان را باز کنید و نگاه کنید.')}</h2>
       <span class="tag ${bypass.length ? 'w' : 'g'}">${faDigits(bypass.length)} مورد</span>
     </div>
     ${
@@ -242,10 +244,258 @@ function dashPage() {
         : emptyBox('نمایندگی‌ای با این الگو پیدا نشد.')
     }
     <div class="hint" style="padding:10px 14px">
-      هیچ فیلتر متنی همه‌ی راه‌های نوشتن یک شماره را نمی‌گیرد — ولی <b>نتیجه‌اش</b>
-      همیشه همین است: آگهی هست و بازدید مشخصات نیست.
+      متن تایپی آگهی‌ها دیگر روی کارت عمومی نشان داده نمی‌شود، پس پنهان کردن شماره
+      در آن سخت‌تر شده — ولی راه‌های دیگری هم هست، و <b>نتیجه‌شان</b> همیشه همین
+      است: آگهی هست و بازدید مشخصات نیست.
     </div>
   </div>`;
+}
+
+/**
+ * The admin dashboard.
+ *
+ * Rebuilt around one question — «what needs me right now?» — because the first
+ * version answered a different one. It led with six counts and then two large
+ * cards that, on a healthy day, both said «nothing found»: two thirds of the
+ * screen given to the absence of problems. Numbers you cannot click are not a
+ * dashboard, they are a poster.
+ *
+ * So the order is: the queue first, with a button on every line; then the state
+ * of the market; then the fortnight behind it. The two review lists that used
+ * to fill this page have their own screen now — they are an investigation, not
+ * a morning check.
+ */
+function dashPage() {
+  const { data } = getState();
+  const o = data.overview || {};
+
+  // Every queue, with what to do about it. Written as data so the empty state
+  // is a fact about the list rather than a second copy of the markup.
+  const queue = [
+    {
+      count: o.pendingReports,
+      label: 'گزارش تخلف بررسی‌نشده',
+      hint: 'تا وقتی بررسی نشده، آگهی هنوز به بازار نشان داده می‌شود',
+      page: 'adm-reports',
+      tone: 'danger',
+    },
+    {
+      count: o.thirdStrike,
+      label: 'تعلیق در انتظار تأیید مدیر کل',
+      hint: 'سومین اخطار، که بدون تأیید اعمال نمی‌شود',
+      page: 'adm-reports',
+      tone: 'danger',
+      permission: 'thirdStrike',
+    },
+    {
+      count: o.openTickets,
+      label: 'گفتگوی باز',
+      hint: 'نمایندگی منتظر جواب است',
+      page: 'adm-tickets',
+      tone: 'warn',
+    },
+    {
+      count: o.pendingSeatOrders,
+      label: 'درخواست ظرفیت',
+      hint: 'فیش واریزی ثبت شده و منتظر تأیید است',
+      page: 'adm-seats',
+      tone: 'warn',
+      permission: 'seats',
+    },
+    {
+      count: o.expiringSubscriptions,
+      label: 'اشتراک رو به پایان',
+      hint: 'کمتر از هفت روز مانده — این‌ها را باید یادآوری کرد',
+      page: 'adm-agents',
+      tone: 'warn',
+      params: 'status=EXPIRING',
+    },
+  ].filter((row) => row.count > 0 && (!row.permission || can(row.permission)));
+
+  return html`
+  <div class="card kartabl">
+    <div class="card-h">
+      <h2>کارتابل ${qtip('کارهایی که همین حالا منتظر شماست. هر خط یک صف است و دکمه‌اش مستقیم می‌بردتان همان‌جا. وقتی این بخش خالی است یعنی هیچ صفی معطل نمانده.')}</h2>
+      ${
+        queue.length
+          ? html`<span class="tag w">${faDigits(queue.reduce((sum, r) => sum + r.count, 0))} مورد</span>`
+          : html`<span class="tag g">خالی</span>`
+      }
+    </div>
+    ${
+      queue.length
+        ? html`<div class="kt-list">
+            ${queue.map(
+              (row) => html`<div class="kt-row is-${row.tone}">
+                <b class="kt-n num">${faDigits(row.count)}</b>
+                <div class="kt-t">
+                  <b>${row.label}</b>
+                  <span>${row.hint}</span>
+                </div>
+                <button class="btn sm" data-go="${row.page}"
+                        ${raw(row.params ? `data-go-params="${row.params}"` : '')}>رسیدگی</button>
+              </div>`
+            )}
+          </div>`
+        : html`<div class="kt-empty">
+            <span>✓</span>
+            <div>
+              <b>هیچ کاری معطل نمانده است</b>
+              گزارش بررسی‌نشده، گفتگوی بی‌جواب و درخواست ظرفیتِ در انتظار ندارید.
+            </div>
+          </div>`
+    }
+  </div>
+
+  <div class="stats">
+    ${stat(
+      'نمایندگی فعال',
+      faDigits(o.activeAgencies ?? 0),
+      o.suspendedAgencies
+        ? `${faDigits(o.suspendedAgencies)} تعلیق‌شده · ${faDigits(o.newAgencies ?? 0)} تازه در ۳۰ روز`
+        : `${faDigits(o.newAgencies ?? 0)} تازه در ۳۰ روز`,
+      'shield'
+    )}
+    ${stat(
+      'آگهی زنده',
+      faDigits(o.liveListings ?? 0),
+      // Per market, because one number labelled «حواله» that has ثبت‌نامی
+      // inside it is the mistake the agency dashboard made until this morning.
+      `حواله ${faDigits(o.liveByMarket?.HAVALE ?? 0)} · ثبت‌نامی ${faDigits(o.liveByMarket?.REGISTRATION ?? 0)}`,
+      'file'
+    )}
+    ${stat(
+      'بازدید مشخصات',
+      faDigits(o.revealsLast7d ?? 0),
+      // A number with nothing to compare it to is decoration.
+      trendHint(o.revealsLast7d, o.revealsPrev7d),
+      'eye',
+      trendTone(o.revealsLast7d, o.revealsPrev7d)
+    )}
+    ${stat(
+      'اشتراک فعال',
+      faDigits(o.liveSubscriptions ?? 0),
+      o.expiringSubscriptions
+        ? `${faDigits(o.expiringSubscriptions)} تا هفت روز دیگر تمام می‌شود`
+        : 'هیچ‌کدام این هفته تمام نمی‌شود',
+      'clock',
+      o.expiringSubscriptions ? 'warn' : 'ok'
+    )}
+  </div>
+
+  ${pulseCard(o.series || [])}`;
+}
+
+/** «۲۲ در هفت روز — ۱۲ تا بیشتر از هفته‌ی قبل», or the flat truth. */
+function trendHint(now = 0, before = 0) {
+  const diff = (now || 0) - (before || 0);
+  if (!before && !now) return 'در هفت روز گذشته';
+  if (!before) return 'در هفت روز گذشته — هفته‌ی قبل هیچ';
+  if (diff === 0) return 'در هفت روز گذشته — مثل هفته‌ی قبل';
+  return diff > 0
+    ? `در هفت روز گذشته — ${faDigits(diff)} بیشتر از هفته‌ی قبل`
+    : `در هفت روز گذشته — ${faDigits(-diff)} کمتر از هفته‌ی قبل`;
+}
+
+function trendTone(now = 0, before = 0) {
+  if (!before || now === before) return '';
+  return now > before ? 'ok' : 'warn';
+}
+
+/**
+ * Fourteen days of the two things that say whether the market is alive.
+ *
+ * Two series on one scale, which is the only honest way to put them together:
+ * both are «events on a day», so a bar in one is directly comparable with a bar
+ * in the other. (Two scales on one chart would let any pair of lines be made to
+ * cross wherever the author wanted.)
+ *
+ * Bars rather than lines because the counts are small integers and many days
+ * are zero — a line through a zero dips to the axis and reads as an outage
+ * rather than as a quiet Friday.
+ *
+ * Drawn as inline SVG: fourteen days of two numbers does not need a charting
+ * library, and this panel has no build step to add one to.
+ */
+function pulseCard(series) {
+  const days = series.slice(-14);
+  const peak = Math.max(1, ...days.map((d) => Math.max(d.reveals, d.listings)));
+
+  // Geometry in user units; the SVG scales itself to the card.
+  const W = 720;
+  const H = 130;
+  const pad = 18;
+  const slot = (W - pad * 2) / Math.max(days.length, 1);
+  const barW = Math.min(9, slot / 2 - 2);
+  const scale = (n) => (H - pad) * (n / peak);
+
+  const totals = days.reduce(
+    (sum, d) => ({ reveals: sum.reveals + d.reveals, listings: sum.listings + d.listings }),
+    { reveals: 0, listings: 0 }
+  );
+
+  return html`
+  <div class="card">
+    <div class="card-h">
+      <h2>نبض بازار ${qtip('دو هفته‌ی گذشته: هر روز چند آگهی ثبت شده و چند بار کسی مشخصات تماس را باز کرده. با نگه داشتن نشانگر روی هر روز، عددهای همان روز را می‌بینید.')}</h2>
+      <div class="lgnd">
+        <span><i style="background:var(--c-reveal)"></i>بازدید مشخصات ${faDigits(totals.reveals)}</span>
+        <span><i style="background:var(--c-listing)"></i>آگهی تازه ${faDigits(totals.listings)}</span>
+      </div>
+    </div>
+
+    ${
+      days.length
+        ? html`<div class="pulse">
+            <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+                 aria-label="نمودار دو هفته‌ی گذشته">
+              <!-- The baseline, recessive: it orients the bars without competing
+                   with them. -->
+              <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}"
+                    stroke="var(--line)" stroke-width="1"/>
+              ${
+                // Drawn newest-last but *placed* right to left, because the page
+                // is right to left: on an RTL screen the eye starts at the right
+                // edge, so that is where «two weeks ago» has to be. Left as it
+                // came, the bars ran one way and the dates under them the other.
+                [...days].reverse().map((d, i) => {
+                const x = pad + i * slot + (slot - barW * 2 - 2) / 2;
+                const r = scale(d.reveals);
+                const l = scale(d.listings);
+                return html`<g class="pb" data-day="${d.day}">
+                  <rect x="${x}" y="${H - pad - r}" width="${barW}" height="${r}"
+                        rx="2" fill="var(--c-reveal)"/>
+                  <rect x="${x + barW + 2}" y="${H - pad - l}" width="${barW}" height="${l}"
+                        rx="2" fill="var(--c-listing)"/>
+                  <!-- The hit target is the whole column, not the bar: a day
+                       with a count of one is three pixels tall. -->
+                  <rect class="pb-hit" x="${pad + i * slot}" y="0" width="${slot}" height="${H}"
+                        fill="transparent">
+                    <title>${jalaliDay(d.day)} — بازدید ${faDigits(d.reveals)} · آگهی ${faDigits(d.listings)}</title>
+                  </rect>
+                </g>`;
+                })
+              }
+            </svg>
+            <div class="pulse-x">
+              <span>${jalaliDay(days[0].day)}</span>
+              <span>${jalaliDay(days[days.length - 1].day)}</span>
+            </div>
+          </div>`
+        : emptyBox('هنوز داده‌ای برای دو هفته‌ی گذشته نیست.')
+    }
+  </div>`;
+}
+
+/** «۰۸ شهریور» — the axis speaks the calendar the reader lives in. */
+function jalaliDay(iso) {
+  try {
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { day: '2-digit', month: 'short' }).format(
+      new Date(`${iso}T00:00:00`)
+    );
+  } catch {
+    return iso;
+  }
 }
 
 function stat(label, value, hint, iconName = 'dashboard', tone = '') {

@@ -273,6 +273,7 @@ function adminTitle(page) {
     'adm-tickets': 'پشتیبانی',
     'adm-catalog': 'کاتالوگ خودرو',
     'adm-monitor': 'مانیتورینگ',
+    'adm-review': 'رفتار قابل بررسی',
     'adm-seats': 'درخواست‌های ظرفیت',
     'adm-settings': 'تنظیمات',
     'adm-staff': 'کاربران سیستم',
