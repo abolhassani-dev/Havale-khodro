@@ -808,6 +808,52 @@ maybe('moderation', () => {
       expect(box.body.data.items).toHaveLength(1);
     });
 
+    it('warns a buyer whose paid-for advertisement was changed afterwards', async () => {
+      const { owner, reporter: viewer, havale } = await listingAndReporter();
+
+      // Paying to see the contact is buying a particular set of facts.
+      await request(app)
+        .post(api(`/havales/${havale.id}/reveal`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      const quiet = await request(app).get(api('/notices')).set('Cookie', viewer.cookie).expect(200);
+      expect(quiet.body.data.items.some((n) => n.kind === 'LISTING_EDITED')).toBe(false);
+
+      await request(app)
+        .patch(api(`/havales/${havale.id}`))
+        .set('Cookie', owner.cookie)
+        .send({ amountToman: 12_000_000 })
+        .expect(200);
+
+      // The row looks exactly the same as an untouched one, so without this the
+      // person who spent an allowance on it would be the last to know.
+      const box = await request(app).get(api('/notices')).set('Cookie', viewer.cookie).expect(200);
+      const changed = box.body.data.items.find((n) => n.kind === 'LISTING_EDITED');
+      expect(changed).toBeDefined();
+      expect(changed.listing.serial).toBe(havale.serial);
+    });
+
+    it('says nothing to somebody who saw the advertisement after it was edited', async () => {
+      const { owner, reporter: viewer, havale } = await listingAndReporter();
+
+      await request(app)
+        .patch(api(`/havales/${havale.id}`))
+        .set('Cookie', owner.cookie)
+        .send({ amountToman: 12_000_000 })
+        .expect(200);
+
+      await request(app)
+        .post(api(`/havales/${havale.id}/reveal`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      // They bought the current version. Telling them it «changed» would be
+      // noise about something that happened before they were involved.
+      const box = await request(app).get(api('/notices')).set('Cookie', viewer.cookie).expect(200);
+      expect(box.body.data.items.some((n) => n.kind === 'LISTING_EDITED')).toBe(false);
+    });
+
     it('is still reachable after the account is suspended', async () => {
       const superAdmin = await staff('SUPER_ADMIN');
       const { owner } = await listingAndReporter();

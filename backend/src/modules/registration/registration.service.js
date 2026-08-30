@@ -253,6 +253,10 @@ const registrationService = {
         ? { closesAt: closingDate(row.kind, payload.registerDeadline) }
         : {}),
       detail,
+      // Marked as edited, exactly as in the حواله market. `updatedAt` moves on
+      // every write and so cannot say whether the *owner* changed anything.
+      editedAt: new Date(),
+      editCount: { increment: 1 },
     });
 
     await authRepository.recordActivity({

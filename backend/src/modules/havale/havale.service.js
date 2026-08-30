@@ -293,18 +293,26 @@ const havaleService = {
       throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
     }
 
-    const { carModelId, carColor, ...rest } = payload;
-    const catalog = await this.resolveCatalog({ carModelId, carColor });
+    // The car itself is not editable, and neither is the kind. Everything on
+    // the card is negotiable except what the card *is*: an advertisement that
+    // three hundred agencies read as «پژو ۲۰۷، ۹۵۰ میلیون» must not quietly
+    // become a پراید on the same row, keeping its age and its view count. The
+    // way to sell a different car is to post a different advertisement.
+    //
+    // It closes a second hole for free: an edit used to be able to walk a
+    // listing onto a brand this account was never granted, so the brand check
+    // had to be repeated here. With the model frozen there is nothing to walk.
+    const { carColor, ...rest } = payload;
+    const catalog = await this.resolveCatalog({ carColor });
 
-    // The same rule as on create, and for the same reason: an edit can change
-    // the model, so a listing posted under an allowed brand could otherwise be
-    // walked over to one this account was never given. Checked against the
-    // listing's own kind, not the payload's — the kind cannot be edited.
-    if (carModelId !== undefined && havale.kind === HAVALE_KIND.OFFER) {
-      await brandAccess.assertMayPost({ userId: user.id, carModelId });
-    }
-
-    const updated = await havaleRepository.update(id, { ...rest, ...catalog });
+    const updated = await havaleRepository.update(id, {
+      ...rest,
+      ...catalog,
+      // Not `updatedAt`: that moves on every write — a renewal, a sale, the
+      // view counter — so it cannot answer «has the owner changed this?».
+      editedAt: new Date(),
+      editCount: { increment: 1 },
+    });
     await authRepository.recordActivity({
       userId: user.id,
       action: 'HAVALE_UPDATED',

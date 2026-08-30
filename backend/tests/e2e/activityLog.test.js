@@ -116,9 +116,7 @@ maybe('the activity log', () => {
       expect(entry.changes).toBeNull();
     });
 
-    it('names the car rather than its id', async () => {
-      // An id changing tells a reader nothing. «از پژو ۲۰۷ به سمند» is the
-      // whole value of the entry.
+    it('refuses to change the car an existing listing is about', async () => {
       const owner = await agent();
       const listing = await request(app)
         .post(api('/havales'))
@@ -126,21 +124,40 @@ maybe('the activity log', () => {
         .send(await offer())
         .expect(201);
 
-      const other = models[1];
+      // The car is what the advertisement *is*. Letting it move would keep the
+      // row's age, its position and its view count while changing what is for
+      // sale — and would silently rewrite what everybody who already paid to
+      // see the contact had been looking at.
       await request(app)
         .patch(api(`/havales/${listing.body.data.id}`))
         .set('Cookie', owner.cookie)
-        .send({ carModelId: other.id })
+        .send({ carModelId: models[1].id })
+        .expect(422);
+    });
+
+    it('marks the listing as edited, and says so only after a real edit', async () => {
+      const owner = await agent();
+      const listing = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', owner.cookie)
+        .send(await offer())
+        .expect(201);
+
+      const fresh = await prisma.listing.findUnique({ where: { id: listing.body.data.id } });
+      expect(fresh.editedAt).toBeNull();
+      expect(fresh.editCount).toBe(0);
+
+      await request(app)
+        .patch(api(`/havales/${listing.body.data.id}`))
+        .set('Cookie', owner.cookie)
+        .send({ amountToman: 40_000_000 })
         .expect(200);
 
-      const entry = await lastEntry(owner.user.id, 'HAVALE_UPDATED');
-      const fields = (entry.changes || []).map((c) => c.field);
-      expect(fields).not.toContain('carModelId');
-      if (fields.includes('carType')) {
-        const change = entry.changes.find((c) => c.field === 'carType');
-        expect(change.label).toBe('مدل خودرو');
-        expect(typeof change.to).toBe('string');
-      }
+      // Not `updatedAt`, which moves on a renewal and on every reveal — the
+      // marker has to mean «the owner changed this», or it means nothing.
+      const after = await prisma.listing.findUnique({ where: { id: listing.body.data.id } });
+      expect(after.editedAt).not.toBeNull();
+      expect(after.editCount).toBe(1);
     });
 
     it('spells the changes out on the detail call', async () => {

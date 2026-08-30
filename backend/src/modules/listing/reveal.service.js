@@ -181,4 +181,50 @@ async function reveal({ user, access, id, ip, notFound = 'آگهی', targetType 
   });
 }
 
-module.exports = { reveal, usageFor, toRevealResult, revealRepository, OWNER_SELECT };
+/**
+ * Advertisements this agency paid to see, which have been changed since.
+ *
+ * A reveal is a purchase: one of the day's allowance, spent on a particular set
+ * of numbers. If the advertisement is edited afterwards, what they bought is no
+ * longer what is on the page — and they would have no way of knowing, because
+ * an edited row looks exactly like an untouched one. So they are told.
+ *
+ * The comparison is done here rather than in the query because it is between
+ * two columns in two tables — `Listing.editedAt` against `ContactReveal
+ * .createdAt` — and the candidate set is small: the daily allowance bounds how
+ * many reveals anybody has.
+ */
+async function editedSinceRevealFor(viewerId, since) {
+  const rows = await prisma.contactReveal.findMany({
+    where: {
+      viewerId,
+      listing: { editedAt: since ? { gt: since } : { not: null } },
+    },
+    select: {
+      createdAt: true,
+      listing: {
+        select: {
+          id: true,
+          serial: true,
+          carType: true,
+          market: true,
+          editedAt: true,
+          editCount: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+
+  return rows.filter((row) => row.listing.editedAt > row.createdAt);
+}
+
+module.exports = {
+  reveal,
+  usageFor,
+  toRevealResult,
+  editedSinceRevealFor,
+  revealRepository,
+  OWNER_SELECT,
+};

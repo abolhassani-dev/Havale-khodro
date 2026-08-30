@@ -8,6 +8,7 @@ import {
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { jalaliDate } from '../../ui/dateInput.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
+import { editedTag } from './listings.js';
 import { go, resolve } from '../../router.js';
 
 /**
@@ -162,6 +163,7 @@ function regCard(r) {
     <header>
       <div>
         <span class="tag ${offer ? '' : 'c'}">${REG_KIND_LABEL[r.kind]}</span>
+        ${editedTag(r)}
         <h3>${r.carType}</h3>
       </div>
       ${
@@ -613,6 +615,7 @@ function mineRow(r, reseller) {
     <td>
       <b>${r.carType}</b>
       <div class="sub">${REG_KIND_LABEL[r.kind]}</div>
+      ${editedTag(r)}
     </td>
     ${
       reseller
@@ -635,6 +638,13 @@ function mineRow(r, reseller) {
         // and the server answers 404 to anybody else who tries.
         r.isOwn
           ? html`
+            ${
+              // Only while it is still on the market: a fulfilled or suspended
+              // advertisement is a record of what happened, not an offer.
+              r.status === 'ACTIVE'
+                ? html`<button class="btn sm" data-reg-edit="${r.id}">ویرایش</button>`
+                : ''
+            }
             <button class="btn sm" data-reg-renew="${r.id}" data-reg-kind="${r.kind}">تمدید</button>
             ${r.status === 'ACTIVE' ? html`<button class="btn sm" data-reg-fulfill="${r.id}">واگذار شد</button>` : ''}
             <button class="btn sm danger" data-reg-delete="${r.id}">حذف</button>`
@@ -649,6 +659,141 @@ function statusTag(r) {
   if (r.status === 'SUSPENDED') return html`<span class="tag r">تعلیق‌شده</span>`;
   if (r.status !== 'ACTIVE') return html`<span class="tag n">منقضی</span>`;
   return html`<span class="tag ${until(r.closesAt).includes('روز') ? 'w' : 'n'}">${until(r.closesAt)}</span>`;
+}
+
+/**
+ * Editing a ثبت‌نامی advertisement — the same bargain as in the حواله market.
+ *
+ * The car and the kind are not on the form: they are what the advertisement is,
+ * and a row that three hundred agencies read as one car must not become another
+ * while keeping its age and its view count. Everything else — the scheme, the
+ * terms, the prices, the deadline — is a fact of the deal that genuinely moves,
+ * and a market where correcting one means starting again fills up with stale
+ * prices.
+ *
+ * Nothing about the edit is hidden: the card wears «ویرایش‌شده», the change is
+ * written into the activity log field by field, and anybody who spent an
+ * allowance on this advertisement's contact is told it changed after they saw it.
+ */
+export function regEditModal(id) {
+  const { data } = getState();
+  const item = (data.mine?.items || []).find((r) => r.id === id);
+  if (!item) return;
+
+  const offer = item.kind === 'OFFER';
+
+  openModal({
+    type: 'form',
+    title: `ویرایش آگهی #${faDigits(item.serial)}`,
+    body: html`
+      <div class="drow"><span>خودرو</span><b>${item.carType}</b></div>
+      <p style="color:var(--ink-3);font-size:12px;margin:6px 0 10px">
+        خودرو و نوع آگهی قابل تغییر نیستند. این ویرایش روی آگهی نشان داده می‌شود و
+        به هر کسی که مشخصات شما را دیده اطلاع می‌رسد.
+      </p>
+
+      <div class="field">
+        <label for="e-plan">نام طرح</label>
+        <input class="in" id="e-plan" name="planName" maxlength="120"
+               value="${item.planName || ''}">
+      </div>
+
+      <div class="field">
+        <label for="e-method">روش ثبت‌نام</label>
+        <select class="in" id="e-method" name="method">
+          <option value="">انتخاب کنید</option>
+          ${REG_METHODS.map(
+            ([value, label]) => html`<option value="${value}" ${raw(item.method === value ? 'selected' : '')}>${label}</option>`
+          )}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="e-sale">نوع فروش</label>
+        <select class="in" id="e-sale" name="saleType">
+          <option value="">انتخاب کنید</option>
+          ${REG_SALE_TYPES.map(
+            ([value, label]) => html`<option value="${value}" ${raw(item.saleType === value ? 'selected' : '')}>${label}</option>`
+          )}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="e-capacity">${offer ? 'تعداد ظرفیت' : 'تعداد'}</label>
+        <input class="in num" id="e-capacity" name="capacity" inputmode="numeric"
+               value="${item.capacity || ''}">
+      </div>
+
+      <div class="field">
+        <label for="${moneyFieldId('depositToman')}">قیمت خودرو (تومان)</label>
+        ${moneyInput('depositToman', { value: item.depositToman ?? '' })}
+      </div>
+      <div class="field">
+        <label for="${moneyFieldId('premiumToman')}">${offer ? 'مبلغ امتیاز (تومان)' : 'سقف مبلغ امتیاز (تومان)'}</label>
+        ${moneyInput('premiumToman', { value: item.premiumToman ?? '' })}
+      </div>
+
+      ${
+        // Only a capacity holder knows the scheme's dates — a request has no
+        // scheme behind it, so these two would be questions with no answer.
+        offer
+          ? html`<div class="field">
+              <label for="ed-day">مهلت ثبت‌نام</label>
+              ${jalaliDate('registerDeadline', { value: item.registerDeadline || '', labelId: 'ed-day' })}
+            </div>
+            <div class="field">
+              <label for="e-delivery">موعد تحویل</label>
+              <input class="in" id="e-delivery" name="deliveryEstimate" maxlength="60"
+                     value="${item.deliveryEstimate || ''}">
+            </div>`
+          : ''
+      }
+
+      <div class="field">
+        <label for="e-desc">توضیحات</label>
+        <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${item.description || ''}</textarea>
+      </div>`,
+    confirmLabel: 'ثبت ویرایش',
+    onSubmit: async (form) => {
+      // Only what moved: writing every field on every edit would fill the
+      // activity log — which reads «from x to y» — with changes that were not.
+      const payload = {};
+      const put = (name, value, before) => {
+        if (value !== before) payload[name] = value;
+      };
+      const text = (name) => form[name]?.value.trim() ?? '';
+
+      put('planName', text('planName'), item.planName || '');
+      put('method', form.method.value || undefined, item.method ?? undefined);
+      put('saleType', form.saleType.value || undefined, item.saleType ?? undefined);
+
+      const capacity = text('capacity');
+      if (capacity) put('capacity', Number(enDigits(capacity)), item.capacity ?? null);
+
+      for (const name of ['depositToman', 'premiumToman']) {
+        const value = form[name].value.trim();
+        put(name, value === '' ? null : Number(value), item[name] ?? null);
+      }
+
+      if (offer) {
+        const deadline = text('registerDeadline');
+        const before = item.registerDeadline ? String(item.registerDeadline).slice(0, 10) : '';
+        put('registerDeadline', deadline || null, before || null);
+        put('deliveryEstimate', text('deliveryEstimate'), item.deliveryEstimate || '');
+      }
+
+      put('description', text('description'), item.description || '');
+
+      if (!Object.keys(payload).length) {
+        toast('چیزی تغییر نکرده بود');
+        return;
+      }
+
+      await registration.update(id, payload);
+      toast('آگهی ویرایش شد');
+      await resolve();
+    },
+  });
 }
 
 export function regRenew(id, kind) {

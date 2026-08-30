@@ -1,4 +1,5 @@
 const reportService = require('../report/report.service');
+const { editedSinceRevealFor } = require('../listing/reveal.service');
 const noticeRepository = require('./notice.repository');
 const { STRIKE_THRESHOLD } = require('../../constants/moderation');
 
@@ -30,9 +31,10 @@ const { STRIKE_THRESHOLD } = require('../../constants/moderation');
 const byDate = (a, b) => new Date(b.at) - new Date(a.at);
 
 async function build(user) {
-  const [against, filed] = await Promise.all([
+  const [against, filed, edited] = await Promise.all([
     reportService.listAgainstMe(user),
     reportService.listFiledBy(user),
+    editedSinceRevealFor(user.id, null),
   ]);
 
   // Oldest first while numbering, so «strike ۱ of ۳» is the first one they got.
@@ -71,6 +73,21 @@ async function build(user) {
     });
   }
 
+  // Advertisements they paid to see, changed since they paid. A reveal buys a
+  // particular set of numbers; if those move afterwards, the person who spent
+  // an allowance on them is the last to find out — an edited row looks exactly
+  // like an untouched one.
+  for (const row of edited) {
+    notices.push({
+      id: `edited:${row.listing.id}:${row.listing.editCount}`,
+      kind: 'LISTING_EDITED',
+      at: row.listing.editedAt,
+      listing: { serial: row.listing.serial, carType: row.listing.carType },
+      market: row.listing.market,
+      revealedAt: row.createdAt,
+    });
+  }
+
   // The account itself. It is not a report, it is the consequence of the last
   // one, and it is the single fact the agency most needs in writing.
   if (user.status !== 'ACTIVE' && user.suspendedAt) {
@@ -103,9 +120,10 @@ const noticeService = {
    */
   async unreadFor(user) {
     const since = user.noticesSeenAt ? new Date(user.noticesSeenAt) : null;
-    const [against, filed] = await Promise.all([
+    const [against, filed, edited] = await Promise.all([
       noticeRepository.countStrikesSince(user.id, since),
       noticeRepository.countFiledResolvedSince(user.id, since),
+      editedSinceRevealFor(user.id, since),
     ]);
 
     const suspension =
@@ -113,7 +131,7 @@ const noticeService = {
         ? 1
         : 0;
 
-    return against + filed + suspension;
+    return against + filed + edited.length + suspension;
   },
 
   /** Marks the box read up to now. */

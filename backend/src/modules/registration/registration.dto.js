@@ -45,6 +45,10 @@ function baseFields(row) {
     createdAt: row.createdAt,
     renewedAt: row.renewedAt,
     renewCount: row.renewCount,
+    // «ویرایش‌شده» on the card — the same marker the حواله market carries, and
+    // for the same reason: a changed advertisement is a different thing to read.
+    editedAt: row.editedAt,
+    editCount: row.editCount,
   };
 }
 

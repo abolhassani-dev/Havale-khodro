@@ -12,13 +12,14 @@ import { loadDashboard, dashboardPage } from './pages/agent/dashboard.js';
 import { loadSearch, searchPage, confirmReveal, onSearchBrandChange } from './pages/agent/search.js';
 import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
-  renewModal, confirmFulfill, confirmDelete, havaleDetailModal,
+  renewModal, confirmFulfill, confirmDelete, havaleDetailModal, editHavaleModal,
 } from './pages/agent/listings.js';
 // The ثبت‌نامی market. Its own module, its own pages — see modules/registration
 // on the server for the other half of the same separation.
 import {
   loadRegSearch, loadRegForm, loadRegMine, regSearchPage, regFormPage, regMinePage,
   submitRegistration, onRegBrandChange, confirmRegReveal, regRenew, regFulfill, regDelete,
+  regEditModal,
 } from './pages/agent/registration.js';
 import {
   loadSubscription, subscriptionPage, orderSeatsModal,
@@ -301,8 +302,8 @@ function adminTitle(page) {
  */
 const CLICK_KEYS = new Set([
   'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
-  'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale',
-  'regReveal', 'regRenew', 'regFulfill', 'regDelete',
+  'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale', 'editHavale',
+  'regReveal', 'regRenew', 'regFulfill', 'regDelete', 'regEdit',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
   'newTicket', 'closeTicket', 'reopenTicket', 'ticketPriority', 'ackSeat',
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
@@ -358,7 +359,9 @@ function onClick(event) {
   if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);
+  if (d.regEdit) return regEditModal(d.regEdit);
   if (d.report) return reportModal(d.report);
+  if (d.editHavale) return editHavaleModal(d.editHavale);
   if (d.renew) return renewModal(d.renew);
   if (d.fulfill) return confirmFulfill(d.fulfill);
   if (d.deleteHavale) return confirmDelete(d.deleteHavale);

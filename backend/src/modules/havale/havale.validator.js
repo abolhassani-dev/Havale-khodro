@@ -86,10 +86,13 @@ const createBody = Joi.object({
     return value;
   }, 'paid amount within total');
 
-// An update may not change the listing's kind: the required-field rules differ
-// between the two, so flipping it would leave a half-filled row behind.
+// Two fields are not editable. The kind, because the required-field rules
+// differ between the two and flipping it would leave a half-filled row behind.
+// The car, because it is what the advertisement *is*: everything else on the
+// card is a detail of the deal, but changing «پژو ۲۰۷» into «پراید» on a row
+// that already carries three days of age and a view count is not an edit, it
+// is a different advertisement wearing the first one's history.
 const updateBody = Joi.object({
-  carModelId: Joi.string().trim().max(40),
   solh: Joi.string().valid(...Object.values(SOLH_STATUS)),
   carColor: Joi.string().trim().max(60).allow(null),
   model: Joi.string().trim().max(20).allow(null),

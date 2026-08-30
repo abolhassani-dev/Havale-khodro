@@ -416,6 +416,39 @@ await step('account settings page loads', async () => {
 });
 
 /**
+ * A listing can be corrected, and the correction is not silent.
+ *
+ * The two halves have to be checked together, because either alone is a bad
+ * feature: an edit nobody can make leaves stale prices on the market, and an
+ * edit nobody can see is how a listing read by three hundred agencies quietly
+ * becomes a different offer. What must never be on the form is the car itself.
+ */
+await step('a listing can be edited, and says that it was', async () => {
+  await navigate('mine');
+  await page.waitForSelector('table tbody tr', { timeout: 8000 });
+
+  const edit = page.locator('[data-edit-havale]').first();
+  if (!(await edit.count())) throw new Error('no editable listing on «حواله‌های من»');
+  await edit.click();
+  await page.waitForSelector('.modal-b', { timeout: 8000 });
+
+  const form = (await page.textContent('.modal-b')).replace(/\s+/g, ' ');
+  if (!form.includes('خودرو و نوع آگهی قابل تغییر نیستند')) {
+    throw new Error('the form does not say what cannot be changed');
+  }
+  if (await page.locator('.modal-b #brand, .modal-b [name="carModelId"]').count()) {
+    throw new Error('the edit form offers to change the car');
+  }
+
+  await page.fill('#amountToman-in', '۸۸۸۰۰۰۰۰۰');
+  await page.click('.modal button[type=submit]');
+  await page.waitForTimeout(1500);
+
+  const table = (await page.textContent('table')).replace(/\s+/g, ' ');
+  if (!table.includes('ویرایش‌شده')) throw new Error('the edited listing is not marked');
+});
+
+/**
  * The notice box opens, and marks itself read.
  *
  * Whether it has anything in it depends on the database this runs against, so

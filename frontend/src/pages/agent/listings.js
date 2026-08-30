@@ -23,7 +23,15 @@ export async function loadMine(params) {
   // else sends no scope and the server pins them to their own.
   const reseller = Boolean(getState().user?.isReseller);
   const scope = reseller ? params.scope || 'all' : undefined;
-  return { mine: await havale.mine({ status: params.status, scope, limit: 50 }) };
+  // The catalogue rides along because the edit dialogue opens from this page and
+  // needs the colour list. Without it the colour dropdown had one option — «هر
+  // رنگ» — so opening the dialogue on a white car and pressing save quietly
+  // erased its colour.
+  const [mine, tree] = await Promise.all([
+    havale.mine({ status: params.status, scope, limit: 50 }),
+    catalog.get(),
+  ]);
+  return { mine, tree };
 }
 
 /**
@@ -380,6 +388,7 @@ export function minePage() {
                   <td>
                     <b>${h.carType}</b>
                     <div class="sub">${h.carColor || 'هر رنگ'} · ${SOLH_LABEL[h.solh]}</div>
+                    ${editedTag(h)}
                   </td>
                   ${
                     reseller
@@ -404,6 +413,15 @@ export function minePage() {
                       // 403 is worse than no button.
                       h.isOwn
                         ? html`
+                          ${
+                            // Editing is for a listing that is still on the
+                            // market: a sold or suspended one is a record, not
+                            // an offer, and changing it would be rewriting what
+                            // happened rather than what is on sale.
+                            h.status === 'ACTIVE'
+                              ? html`<button class="btn sm" data-edit-havale="${h.id}">ویرایش</button>`
+                              : ''
+                          }
                           <button class="btn sm" data-renew="${h.id}">تمدید</button>
                           ${
                             h.status === 'ACTIVE'
@@ -423,6 +441,19 @@ export function minePage() {
   </div>`;
 }
 
+/**
+ * «ویرایش‌شده», when the owner has changed the listing since posting it.
+ *
+ * Not from `updatedAt`: that moves on a renewal, on a sale, and every time
+ * somebody opens the contact — so a listing nobody had touched would wear the
+ * mark, and the mark would mean nothing.
+ */
+export function editedTag(h) {
+  if (!h.editedAt) return raw('');
+  const times = h.editCount > 1 ? ` ×${faDigits(h.editCount)}` : '';
+  return html`<span class="tag w" title="آخرین ویرایش: ${date(h.editedAt)}">ویرایش‌شده${times}</span>`;
+}
+
 function statusTag(h) {
   const dead = h.closesAt && new Date(h.closesAt) < Date.now();
   if (h.status === 'ACTIVE' && dead) return html`<span class="tag">مهلت تمام شده</span>`;
@@ -439,6 +470,135 @@ function statusTag(h) {
  * It was quoted in days from the original posting date, so after two renewals
  * the number on screen would be describing a date in the past.
  */
+/**
+ * Editing a listing that is already on the market.
+ *
+ * What is *not* here is the point of it. The car and the kind are missing,
+ * because they are what the advertisement is: three hundred agencies read this
+ * row as «پژو ۲۰۷، ۹۵۰ میلیون», and letting it become a پراید on the same row —
+ * keeping its age, its position and its view count — is not an edit. It is a
+ * different advertisement wearing this one's history, and the reveals already
+ * paid for on it stop meaning what they meant.
+ *
+ * Everything else moves: a price is renegotiated, a colour was typed wrong, the
+ * delivery slipped by a week. Those are the ordinary facts of a deal, and a
+ * market where correcting one means deleting the listing and starting again is
+ * a market that quietly fills with stale prices.
+ *
+ * The edit is not silent. The card carries «ویرایش‌شده», the change is written
+ * into the activity log field by field, and anybody who already spent an
+ * allowance to see this listing's contact gets a notice saying it changed after
+ * they looked.
+ */
+export function editHavaleModal(id) {
+  const { data } = getState();
+  const item = (data.mine?.items || []).find((h) => h.id === id);
+  if (!item) return;
+
+  const colors = data.tree?.colors || [];
+
+  openModal({
+    type: 'form',
+    title: `ویرایش آگهی #${faDigits(item.serial)}`,
+    body: html`
+      <div class="drow"><span>خودرو</span><b>${item.carType}</b></div>
+      <p style="color:var(--ink-3);font-size:12px;margin:6px 0 10px">
+        خودرو و نوع آگهی قابل تغییر نیستند. برای خودروی دیگر، آگهی تازه ثبت کنید.
+        این ویرایش روی آگهی نشان داده می‌شود و به هر کسی که مشخصات شما را دیده اطلاع می‌رسد.
+      </p>
+
+      <div class="field">
+        <label for="e-color">رنگ</label>
+        <select class="in" id="e-color" name="carColor">
+          <option value="">هر رنگ</option>
+          ${colors.map(
+            (c) => html`<option value="${c.name}" ${raw(item.carColor === c.name ? 'selected' : '')}>${c.name}</option>`
+          )}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="e-solh">امکان صلح</label>
+        <select class="in" id="e-solh" name="solh">
+          <option value="SOLH" ${raw(item.solh === 'SOLH' ? 'selected' : '')}>صلح</option>
+          <option value="VEKALATI" ${raw(item.solh === 'VEKALATI' ? 'selected' : '')}>وکالتی</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="e-model">مدل (سال)</label>
+        <input class="in num" id="e-model" name="model" inputmode="numeric" value="${item.model || ''}">
+      </div>
+
+      <div class="field">
+        <label for="${moneyFieldId('carPriceToman')}">قیمت خودرو (تومان)</label>
+        ${moneyInput('carPriceToman', { value: item.carPriceToman ?? '' })}
+      </div>
+      <div class="field">
+        <label for="${moneyFieldId('amountToman')}">مبلغ حواله (تومان)</label>
+        ${moneyInput('amountToman', { value: item.amountToman ?? '' })}
+      </div>
+      <div class="field">
+        <label for="${moneyFieldId('paidAmountToman')}">مبلغ واریز شده (تومان)</label>
+        ${moneyInput('paidAmountToman', { value: item.paidAmountToman ?? '' })}
+      </div>
+
+      <div class="field">
+        <label for="e-payment">نحوه پرداخت</label>
+        <select class="in" id="e-payment" name="paymentType">
+          <option value="">انتخاب کنید</option>
+          ${PAYMENT_TYPES.map(
+            ([value, label]) => html`<option value="${value}" ${raw(item.paymentType === value ? 'selected' : '')}>${label}</option>`
+          )}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="e-delivery">زمان تحویل (روز)</label>
+        <input class="in num" id="e-delivery" name="deliveryDays" inputmode="numeric"
+               value="${item.deliveryDays || ''}">
+      </div>
+
+      <div class="field">
+        <label for="e-desc">توضیحات</label>
+        <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${item.description || ''}</textarea>
+      </div>`,
+    confirmLabel: 'ثبت ویرایش',
+    onSubmit: async (form) => {
+      // Only what actually moved. Sending the whole form would write every
+      // field on every edit, and the activity log — which reads «from x to y» —
+      // would fill with changes that were not changes.
+      const payload = {};
+      const put = (name, value, before) => {
+        if (value !== before) payload[name] = value;
+      };
+
+      put('carColor', form.carColor.value || null, item.carColor ?? null);
+      put('solh', form.solh.value, item.solh);
+      put('model', form.model.value.trim() ? enDigits(form.model.value.trim()) : null, item.model ?? null);
+      put('paymentType', form.paymentType.value || null, item.paymentType ?? null);
+      put('description', form.description.value.trim(), item.description || '');
+
+      for (const name of ['carPriceToman', 'amountToman', 'paidAmountToman']) {
+        const raw2 = form[name].value.trim();
+        put(name, raw2 === '' ? null : Number(raw2), item[name] ?? null);
+      }
+
+      const days = form.deliveryDays.value.trim();
+      put('deliveryDays', days === '' ? null : Number(enDigits(days)), item.deliveryDays ?? null);
+
+      if (!Object.keys(payload).length) {
+        toast('چیزی تغییر نکرده بود');
+        return;
+      }
+
+      await havale.update(id, payload);
+      toast('آگهی ویرایش شد');
+      await resolve();
+    },
+  });
+}
+
 export function renewModal(id) {
   const { data } = getState();
   const item = (data.mine?.items || []).find((h) => h.id === id);

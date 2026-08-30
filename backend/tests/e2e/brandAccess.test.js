@@ -137,8 +137,10 @@ maybe('brand access', () => {
       .expect(403);
   });
 
-  // An edit can change the model, so without the same check a listing posted
-  // under an allowed brand could be walked over to one this account never had.
+  // A listing used to be movable onto another model by editing, which is how it
+  // could be walked over to a brand this account was never granted. The model is
+  // now frozen after posting, so the hole is closed by the shape of the API
+  // rather than by a check that has to be remembered.
   it('refuses to move an existing listing onto a brand it does not hold', async () => {
     const { cookie } = await agent({ brands: [brands[0].id] });
 
@@ -152,7 +154,7 @@ maybe('brand access', () => {
       .patch(api(`/havales/${posted.body.data.id}`))
       .set('Cookie', cookie)
       .send({ carModelId: modelOf(1) })
-      .expect(403);
+      .expect(422);
   });
 
   it('refuses to create an agency without choosing any brand', async () => {

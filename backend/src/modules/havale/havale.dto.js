@@ -48,6 +48,11 @@ function baseFields(havale) {
     createdAt: havale.createdAt,
     renewedAt: havale.renewedAt,
     renewCount: havale.renewCount,
+    // Shown on the card as «ویرایش‌شده». An advertisement that has been changed
+    // since it was posted is a different thing to read, and the reader is
+    // entitled to know that before ringing about it.
+    editedAt: havale.editedAt,
+    editCount: havale.editCount,
   };
 }
 

@@ -40,6 +40,7 @@ const SHAPE = {
   REPORT_ABUSIVE: { tone: 'danger', icon: '⚑', appeal: true },
   REPORT_UPHELD: { tone: 'ok', icon: '✓', appeal: false },
   REPORT_REJECTED: { tone: 'warn', icon: '•', appeal: false },
+  LISTING_EDITED: { tone: 'warn', icon: '✎', appeal: false },
 };
 
 function title(n) {
@@ -57,6 +58,8 @@ function title(n) {
       return `گزارش شما درباره‌ی آگهی${serial} تأیید نشد`;
     case 'REPORT_ABUSIVE':
       return `گزارش شما درباره‌ی آگهی${serial} بی‌مورد تشخیص داده شد`;
+    case 'LISTING_EDITED':
+      return `آگهی${serial} — ${car} بعد از دیدن مشخصات، ویرایش شد`;
     default:
       return 'اطلاعیه';
   }
@@ -84,6 +87,10 @@ function body(n) {
       return html`گزارشی که با عنوان «${reason}» ثبت کرده بودید بی‌مورد تشخیص داده شد و
         یک اخطار گزارش نادرست برای حساب شما ثبت شد. گزارش نادرست پیاپی، امکان
         گزارش دادن را محدود می‌کند.`;
+    case 'LISTING_EDITED':
+      return html`شما در ${dateTime(n.revealedAt)} مشخصات این آگهی را دیدید و بعد از آن،
+        آگهی‌دهنده اطلاعات آگهی را تغییر داده است. قبل از تماس، یک بار دیگر آگهی را
+        ببینید — ممکن است مبلغ یا شرایطش با آنچه دیدید فرق کند.`;
     default:
       return '';
   }

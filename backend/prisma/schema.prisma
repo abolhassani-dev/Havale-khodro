@@ -390,6 +390,13 @@ model Listing {
   renewedAt  DateTime?
   renewCount Int       @default(0)
 
+  // ویرایش، آشکار. `updatedAt` با هر نوشتنی عوض می‌شود — تمدید، فروخته‌شدن،
+  // شمارنده‌ی بازدید — پس نمی‌شود گفت «این آگهی ویرایش شده است». اینها فقط
+  // با ویرایشِ صاحب آگهی جابه‌جا می‌شوند، و همان چیزی هستند که روی کارت
+  // نشان داده می‌شود و کسی که مشخصات را دیده از رویشان خبردار می‌شود.
+  editedAt  DateTime?
+  editCount Int       @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
