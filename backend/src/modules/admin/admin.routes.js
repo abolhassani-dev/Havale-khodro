@@ -389,6 +389,8 @@ router.get(
       status: Joi.string().valid('ACTIVE', 'SUSPENDED'),
       city: Joi.string().trim().max(60),
       isReseller: Joi.boolean(),
+      // Subscription state, not account state — see the repository.
+      expiring: Joi.boolean(),
       skip: Joi.number().integer().min(0).default(0),
       take: Joi.number().integer().min(1).max(100).default(25),
     }),

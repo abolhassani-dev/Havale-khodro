@@ -55,7 +55,15 @@ export function registerAdminRoutes(route) {
   });
 
   route('adm-agents', async (params) => ({
-    agents: await admin.agents({ query: params.query, status: params.status, take: 50 }),
+    agents: await admin.agents({
+      query: params.query,
+      status: params.status,
+      // Subscription state rather than account state, and its own parameter for
+      // that reason. It arrived here as `status=EXPIRING` from the dashboard,
+      // which the server rightly refused: «EXPIRING» is not an account status.
+      expiring: params.expiring || undefined,
+      take: 50,
+    }),
   }));
 
   route('adm-agent', async (params) => {
@@ -308,7 +316,7 @@ function dashPage() {
       hint: 'کمتر از هفت روز مانده — این‌ها را باید یادآوری کرد',
       page: 'adm-agents',
       tone: 'warn',
-      params: 'status=EXPIRING',
+      params: 'expiring=true',
     },
   ].filter((row) => row.count > 0 && (!row.permission || can(row.permission)));
 
@@ -522,6 +530,18 @@ function agentsPage() {
         <button class="btn primary" type="submit">جستجو</button>
       </div>
     </form>
+
+    ${
+      // Shown as something you can see and take off. A filter that arrives from
+      // a link on another page and leaves no mark is a list that is quietly
+      // shorter than it looks.
+      params.expiring
+        ? html`<div class="filter-chip">
+            <span>فقط نمایندگی‌هایی که اشتراکشان کمتر از هفت روز دیگر تمام می‌شود</span>
+            <button class="btn sm" data-go="adm-agents">حذف فیلتر</button>
+          </div>`
+        : ''
+    }
 
     ${
       items.length

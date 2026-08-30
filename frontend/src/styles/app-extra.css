@@ -2006,3 +2006,18 @@ button.af-parent:hover { text-decoration: underline; }
 .rank-row[data-go] { cursor: pointer; }
 .rank-row[data-go]:hover .rank-c b { color: var(--primary); }
 .rank-v { font-size: 13px; font-weight: 700; color: var(--primary); }
+
+/* ---- فیلتری که از صفحه‌ی دیگر آمده ---- */
+/* دیده می‌شود و برداشته می‌شود — وگرنه فهرست بی‌صدا کوتاه‌تر از چیزی است که
+   به نظر می‌رسد. */
+.filter-chip {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 14px 12px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid #b98900;
+  border-radius: 9px;
+  background: #fdfcf8;
+  font-size: 12px; color: var(--ink-2);
+}
+.filter-chip span { flex: 1; min-width: 0; }

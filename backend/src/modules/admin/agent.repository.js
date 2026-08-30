@@ -76,7 +76,7 @@ const agentRepository = {
    * Search across the fields somebody on the phone would actually quote: an
    * agency code, a name, a mobile number.
    */
-  list({ query, status, city, isReseller, skip = 0, take = 25 }) {
+  list({ query, status, city, isReseller, expiring, skip = 0, take = 25 }) {
     // The phone column is encrypted at rest, so substring search on it is
     // impossible by design — `contains` used to sit in this list and turned
     // every text search into a 500. A query that is a whole mobile number
@@ -98,6 +98,22 @@ const agentRepository = {
       ...(status ? { status } : {}),
       ...(city ? { city } : {}),
       ...(isReseller === undefined ? {} : { isReseller }),
+      // «Whose subscription runs out this week» — the list somebody works
+      // through with a telephone. Its own parameter rather than a value of
+      // `status`, because `status` is the state of the *account* and this is
+      // the state of a subscription: putting them in one field made the
+      // dashboard's own link ask for an account status called «EXPIRING» and
+      // get a 422 for it.
+      ...(expiring
+        ? {
+            subscriptions: {
+              some: {
+                status: 'ACTIVE',
+                expiresAt: { gt: new Date(), lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+              },
+            },
+          }
+        : {}),
       ...(query
         ? { OR: [...textMatch(query), { children: { some: { OR: textMatch(query) } } }] }
         : {}),

@@ -551,6 +551,43 @@ await step('admin can sign in and see monitoring', async () => {
   await page.waitForSelector('.tl-row, .empty', { timeout: 8000 });
 });
 
+/**
+ * Every button in the kartabl actually goes somewhere.
+ *
+ * The dashboard's «اشتراک رو به پایان» row linked to the agencies list with
+ * `status=EXPIRING` — and «EXPIRING» is not an account status, so the server
+ * refused it and the first thing an admin saw after pressing «رسیدگی» was a
+ * red validation banner. A link written in one file against a validator in
+ * another cannot be checked by either of them; it can only be checked by
+ * pressing it.
+ */
+await step('every kartabl button opens without an error', async () => {
+  await page.goto(`${BASE}#adm-dash`);
+  await page.waitForSelector('.kartabl', { timeout: 8000 });
+
+  const rows = await page.locator('.kt-row').count();
+  for (let i = 0; i < rows; i += 1) {
+    await page.goto(`${BASE}#adm-dash`);
+    await page.waitForSelector('.kt-row', { timeout: 8000 });
+    const label = (await page.locator('.kt-row .kt-t b').nth(i).innerText()).trim();
+
+    await page.locator('.kt-row button').nth(i).click();
+    await page.waitForTimeout(1200);
+
+    // The failure banner specifically, not the word «خطا» anywhere on the page:
+    // a support ticket can be *about* an error and say so in its subject.
+    if (await page.locator('.content > .banner.danger').count()) {
+      const why = (await page.textContent('.content > .banner.danger')).replace(/\s+/g, ' ');
+      throw new Error(`«${label}» landed on an error — ${why.trim()}`);
+    }
+  }
+
+  // Put the page back where the next step expects to find it: this one walks
+  // away from the monitoring screen that the previous step opened.
+  await page.goto(`${BASE}#adm-monitor`);
+  await page.waitForSelector('.tl-row, .empty', { timeout: 8000 });
+});
+
 await step('timeline entry explains itself in a sentence', async () => {
   await page.click('[data-activity]');
   await page.waitForSelector('.modal', { timeout: 5000 });
