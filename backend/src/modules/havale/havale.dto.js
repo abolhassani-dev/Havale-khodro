@@ -15,6 +15,7 @@
  */
 
 const { HAVALE_KIND } = require('../../constants/havale');
+const { maskContact } = require('../../utils/textGuard');
 
 /** Prisma returns BigInt for money columns, and JSON.stringify throws on those. */
 const toNumber = (value) => (value === null || value === undefined ? null : Number(value));
@@ -65,8 +66,20 @@ function baseFields(havale) {
  * @param {boolean} ctx.revealed            a ContactReveal row exists for this viewer
  */
 function toHavaleCard(havale, { subscriptionActive, revealed = false } = {}) {
+  const base = baseFields(havale);
+
+  // The description, with any contact details blanked out.
+  //
+  // The submit check refuses the obvious cases, but no text filter is
+  // complete — and rows written before that check existed are still in the
+  // table. This is the layer that does not have to be complete to be worth
+  // having: whatever walks past the front door is still not *served* to
+  // somebody who has not paid for the contact. Not applied for a viewer who
+  // has revealed, because at that point they have the number anyway.
+  if (!revealed) base.description = maskContact(base.description);
+
   const card = {
-    ...baseFields(havale),
+    ...base,
     isOwn: false,
     // The owner sees this number and nothing else about who looked (blueprint
     // 6.9). Knowing which agencies called would let them arrange the deal

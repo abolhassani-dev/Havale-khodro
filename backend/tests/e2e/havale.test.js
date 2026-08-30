@@ -744,4 +744,124 @@ maybe('havale', () => {
       expect(strangerList.body.data.items.some((h) => h.id === posted.body.data.id)).toBe(false);
     });
   });
+
+  /**
+   * Contact details written into the description.
+   *
+   * The business rests on a phone number not being readable until somebody
+   * spends an allowance on it. A description box defeats that in one line, so
+   * the check runs before the write — and, because no text filter is complete,
+   * again on the way out.
+   */
+  describe('contact details in free text', () => {
+    const withDescription = async (description) => ({ ...(await offer()), description });
+
+    it('refuses a listing whose description carries a phone number', async () => {
+      const { cookie } = await agent();
+      const res = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await withDescription('فوری، تماس: ۰۹۱۲۳۴۵۶۷۸۹'))
+        .expect(422);
+
+      // The refusal has to say which box and what was found, or the person
+      // reads «invalid» and has no idea what to change.
+      expect(res.body.error.message).toContain('توضیحات');
+      expect(res.body.error.message).toContain('شماره تماس');
+    });
+
+    it('refuses the same number written to get past a filter', async () => {
+      const { cookie } = await agent();
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await withDescription('تماس ۰۹۱۲*۳۴۵*۶۷۸۹'))
+        .expect(422);
+    });
+
+    it('refuses a description carrying the agency’s own code', async () => {
+      const signed = await agent();
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', signed.cookie)
+        .send(await withDescription(`نمایندگی ${signed.user.agencyCode} در خدمت شماست`))
+        .expect(422);
+    });
+
+    it('accepts an honest description that happens to be full of numbers', async () => {
+      const { cookie } = await agent();
+      // The case that decides whether this rule helps or hurts: a refused
+      // honest listing teaches an agency the form is broken.
+      await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await withDescription('قیمت ۹۵۰۰۰۰۰۰۰ تومان، مدل ۱۴۰۵، تحویل ۴۵ روزه'))
+        .expect(201);
+    });
+
+    it('refuses the number on an edit too', async () => {
+      const { cookie } = await agent();
+      const posted = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', cookie)
+        .send(await offer())
+        .expect(201);
+
+      // Posting clean text and editing the number in afterwards is the obvious
+      // way round a check that only runs once.
+      await request(app)
+        .patch(api(`/havales/${posted.body.data.id}`))
+        .set('Cookie', cookie)
+        .send({ description: 'شماره: ۰۹۱۲۳۴۵۶۷۸۹' })
+        .expect(422);
+    });
+
+    it('blanks a number that reached the table anyway', async () => {
+      const owner = await agent();
+      const viewer = await agent();
+
+      const posted = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', owner.cookie)
+        .send(await offer())
+        .expect(201);
+
+      // Written straight to the database, standing in for the rows that predate
+      // the submit check and for whatever encoding walks past it.
+      await prisma.listing.update({
+        where: { id: posted.body.data.id },
+        data: { description: 'تماس ۰۹۱۲۳۴۵۶۷۸۹ فوری' },
+      });
+
+      const list = await request(app)
+        .get(api(`/havales?carType=${encodeURIComponent(posted.body.data.carType)}`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+
+      const row = list.body.data.items.find((h) => h.id === posted.body.data.id);
+      expect(row).toBeDefined();
+      expect(row.description).not.toMatch(/۰۹۱۲|09123/);
+      expect(row.description).toContain('فوری');
+    });
+
+    it('shows the owner their own words, unblanked', async () => {
+      const owner = await agent();
+      const posted = await request(app)
+        .post(api('/havales'))
+        .set('Cookie', owner.cookie)
+        .send(await offer())
+        .expect(201);
+
+      await prisma.listing.update({
+        where: { id: posted.body.data.id },
+        data: { description: 'تماس ۰۹۱۲۳۴۵۶۷۸۹ فوری' },
+      });
+
+      // Masking is for the reader who has not paid. Blanking the owner's own
+      // text would leave them unable to see what they have to correct.
+      const mine = await request(app).get(api('/havales/mine')).set('Cookie', owner.cookie).expect(200);
+      const row = mine.body.data.items.find((h) => h.id === posted.body.data.id);
+      expect(row.description).toContain('۰۹۱۲۳۴۵۶۷۸۹');
+    });
+  });
 });

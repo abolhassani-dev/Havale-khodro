@@ -518,4 +518,37 @@ maybe('registration market', () => {
         .expect(422);
     });
   });
+
+  /**
+   * The scheme name is the field an agency is most tempted to sign.
+   *
+   * It reads like a title, so «طرح ثبت‌نامی نمایندگی البرز — ۰۹۱۲…» looks to
+   * the person typing it like naming their own product rather than publishing
+   * a telephone number. It is published either way.
+   */
+  describe('contact details in the scheme name and the terms', () => {
+    it('refuses a phone number in the scheme name', async () => {
+      const { cookie } = await agent();
+      const res = await post(cookie, capacity({ planName: 'طرح ویژه ۰۹۱۲۳۴۵۶۷۸۹' })).expect(422);
+      expect(res.body.error.message).toContain('نام طرح');
+    });
+
+    it('refuses the agency’s own code in the scheme name', async () => {
+      const signed = await agent();
+      await post(signed.cookie, capacity({ planName: `طرح ${signed.user.agencyCode}` })).expect(422);
+    });
+
+    it('refuses a messenger handle in the terms', async () => {
+      const { cookie } = await agent();
+      const res = await post(cookie, capacity({ conditions: 'هماهنگی از @alborz_car' })).expect(422);
+      expect(res.body.error.message).toContain('شرایط');
+    });
+
+    it('accepts a scheme name that is just a scheme name', async () => {
+      const { cookie } = await agent();
+      // The case that decides whether the rule helps or hurts: a real scheme
+      // name is full of digits.
+      await post(cookie, capacity({ planName: 'پیش‌فروش ۶ ماهه شهریور ۱۴۰۵' })).expect(201);
+    });
+  });
 });

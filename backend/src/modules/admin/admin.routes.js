@@ -218,6 +218,32 @@ router.get(
   asyncHandler(async (req, res) => success(res, await monitoringService.suspicious(req.query)))
 );
 
+/**
+ * @openapi
+ * /admin/contact-bypass:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Agencies advertising a lot and never being asked for their contact
+ *     description: >
+ *       The check that catches a leak no text filter can. An agency that has put
+ *       its telephone number into its own advertisements gets the calls it wanted
+ *       and no reveals at all, because nobody needs to spend an allowance on a
+ *       number already on the page. Nothing is blocked — it is a list a person
+ *       reads.
+ */
+router.get(
+  '/contact-bypass',
+  requirePermission('monitoring'),
+  validate({
+    query: Joi.object({
+      days: Joi.number().integer().min(7).max(180).default(30),
+      minListings: Joi.number().integer().min(1).max(200).default(5),
+      minAgeDays: Joi.number().integer().min(1).max(60).default(7),
+    }),
+  }),
+  asyncHandler(async (req, res) => success(res, await monitoringService.contactBypass(req.query)))
+);
+
 // ── listings ────────────────────────────────────────────────────────────────
 
 /**

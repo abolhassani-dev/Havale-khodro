@@ -369,6 +369,76 @@ const monitoringService = {
         .sort((a, b) => b.reveals - a.reveals),
     };
   },
+
+  /**
+   * The other shape: agencies nobody ever asks to contact.
+   *
+   * This is the check that catches a leak no text filter can. An agency that
+   * has written its telephone number into its advertisements — spelled out,
+   * split with stars, hidden behind a Telegram handle, or simply signed with
+   * its own name — gets exactly the calls it wanted and *no reveals at all*,
+   * because nobody needs to spend an allowance on a number already on the page.
+   *
+   * So the signal is not in the text, and does not have to be: many
+   * advertisements, standing long enough to have been read, and not one person
+   * who paid to see the contact. That is either an agency nobody wants to talk
+   * to, or one being talked to off the platform — and both are worth a minute
+   * of somebody's time.
+   *
+   * Nothing is blocked and nothing is written. It is a list a person reads.
+   *
+   * The age floor is what keeps it honest: an agency that joined on Tuesday and
+   * posted six advertisements has no reveals yet because it is Wednesday.
+   */
+  async contactBypass({ days = 30, minListings = 5, minAgeDays = 7 } = {}) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const oldEnough = new Date(Date.now() - minAgeDays * 24 * 60 * 60 * 1000);
+
+    const groups = await monitoringRepository.listingsPerAgency(since);
+    const candidates = groups
+      .map((g) => ({
+        userId: g.ownerId,
+        listings: g._count._all,
+        reveals: g._sum.revealCount || 0,
+        oldest: g._min.createdAt,
+      }))
+      .filter(
+        (row) => row.listings >= minListings && row.reveals === 0 && row.oldest <= oldEnough
+      );
+
+    if (!candidates.length) return { days, minListings, items: [] };
+
+    const agencies = await monitoringRepository.agenciesByIds(candidates.map((c) => c.userId));
+    const byId = new Map(agencies.map((a) => [a.id, a]));
+
+    return {
+      days,
+      minListings,
+      items: candidates
+        .map((row) => {
+          const agency = byId.get(row.userId);
+          return {
+            agency: agency
+              ? {
+                  id: agency.id,
+                  name: agency.agencyName,
+                  agencyCode: agency.agencyCode,
+                  city: agency.city,
+                  status: agency.status,
+                }
+              : { id: row.userId },
+            listings: row.listings,
+            oldest: row.oldest,
+            // Said in words, because two numbers and a flag name is a thing
+            // people take on trust once and ignore afterwards.
+            reason:
+              `${toPersianDigits(row.listings)} آگهی در ${toPersianDigits(days)} روز گذشته، ` +
+              'و حتی یک بار هم کسی مشخصات تماسشان را باز نکرده است',
+          };
+        })
+        .sort((a, b) => b.listings - a.listings),
+    };
+  },
 };
 
 module.exports = monitoringService;

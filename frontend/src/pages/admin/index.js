@@ -42,11 +42,15 @@ export function registerAdminRoutes(route) {
   // three calls waits three round trips for data that has no order between it,
   // and the page arrives three times slower than it needs to.
   route('adm-dash', async () => {
-    const [overview, suspicious] = await Promise.all([
+    const [overview, suspicious, bypass] = await Promise.all([
       admin.overview(),
       admin.suspicious({ days: 7, minReveals: 20 }).catch(() => null),
+      // The mirror image of the line above: not «who is collecting numbers» but
+      // «whose numbers nobody ever asks for». Caught rather than awaited bare —
+      // one card failing must dim that card, not the dashboard.
+      admin.contactBypass({ days: 30, minListings: 5 }).catch(() => null),
     ]);
-    return { overview, suspicious };
+    return { overview, suspicious, bypass };
   });
 
   route('adm-agents', async (params) => ({
@@ -166,6 +170,7 @@ function dashPage() {
   const { data } = getState();
   const o = data.overview || {};
   const flagged = data.suspicious?.items || [];
+  const bypass = data.bypass?.items || [];
 
   return html`
   <div class="stats">
@@ -206,6 +211,39 @@ function dashPage() {
     }
     <div class="hint" style="padding:10px 14px">
       این‌ها فقط <b>علامت‌گذاری</b> است، نه مسدودسازی — سقف‌ها جلوی حجم را از قبل گرفته‌اند.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <h2>آگهی زیاد، بازدید صفر ${qtip('نمایندگی‌هایی که آگهی زیادی دارند ولی حتی یک بار هم کسی مشخصات تماسشان را باز نکرده است. معمولاً یعنی شماره‌ی تماس جایی در متن آگهی نوشته شده — چون وقتی شماره روی صفحه باشد، کسی سهمیه‌اش را خرج نمی‌کند. متن آگهی‌هایشان را نگاه کنید. این فقط یک فهرست است؛ چیزی مسدود نمی‌شود.')}</h2>
+      <span class="tag ${bypass.length ? 'w' : 'g'}">${faDigits(bypass.length)} مورد</span>
+    </div>
+    ${
+      bypass.length
+        ? html`<table>
+            <thead><tr><th>نمایندگی</th><th>آگهی</th><th>قدیمی‌ترین</th><th>دلیل</th><th></th></tr></thead>
+            <tbody>
+              ${bypass.map(
+                (row) => html`<tr>
+                  <td><b>${row.agency.name || '—'}</b>
+                    <div class="sub num">${row.agency.agencyCode || ''}</div></td>
+                  <td class="num">${faDigits(row.listings)}</td>
+                  <td>${date(row.oldest)}</td>
+                  <td>${row.reason}</td>
+                  <td style="text-align:left">
+                    <button class="btn sm" data-go="adm-agent"
+                            data-go-params="id=${row.agency.id}">پرونده</button>
+                  </td>
+                </tr>`
+              )}
+            </tbody>
+          </table>`
+        : emptyBox('نمایندگی‌ای با این الگو پیدا نشد.')
+    }
+    <div class="hint" style="padding:10px 14px">
+      هیچ فیلتر متنی همه‌ی راه‌های نوشتن یک شماره را نمی‌گیرد — ولی <b>نتیجه‌اش</b>
+      همیشه همین است: آگهی هست و بازدید مشخصات نیست.
     </div>
   </div>`;
 }

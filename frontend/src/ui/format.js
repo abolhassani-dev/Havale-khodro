@@ -138,6 +138,7 @@ export const REPORT_REASON_LABEL = {
   UNREACHABLE: 'عدم پاسخگویی',
   ALREADY_SOLD: 'قبلاً فروخته شده',
   FRAUD: 'کلاهبرداری',
+  CONTACT_IN_TEXT: 'درج اطلاعات تماس در متن آگهی',
   OTHER: 'سایر',
 };
 

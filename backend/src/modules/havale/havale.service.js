@@ -8,6 +8,7 @@ const { NotFoundError, ForbiddenError, BadRequestError } = require('../../errors
 const { MESSAGES } = require('../../constants/messages');
 const { addDays } = require('../../utils/time');
 const { diffOf } = require('../../utils/diff');
+const { assertClean } = require('../../utils/textGuard');
 const {
   HAVALE_KIND,
   HAVALE_STATUS,
@@ -125,6 +126,12 @@ const EDIT_FIELDS = {
 
 const havaleService = {
   async create({ user, payload }) {
+    // Before anything is written. The description is the one field on this form
+    // with no shape at all, and a contact number inside it hands the market a
+    // free directory — every reveal that would have been paid for, given away
+    // in one line. See utils/textGuard for why this is one layer of several.
+    assertClean({ توضیحات: payload.description }, { agencyCode: user.agencyCode });
+
     const { carModelId, carColor, ...rest } = payload;
     const catalog = await this.resolveCatalog({ carModelId, carColor });
 
@@ -292,6 +299,11 @@ const havaleService = {
     if (havale.status !== HAVALE_STATUS.ACTIVE) {
       throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
     }
+
+    // Checked on an edit as well, and not as an afterthought: posting clean
+    // text and editing the number in afterwards is the obvious way round a
+    // check that only runs once.
+    assertClean({ توضیحات: payload.description }, { agencyCode: user.agencyCode });
 
     // The car itself is not editable, and neither is the kind. Everything on
     // the card is negotiable except what the card *is*: an advertisement that

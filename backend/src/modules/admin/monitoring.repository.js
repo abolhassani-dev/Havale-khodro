@@ -141,6 +141,25 @@ const monitoringRepository = {
     });
   },
 
+  /**
+   * Listings per agency, with the reveals they attracted and the age of the
+   * oldest one — the three numbers behind «this agency is being contacted off
+   * the platform».
+   *
+   * One grouped query rather than a row per listing: this runs on a page an
+   * admin opens, and the whole point of the check is that it costs almost
+   * nothing to keep asking.
+   */
+  listingsPerAgency(since) {
+    return prisma.listing.groupBy({
+      by: ['ownerId'],
+      where: { createdAt: { gte: since }, deletedAt: null },
+      _count: { _all: true },
+      _sum: { revealCount: true },
+      _min: { createdAt: true },
+    });
+  },
+
   agenciesByIds(ids) {
     return prisma.user.findMany({
       where: { id: { in: ids } },

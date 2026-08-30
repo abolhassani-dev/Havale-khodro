@@ -149,6 +149,7 @@ export const admin = {
   activityDetail: (id) => api.get(`/admin/activity/${id}`),
   reveals: (query) => api.get('/admin/reveals', query),
   suspicious: (query) => api.get('/admin/suspicious', query),
+  contactBypass: (query) => api.get('/admin/contact-bypass', query),
 
   // Listings, from the desk that has to answer for them: every state, whose
   // they are, and the two levers — hide, or take down.

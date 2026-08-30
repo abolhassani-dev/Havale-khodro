@@ -8,6 +8,11 @@ const REPORT_REASON = {
   UNREACHABLE: 'UNREACHABLE',
   ALREADY_SOLD: 'ALREADY_SOLD',
   FRAUD: 'FRAUD',
+  // Contact details written into the advertisement's own text, to be read
+  // without anybody spending an allowance on the reveal. No filter catches
+  // every encoding of a telephone number — but a competitor reading the market
+  // catches all of them, and has every reason to look.
+  CONTACT_IN_TEXT: 'CONTACT_IN_TEXT',
   OTHER: 'OTHER',
 };
 

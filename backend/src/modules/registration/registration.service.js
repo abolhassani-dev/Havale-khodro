@@ -7,6 +7,7 @@ const brandAccess = require('../catalog/brandAccess.service');
 const authRepository = require('../auth/auth.repository');
 const { addDays } = require('../../utils/time');
 const { diffOf } = require('../../utils/diff');
+const { assertClean } = require('../../utils/textGuard');
 const { LIST_PAGE_SIZE } = require('../../constants/havale');
 const { MESSAGES } = require('../../constants/messages');
 const { NotFoundError, BadRequestError } = require('../../errors/AppError');
@@ -112,6 +113,18 @@ function detailPatch(payload) {
 
 const registrationService = {
   async create({ user, payload }) {
+    // Three free-text boxes here rather than one, and the scheme name is the
+    // worst of them: it is the field an agency is most tempted to sign, because
+    // it reads like a title. See utils/textGuard.
+    assertClean(
+      {
+        'نام طرح': payload.planName,
+        شرایط: payload.conditions,
+        توضیحات: payload.description,
+      },
+      { agencyCode: user.agencyCode }
+    );
+
     const { listing, detail } = split(payload);
 
     // The car's name is copied onto the row rather than only referenced. An
@@ -242,6 +255,17 @@ const registrationService = {
   async update({ user, id, payload }) {
     const row = await this.requireOwn(user, id);
     if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
+
+    // On the edit too: writing clean text and editing the number in afterwards
+    // is the obvious way round a check that only runs once.
+    assertClean(
+      {
+        'نام طرح': payload.planName,
+        شرایط: payload.conditions,
+        توضیحات: payload.description,
+      },
+      { agencyCode: user.agencyCode }
+    );
 
     const detail = detailPatch(payload);
     const updated = await registrationRepository.update(id, {

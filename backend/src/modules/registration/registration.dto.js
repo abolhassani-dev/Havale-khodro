@@ -12,6 +12,8 @@
  * to reach for by accident.
  */
 
+const { maskContact } = require('../../utils/textGuard');
+
 /** Prisma returns BigInt for money columns, and JSON.stringify throws on those. */
 const toNumber = (value) => (value === null || value === undefined ? null : Number(value));
 
@@ -61,8 +63,21 @@ function baseFields(row) {
  * @param {boolean} ctx.revealed            a ContactReveal row exists for this viewer
  */
 function toCard(row, { subscriptionActive, revealed = false } = {}) {
+  const base = baseFields(row);
+
+  // Three free-text boxes on this market, so three to blank. The submit check
+  // refuses the obvious cases, but no text filter is complete and rows written
+  // before it existed are still in the table — this is the layer that does not
+  // have to be complete to be worth having. Skipped for a viewer who already
+  // revealed: they have the number.
+  if (!revealed) {
+    base.description = maskContact(base.description);
+    base.conditions = maskContact(base.conditions);
+    base.planName = maskContact(base.planName);
+  }
+
   const card = {
-    ...baseFields(row),
+    ...base,
     isOwn: false,
     // The owner sees this number and nothing else about who looked: knowing
     // which agencies called would let them arrange the deal outside the system.
