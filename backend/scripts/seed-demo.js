@@ -61,6 +61,26 @@ async function demoAgency(agency, plan, passwordHash, index) {
     },
   });
 
+  // Every brand, which a real agency would never have — and that is the point.
+  //
+  // Without this the demo accounts could sign in and see the market and post
+  // nothing at all: the brand dropdown on the listing form comes up empty and
+  // the submit button has nothing to submit. The failure is silent from the
+  // outside — no error, just a form that cannot be completed — and it costs
+  // whoever sets this up next an hour of looking in the wrong place. It cost
+  // exactly that here.
+  //
+  // The absence of a row means «no brands» by design (see BrandAccess in the
+  // schema), so a fixture that skips this produces an account nobody can
+  // demonstrate anything with.
+  const brands = await prisma.carBrand.findMany({ where: { isActive: true }, select: { id: true } });
+  if (brands.length) {
+    await prisma.brandAccess.createMany({
+      data: brands.map((brand) => ({ userId: user.id, brandId: brand.id })),
+      skipDuplicates: true,
+    });
+  }
+
   return user;
 }
 
