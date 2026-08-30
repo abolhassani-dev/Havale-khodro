@@ -38,6 +38,10 @@ const monitoringRepository = {
       liveSubs,
       expiringSubs,
       topCars,
+      oldestReport,
+      oldestTicket,
+      oldestSeatOrder,
+      soonestExpiry,
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'AGENT' } }),
       prisma.user.count({ where: { role: 'AGENT', status: 'ACTIVE' } }),
@@ -68,6 +72,32 @@ const monitoringRepository = {
         where: { status: 'ACTIVE', expiresAt: { gt: now, lte: weekAhead } },
       }),
       this.topCars(monthAgo),
+      // How long each queue has been waiting. A count alone cannot say which
+      // queue is burning: four reports filed this morning and four filed last
+      // Tuesday are the same number and not the same problem.
+      prisma.violationReport.findFirst({
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }),
+      prisma.ticket.findFirst({
+        where: { status: 'OPEN' },
+        // The last thing said, not the day it opened: a conversation opened a
+        // month ago and answered yesterday is not a month overdue.
+        orderBy: { lastReplyAt: 'asc' },
+        select: { lastReplyAt: true },
+      }),
+      prisma.seatOrder.findFirst({
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }),
+      // A deadline rather than an age — this queue is not late, it is due.
+      prisma.subscription.findFirst({
+        where: { status: 'ACTIVE', expiresAt: { gt: now, lte: weekAhead } },
+        orderBy: { expiresAt: 'asc' },
+        select: { expiresAt: true },
+      }),
     ]);
 
     const byMarket = Object.fromEntries(liveByMarket.map((m) => [m.market, m._count._all]));
@@ -88,6 +118,15 @@ const monitoringRepository = {
       pendingSeatOrders,
       liveSubscriptions: liveSubs,
       expiringSubscriptions: expiringSubs,
+      // Paired with the counts above and read the same way by the panel: a
+      // queue with something in it always has a «since», and the one queue that
+      // measures forward has a «due».
+      waitingSince: {
+        reports: oldestReport?.createdAt || null,
+        tickets: oldestTicket?.lastReplyAt || null,
+        seats: oldestSeatOrder?.createdAt || null,
+      },
+      dueAt: { subscription: soonestExpiry?.expiresAt || null },
       topCars: topCars.map((c) => ({
         carType: c.carType,
         reveals: c._sum.revealCount || 0,

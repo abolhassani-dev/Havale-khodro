@@ -3,7 +3,7 @@ import { icon } from '../../ui/icons.js';
 import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
 import {
-  money, faDigits, date, dateTime, timeOnly, relative, enDigits, fileSize,
+  money, faDigits, date, dateTime, timeOnly, relative, until, enDigits, fileSize,
   KIND_LABEL, HAVALE_STATUS_LABEL,
   REPORT_REASON_LABEL, REPORT_STATUS_LABEL, TICKET_STATUS_LABEL, TICKET_CATEGORIES, ROLE_LABEL,
 } from '../../ui/format.js';
@@ -277,48 +277,59 @@ function dashPage() {
   const { data } = getState();
   const o = data.overview || {};
 
-  // Every queue, with what to do about it. Written as data so the empty state
-  // is a fact about the list rather than a second copy of the markup.
+  // Every queue, with what to do about it, how long it has been waiting, and
+  // where the button goes. Written as data so that sorting and colouring are
+  // one rule each rather than five copies of the markup.
+  //
+  // `since` is «this has been sitting here» and `due` is «this runs out»; a
+  // queue has one or the other, never both.
   const queue = [
     {
       count: o.pendingReports,
+      since: o.waitingSince?.reports,
       label: 'گزارش تخلف بررسی‌نشده',
       hint: 'تا وقتی بررسی نشده، آگهی هنوز به بازار نشان داده می‌شود',
       page: 'adm-reports',
-      tone: 'danger',
     },
     {
       count: o.thirdStrike,
+      since: o.waitingSince?.reports,
       label: 'تعلیق در انتظار تأیید مدیر کل',
       hint: 'سومین اخطار، که بدون تأیید اعمال نمی‌شود',
       page: 'adm-reports',
-      tone: 'danger',
       permission: 'thirdStrike',
     },
     {
       count: o.openTickets,
+      since: o.waitingSince?.tickets,
       label: 'گفتگوی باز',
       hint: 'نمایندگی منتظر جواب است',
       page: 'adm-tickets',
-      tone: 'warn',
     },
     {
       count: o.pendingSeatOrders,
+      since: o.waitingSince?.seats,
       label: 'درخواست ظرفیت',
       hint: 'فیش واریزی ثبت شده و منتظر تأیید است',
       page: 'adm-seats',
-      tone: 'warn',
       permission: 'seats',
     },
     {
       count: o.expiringSubscriptions,
+      due: o.dueAt?.subscription,
       label: 'اشتراک رو به پایان',
       hint: 'کمتر از هفت روز مانده — این‌ها را باید یادآوری کرد',
       page: 'adm-agents',
-      tone: 'warn',
       params: 'expiring=true',
     },
-  ].filter((row) => row.count > 0 && (!row.permission || can(row.permission)));
+  ]
+    .filter((row) => row.count > 0 && (!row.permission || can(row.permission)))
+    .map((row) => ({ ...row, urgency: urgencyOf(row) }))
+    // Most urgent first, rather than a fixed order. A list whose order never
+    // changes teaches the reader to read it from the top and stop, which is
+    // exactly wrong on the day the last line is the one on fire.
+    .sort((a, b) => b.urgency - a.urgency);
+
 
   return html`
   <div class="card kartabl">
@@ -334,12 +345,21 @@ function dashPage() {
       queue.length
         ? html`<div class="kt-list">
             ${queue.map(
-              (row) => html`<div class="kt-row is-${row.tone}">
+              (row) => html`<div class="kt-row is-${toneOf(row.urgency)}">
                 <b class="kt-n num">${faDigits(row.count)}</b>
                 <div class="kt-t">
                   <b>${row.label}</b>
                   <span>${row.hint}</span>
                 </div>
+                ${
+                  // The age, said plainly and coloured with the row. This is
+                  // the number that says which queue is burning — four reports
+                  // filed this morning and four filed last Tuesday are the same
+                  // count and not the same problem.
+                  waitLabel(row)
+                    ? html`<span class="kt-age">${waitLabel(row)}</span>`
+                    : ''
+                }
                 <button class="btn sm" data-go="${row.page}"
                         ${raw(row.params ? `data-go-params="${row.params}"` : '')}>رسیدگی</button>
               </div>`
@@ -392,6 +412,51 @@ function dashPage() {
   </div>
 
   ${liveCards(o.topCars || [], o.busiest || [])}`;
+}
+
+/**
+ * How pressing a queue is, in hours, so that one `sort` can order all of them.
+ *
+ * Two different clocks have to end up on one scale. Most rows measure backwards
+ * — «this has been waiting since Tuesday» — and one measures forwards, «this
+ * subscription runs out on Thursday». They are put on the same axis by treating
+ * a deadline as urgent in proportion to how little of its week is left: a
+ * subscription ending tomorrow ranks alongside something that has been waiting
+ * six days. That is a judgement, not a fact, and it is written here in one
+ * place so it can be argued with rather than hidden in a comparator.
+ *
+ * A queue with no timestamp at all still sorts above nothing: it has a count,
+ * so it is real; it just cannot say how long.
+ */
+function urgencyOf(row) {
+  const HOUR = 60 * 60 * 1000;
+  if (row.since) return (Date.now() - new Date(row.since)) / HOUR;
+  if (row.due) {
+    const left = (new Date(row.due) - Date.now()) / HOUR;
+    return Math.max(0, 7 * 24 - left);
+  }
+  return 0;
+}
+
+/**
+ * The colour, from the age rather than from the kind of work.
+ *
+ * It used to be fixed per queue — reports always red, tickets always amber —
+ * which made the colour a label for the category and not a statement about
+ * anything. A colour that never changes carries no information. Now red means
+ * «this has been sitting here for three days», whatever it is.
+ */
+function toneOf(hours) {
+  if (hours >= 72) return 'danger';
+  if (hours >= 24) return 'warn';
+  return 'calm';
+}
+
+/** «۳ روز معطل» / «۲ روز دیگر» — or nothing, when there is no clock to read. */
+function waitLabel(row) {
+  if (row.since) return `${relative(row.since).replace(' پیش', '')} معطل`;
+  if (row.due) return until(row.due);
+  return '';
 }
 
 /** «۲۲ در هفت روز — ۱۲ تا بیشتر از هفته‌ی قبل», or the flat truth. */
