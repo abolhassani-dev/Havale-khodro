@@ -1,0 +1,24 @@
+import { chromium } from 'playwright';
+const B = 'http://127.0.0.1:5173';
+const D = '/tmp/claude-0/-home-user-Havale-khodro/71c781a2-85a9-5823-bb83-f67e86e415b7/scratchpad';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const errors = [];
+const log = (ok, w, x = '') => console.log(ok ? '✓' : '✕', w, x);
+const page = await browser.newPage({ viewport: { width: 1360, height: 1050 } });
+page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|404|422)/.test(m.text())) errors.push(m.text()); });
+page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+await page.goto(B, { waitUntil: 'networkidle' });
+await page.fill('input[name="username"]', 'admin');
+await page.fill('input[name="password"]', 'LocalAdmin@2026');
+await page.click('button[type="submit"]');
+await page.waitForSelector('.sidebar');
+await page.waitForTimeout(1800);
+const t = (await page.locator('.content').innerText()).replace(/\s+/g, ' ');
+log(!/نبض بازار/.test(t), 'the chart is gone');
+log(/آخرین رویدادها/.test(t), 'a live feed took its place');
+log(/پرتقاضاترین خودروها/.test(t), 'and a demand list beside it');
+log(await page.locator('.feed-row').count() > 0, 'the feed has rows',
+  String(await page.locator('.feed-row').count()));
+await page.screenshot({ path: `${D}/dash3.png`, fullPage: true });
+log(errors.length === 0, 'no console errors', errors.slice(0, 3).join(' | '));
+await browser.close();

@@ -31,10 +31,11 @@ const { STRIKE_THRESHOLD } = require('../../constants/moderation');
 const byDate = (a, b) => new Date(b.at) - new Date(a.at);
 
 async function build(user) {
-  const [against, filed, edited] = await Promise.all([
+  const [against, filed, edited, suspended] = await Promise.all([
     reportService.listAgainstMe(user),
     reportService.listFiledBy(user),
     editedSinceRevealFor(user.id, null),
+    noticeRepository.suspendedListings(user.id),
   ]);
 
   // Oldest first while numbering, so «strike ۱ of ۳» is the first one they got.
@@ -70,6 +71,29 @@ async function build(user) {
       note: r.adminNote || null,
       listing: r.listing,
       reportSerial: r.serial,
+    });
+  }
+
+  // Listings an admin has taken down.
+  //
+  // A second source rather than part of the strike list, because a suspension
+  // does not need a report behind it — an admin can take one down directly, and
+  // the reason they are made to write is addressed to the agency. It went
+  // nowhere until this existed.
+  //
+  // A suspension that *did* come from a report is skipped: the strike notice
+  // above already says the same thing with more in it — which report, which
+  // grounds, and which strike of three.
+  const struck = new Set(strikes.map((r) => r.havale?.id).filter(Boolean));
+  for (const row of suspended) {
+    if (struck.has(row.id)) continue;
+    notices.push({
+      id: `suspended:${row.id}:${row.suspendedAt.toISOString()}`,
+      kind: 'LISTING_SUSPENDED',
+      at: row.suspendedAt,
+      note: row.suspendReason || null,
+      listing: { serial: row.serial, carType: row.carType },
+      market: row.market,
     });
   }
 
@@ -120,10 +144,11 @@ const noticeService = {
    */
   async unreadFor(user) {
     const since = user.noticesSeenAt ? new Date(user.noticesSeenAt) : null;
-    const [against, filed, edited] = await Promise.all([
+    const [against, filed, edited, suspended] = await Promise.all([
       noticeRepository.countStrikesSince(user.id, since),
       noticeRepository.countFiledResolvedSince(user.id, since),
       editedSinceRevealFor(user.id, since),
+      noticeRepository.countSuspendedSince(user.id, since),
     ]);
 
     const suspension =
@@ -131,7 +156,7 @@ const noticeService = {
         ? 1
         : 0;
 
-    return against + filed + edited.length + suspension;
+    return against + filed + edited.length + suspended + suspension;
   },
 
   /** Marks the box read up to now. */

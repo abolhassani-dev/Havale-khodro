@@ -854,6 +854,54 @@ maybe('moderation', () => {
       expect(box.body.data.items.some((n) => n.kind === 'LISTING_EDITED')).toBe(false);
     });
 
+    /**
+     * A listing an admin takes down directly, with no report behind it.
+     *
+     * The refusal that makes them write a reason says «نماینده همین متن را
+     * می‌بیند» — and until this existed, nobody did: the sentence was stored on
+     * the listing and shown on no screen at all.
+     */
+    it('tells the agency when an admin takes a listing down', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner, havale } = await listingAndReporter();
+
+      await request(app)
+        .put(api(`/admin/havales/${havale.id}/status`))
+        .set('Cookie', superAdmin.cookie)
+        .send({ status: 'SUSPENDED', reason: 'شماره تماس در توضیحات نوشته شده بود' })
+        .expect(200);
+
+      const box = await request(app).get(api('/notices')).set('Cookie', owner.cookie).expect(200);
+      const notice = box.body.data.items.find((n) => n.kind === 'LISTING_SUSPENDED');
+
+      expect(notice).toBeDefined();
+      expect(notice.listing.serial).toBe(havale.serial);
+      expect(notice.note).toBe('شماره تماس در توضیحات نوشته شده بود');
+    });
+
+    it('does not say it twice when the suspension came from a report', async () => {
+      const superAdmin = await staff('SUPER_ADMIN');
+      const { owner, reporter, havale } = await listingAndReporter();
+
+      const report = await file(reporter.cookie, havale.id).expect(201);
+      await review(superAdmin.cookie, report.body.data.id, 'CONFIRMED').expect(200);
+
+      // Upholding a report also suspends the listing, so both sources see it.
+      // The strike notice says more — which report, on what grounds, which
+      // strike of three — so it is the one that speaks.
+      const box = await request(app).get(api('/notices')).set('Cookie', owner.cookie).expect(200);
+      const forThisListing = box.body.data.items.filter((n) => n.listing?.serial === havale.serial);
+      expect(forThisListing).toHaveLength(1);
+      expect(forThisListing[0].kind).toBe('STRIKE');
+
+      // And the badge agrees with the box it is counting.
+      const unread = await request(app)
+        .get(api('/notices/unread'))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      expect(unread.body.data.notices).toBe(1);
+    });
+
     it('is still reachable after the account is suspended', async () => {
       const superAdmin = await staff('SUPER_ADMIN');
       const { owner } = await listingAndReporter();

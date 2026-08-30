@@ -383,7 +383,7 @@ function dashPage() {
     )}
   </div>
 
-  ${pulseCard(o.series || [])}`;
+  ${liveCards(o.topCars || [], o.busiest || [])}`;
 }
 
 /** «۲۲ در هفت روز — ۱۲ تا بیشتر از هفته‌ی قبل», or the flat truth. */
@@ -403,99 +403,69 @@ function trendTone(now = 0, before = 0) {
 }
 
 /**
- * Fourteen days of the two things that say whether the market is alive.
+ * Two questions the rest of the panel does not answer.
  *
- * Two series on one scale, which is the only honest way to put them together:
- * both are «events on a day», so a bar in one is directly comparable with a bar
- * in the other. (Two scales on one chart would let any pair of lines be made to
- * cross wherever the author wanted.)
+ * What replaced what, twice, is the argument for these two. First there was a
+ * fourteen-day chart: honest and useless, because on a market this size most
+ * days are zero and it drew a wide white box with three bars in it. Then a feed
+ * of recent events — worse, because the monitoring screen already *is* that
+ * feed, searchable and filtered, so the dashboard was spending a third of
+ * itself on a poorer copy of another page.
  *
- * Bars rather than lines because the counts are small integers and many days
- * are zero — a line through a zero dips to the axis and reads as an outage
- * rather than as a quiet Friday.
- *
- * Drawn as inline SVG: fourteen days of two numbers does not need a charting
- * library, and this panel has no build step to add one to.
+ * These are here because nothing else shows them: which cars people are asking
+ * about, and which agencies are getting value out of a subscription. Both are
+ * counted by reveals rather than by listings, for the same reason — posting is
+ * free and costs nothing to do ten times, while a reveal is somebody spending
+ * part of a capped daily allowance on a telephone number.
  */
-function pulseCard(series) {
-  const days = series.slice(-14);
-  const peak = Math.max(1, ...days.map((d) => Math.max(d.reveals, d.listings)));
-
-  // Geometry in user units; the SVG scales itself to the card.
-  const W = 720;
-  const H = 130;
-  const pad = 18;
-  const slot = (W - pad * 2) / Math.max(days.length, 1);
-  const barW = Math.min(9, slot / 2 - 2);
-  const scale = (n) => (H - pad) * (n / peak);
-
-  const totals = days.reduce(
-    (sum, d) => ({ reveals: sum.reveals + d.reveals, listings: sum.listings + d.listings }),
-    { reveals: 0, listings: 0 }
-  );
-
+function liveCards(topCars, busiest) {
   return html`
-  <div class="card">
-    <div class="card-h">
-      <h2>نبض بازار ${qtip('دو هفته‌ی گذشته: هر روز چند آگهی ثبت شده و چند بار کسی مشخصات تماس را باز کرده. با نگه داشتن نشانگر روی هر روز، عددهای همان روز را می‌بینید.')}</h2>
-      <div class="lgnd">
-        <span><i style="background:var(--c-reveal)"></i>بازدید مشخصات ${faDigits(totals.reveals)}</span>
-        <span><i style="background:var(--c-listing)"></i>آگهی تازه ${faDigits(totals.listings)}</span>
+  <div class="cols c2">
+    <div class="card">
+      <div class="card-h">
+        <h2>پرتقاضاترین خودروها ${qtip('خودروهایی که در سی روز گذشته بیشترین «نمایش مشخصات» را گرفته‌اند — نه بیشترین آگهی. هر کسی می‌تواند ده آگهی بگذارد، ولی نمایش مشخصات یعنی یک نمایندگی بخشی از سقف روزانه‌اش را خرج کرده است.')}</h2>
+        <span class="tag">۳۰ روز</span>
       </div>
+      ${
+        topCars.length
+          ? html`<div class="rank">
+              ${topCars.map(
+                (car, i) => html`<div class="rank-row">
+                  <span class="rank-n num">${faDigits(i + 1)}</span>
+                  <b class="rank-c">${car.carType}</b>
+                  <span class="rank-v num">${faDigits(car.reveals)}</span>
+                </div>`
+              )}
+            </div>`
+          : emptyBox('در سی روز گذشته مشخصات هیچ آگهی‌ای باز نشده است.')
+      }
     </div>
 
-    ${
-      days.length
-        ? html`<div class="pulse">
-            <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-                 aria-label="نمودار دو هفته‌ی گذشته">
-              <!-- The baseline, recessive: it orients the bars without competing
-                   with them. -->
-              <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}"
-                    stroke="var(--line)" stroke-width="1"/>
-              ${
-                // Drawn newest-last but *placed* right to left, because the page
-                // is right to left: on an RTL screen the eye starts at the right
-                // edge, so that is where «two weeks ago» has to be. Left as it
-                // came, the bars ran one way and the dates under them the other.
-                [...days].reverse().map((d, i) => {
-                const x = pad + i * slot + (slot - barW * 2 - 2) / 2;
-                const r = scale(d.reveals);
-                const l = scale(d.listings);
-                return html`<g class="pb" data-day="${d.day}">
-                  <rect x="${x}" y="${H - pad - r}" width="${barW}" height="${r}"
-                        rx="2" fill="var(--c-reveal)"/>
-                  <rect x="${x + barW + 2}" y="${H - pad - l}" width="${barW}" height="${l}"
-                        rx="2" fill="var(--c-listing)"/>
-                  <!-- The hit target is the whole column, not the bar: a day
-                       with a count of one is three pixels tall. -->
-                  <rect class="pb-hit" x="${pad + i * slot}" y="0" width="${slot}" height="${H}"
-                        fill="transparent">
-                    <title>${jalaliDay(d.day)} — بازدید ${faDigits(d.reveals)} · آگهی ${faDigits(d.listings)}</title>
-                  </rect>
-                </g>`;
-                })
-              }
-            </svg>
-            <div class="pulse-x">
-              <span>${jalaliDay(days[0].day)}</span>
-              <span>${jalaliDay(days[days.length - 1].day)}</span>
-            </div>
-          </div>`
-        : emptyBox('هنوز داده‌ای برای دو هفته‌ی گذشته نیست.')
-    }
+    <div class="card">
+      <div class="card-h">
+        <h2>فعال‌ترین نمایندگی‌ها ${qtip('نمایندگی‌هایی که در سی روز گذشته بیشترین استفاده را از سامانه کرده‌اند. عدد سمت چپ، تعداد «نمایش مشخصات» است — یعنی چقدر از سقفشان را خرج کرده‌اند، که نزدیک‌ترین چیزی است که می‌گوید یک اشتراک دارد کار می‌کند یا نه.')}</h2>
+        <button class="btn sm" data-go="adm-agents">همه</button>
+      </div>
+      ${
+        busiest.length
+          ? html`<div class="rank">
+              ${busiest.map(
+                (a, i) => html`<div class="rank-row" data-go="adm-agent" data-go-params="id=${a.id}">
+                  <span class="rank-n num">${faDigits(i + 1)}</span>
+                  <div class="rank-c">
+                    <b>${a.name || '—'}</b>
+                    <span class="sub num">${a.agencyCode || ''}${a.city ? ` · ${a.city}` : ''}</span>
+                  </div>
+                  <span class="rank-v num" title="${faDigits(a.listings)} آگهی در همین مدت">
+                    ${faDigits(a.reveals)}
+                  </span>
+                </div>`
+              )}
+            </div>`
+          : emptyBox('در سی روز گذشته هیچ نمایندگی‌ای مشخصاتی باز نکرده است.')
+      }
+    </div>
   </div>`;
-}
-
-/** «۰۸ شهریور» — the axis speaks the calendar the reader lives in. */
-function jalaliDay(iso) {
-  try {
-    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { day: '2-digit', month: 'short' }).format(
-      new Date(`${iso}T00:00:00`)
-    );
-  } catch {
-    return iso;
-  }
 }
 
 function stat(label, value, hint, iconName = 'dashboard', tone = '') {

@@ -206,15 +206,7 @@ function regCard(r) {
 
     ${r.conditions ? html`<p class="desc"><b>شرایط:</b> ${r.conditions}</p>` : ''}
     ${r.description ? html`<p class="desc">${r.description}</p>` : ''}
-    ${
-      // Four typed boxes on this market — the scheme, the delivery date, the
-      // terms and the note — and none of them is on a card somebody has not
-      // paid for. Said rather than hidden: «there is something here» is itself
-      // a reason to open the contact.
-      r.hasNotes && !r.contactRevealed
-        ? html`<p class="desc locked">${icon('lock', 13)} نام طرح، موعد تحویل، شرایط و توضیحات با «نمایش مشخصات» باز می‌شوند.</p>`
-        : ''
-    }
+
 
     <footer>
       <div class="meta">
@@ -223,7 +215,10 @@ function regCard(r) {
             ? html`<span>${r.agency.name || '—'}</span>
                 ${r.agency.code ? html`<span class="num">${r.agency.code}</span>` : ''}
                 ${r.agency.city ? html`<span>${r.agency.city}</span>` : ''}`
-            : html`<span class="masked-id">نمایندگی محرمانه — با «نمایش مشخصات» باز می‌شود</span>`
+            : html`<span class="masked-id">
+                ${icon('lock', 12)}
+                ${r.hasNotes ? 'نمایندگی، طرح و شرایط' : 'نمایندگی'} محرمانه — با «نمایش مشخصات» باز می‌شود
+              </span>`
         }
         <span class="tag">${until(r.closesAt)}</span>
       </div>

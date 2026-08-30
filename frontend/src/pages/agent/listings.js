@@ -450,8 +450,11 @@ export function minePage() {
  */
 export function editedTag(h) {
   if (!h.editedAt) return raw('');
-  const times = h.editCount > 1 ? ` ×${faDigits(h.editCount)}` : '';
-  return html`<span class="tag w" title="آخرین ویرایش: ${date(h.editedAt)}">ویرایش‌شده${times}</span>`;
+  // The word, and nothing else. The count was on it — «ویرایش‌شده ×۲۰» — and it
+  // shouted: a loud orange number that answers a question nobody asked. What a
+  // reader needs to know is *that* it changed and *when*, and the second of
+  // those belongs in the tooltip rather than in the badge.
+  return html`<span class="tag edited" title="آخرین ویرایش: ${date(h.editedAt)}">ویرایش‌شده</span>`;
 }
 
 function statusTag(h) {

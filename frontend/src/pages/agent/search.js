@@ -218,18 +218,10 @@ function card(h) {
     </dl>
 
     ${
-      // The description arrives with the contact, not before it.
-      //
-      // Every rule about what may be written in a free-text box is a rule
-      // somebody works out how to write around — a number spelled out, an
-      // agency's own name, a box nobody thought to guard. Not serving the box
-      // ends that argument rather than winning it. What is left on the card is
-      // structured, and structured text cannot carry a telephone number.
-      h.description
-        ? html`<p class="desc">${h.description}</p>`
-        : h.hasDescription
-          ? html`<p class="desc locked">${icon('lock', 13)} توضیحات این آگهی با «نمایش مشخصات» باز می‌شود.</p>`
-          : ''
+      // Shown once it is paid for. Before that there is no second notice here:
+      // the footer already says one thing is behind the reveal, and a card that
+      // says «با نمایش مشخصات باز می‌شود» twice reads as a bug.
+      h.description ? html`<p class="desc">${h.description}</p>` : ''
     }
 
     <footer>
@@ -239,7 +231,10 @@ function card(h) {
             ? html`<span>${h.agency.name || '—'}</span>
                 ${h.agency.code ? html`<span class="num">${h.agency.code}</span>` : ''}
                 ${h.agency.city ? html`<span>${h.agency.city}</span>` : ''}`
-            : html`<span class="masked-id">نمایندگی محرمانه — با «نمایش مشخصات» باز می‌شود</span>`
+            : html`<span class="masked-id">
+                ${icon('lock', 12)}
+                ${h.hasDescription ? 'نمایندگی و توضیحات' : 'نمایندگی'} محرمانه — با «نمایش مشخصات» باز می‌شود
+              </span>`
         }
         <span class="tag">${until(h.closesAt)}</span>
       </div>

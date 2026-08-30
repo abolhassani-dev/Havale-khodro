@@ -41,6 +41,7 @@ const SHAPE = {
   REPORT_UPHELD: { tone: 'ok', icon: '✓', appeal: false },
   REPORT_REJECTED: { tone: 'warn', icon: '•', appeal: false },
   LISTING_EDITED: { tone: 'warn', icon: '✎', appeal: false },
+  LISTING_SUSPENDED: { tone: 'danger', icon: '✕', appeal: true },
 };
 
 function title(n) {
@@ -60,6 +61,8 @@ function title(n) {
       return `گزارش شما درباره‌ی آگهی${serial} بی‌مورد تشخیص داده شد`;
     case 'LISTING_EDITED':
       return `آگهی${serial} — ${car} بعد از دیدن مشخصات، ویرایش شد`;
+    case 'LISTING_SUSPENDED':
+      return `آگهی${serial} — ${car} توسط مدیریت تعلیق شد`;
     default:
       return 'اطلاعیه';
   }
@@ -87,6 +90,10 @@ function body(n) {
       return html`گزارشی که با عنوان «${reason}» ثبت کرده بودید بی‌مورد تشخیص داده شد و
         یک اخطار گزارش نادرست برای حساب شما ثبت شد. گزارش نادرست پیاپی، امکان
         گزارش دادن را محدود می‌کند.`;
+    case 'LISTING_SUSPENDED':
+      return html`این آگهی از بازار برداشته شد و دیگر به نمایندگی‌های دیگر نشان داده
+        نمی‌شود. دلیلش را بررسی‌کننده در پایین نوشته است. اگر ایراد را برطرف کردید یا
+        اعتراضی دارید، از همین‌جا اعتراض ثبت کنید.`;
     case 'LISTING_EDITED':
       return html`شما در ${dateTime(n.revealedAt)} مشخصات این آگهی را دیدید و بعد از آن،
         آگهی‌دهنده اطلاعات آگهی را تغییر داده است. قبل از تماس، یک بار دیگر آگهی را
@@ -99,6 +106,9 @@ function body(n) {
 /** What the appeal ticket is about, so support does not have to ask. */
 function appealSubject(n) {
   if (n.kind === 'ACCOUNT_SUSPENDED') return 'اعتراض به تعلیق حساب';
+  if (n.kind === 'LISTING_SUSPENDED') {
+    return `اعتراض به تعلیق آگهی #${faDigits(n.listing?.serial ?? '')}`;
+  }
   if (n.kind === 'REPORT_ABUSIVE') return `اعتراض به اخطار گزارش نادرست #${faDigits(n.reportSerial)}`;
   const serial = n.listing?.serial ? ` #${faDigits(n.listing.serial)}` : '';
   return `اعتراض به اخطار آگهی${serial}`;
@@ -119,7 +129,12 @@ function card(n) {
         // The moderator's own words, when they left any. They are the difference
         // between «rejected» and a reason, and an agency that can read them
         // argues about the decision instead of about whether one was made.
-        n.note ? html`<p class="ntc-note"><b>توضیح بررسی‌کننده:</b> ${n.note}</p>` : ''
+        n.note
+          ? html`<p class="ntc-note">
+              <b>${n.kind === 'LISTING_SUSPENDED' ? 'دلیل تعلیق' : 'توضیح بررسی‌کننده'}:</b>
+              ${n.note}
+            </p>`
+          : ''
       }
       ${
         shape.appeal

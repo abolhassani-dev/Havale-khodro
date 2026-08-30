@@ -143,9 +143,15 @@ const listingService = {
       throw new BadRequestError('دلیل تعلیق را بنویسید — نماینده همین متن را می‌بیند');
     }
 
+    const suspended = status === HAVALE_STATUS.SUSPENDED;
     const updated = await listingRepository.update(id, {
       status,
-      suspendReason: status === HAVALE_STATUS.SUSPENDED ? reason : null,
+      suspendReason: suspended ? reason : null,
+      // Stamped so the agency can be told. The reason was written here from the
+      // beginning — the refusal above even says «نماینده همین متن را می‌بیند» —
+      // but with no date on it there was nowhere to put it in their notice box,
+      // so the sentence an admin wrote for them was seen by nobody.
+      suspendedAt: suspended ? new Date() : null,
     });
 
     await authRepository.recordActivity({

@@ -108,7 +108,11 @@ const reportRepository = {
       }),
       prisma.listing.update({
         where: { id: listingId },
-        data: { status: 'SUSPENDED', suspendReason: 'گزارش تخلف تأیید شد' },
+        data: {
+          status: 'SUSPENDED',
+          suspendReason: 'گزارش تخلف تأیید شد',
+          suspendedAt: new Date(),
+        },
       }),
       prisma.user.update({ where: { id: ownerId }, data: { fakeStrikes: { increment: 1 } } }),
     ]);
@@ -151,7 +155,7 @@ const reportRepository = {
   hideHavale(listingId, reason) {
     return prisma.listing.update({
       where: { id: listingId },
-      data: { status: 'SUSPENDED', suspendReason: reason },
+      data: { status: 'SUSPENDED', suspendReason: reason, suspendedAt: new Date() },
     });
   },
 

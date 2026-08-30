@@ -134,8 +134,72 @@ function actorName(user) {
 }
 
 const monitoringService = {
-  overview() {
-    return monitoringRepository.overview();
+  /**
+   * The dashboard's whole payload.
+   *
+   * Two rankings ride along with the counts, and what they replaced says why
+   * they are the right two. First there was a fourteen-day chart, which was
+   * honest and useless — on a market this size most days are zero, so it was a
+   * wide white box with three bars in it. Then a feed of the last few events,
+   * which was worse: the monitoring screen already *is* that feed, searchable
+   * and filtered, so the dashboard was spending a third of itself on a poorer
+   * copy of another page.
+   *
+   * These two are here because nothing else in the panel answers them: which
+   * cars people are asking about, and which agencies are actually using the
+   * product. Both are one grouped query and neither can be empty on a live
+   * system.
+   */
+  async overview() {
+    const [counts, busiest] = await Promise.all([
+      monitoringRepository.overview(),
+      this.busiestAgencies(),
+    ]);
+
+    return { ...counts, busiest };
+  },
+
+  /**
+   * Who is actually using the product.
+   *
+   * Ranked by reveals spent rather than by listings posted: posting is free and
+   * costs nothing to do ten times, while a reveal is an agency spending part of
+   * a capped daily allowance. It is the one number here that tracks whether
+   * somebody is getting value out of a subscription — which is the question
+   * behind «who will renew?».
+   */
+  async busiestAgencies({ days = 30, take = 6 } = {}) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const [reveals, listings] = await Promise.all([
+      monitoringRepository.revealsPerAgency(since),
+      monitoringRepository.havalesPerAgency(since),
+    ]);
+    if (!reveals.length) return [];
+
+    const posted = new Map(listings.map((l) => [l.ownerId, l._count._all]));
+    const top = reveals
+      .map((r) => ({ userId: r.viewerId, reveals: r._count._all }))
+      .sort((a, b) => b.reveals - a.reveals)
+      .slice(0, take);
+
+    const agencies = await monitoringRepository.agenciesByIds(top.map((r) => r.userId));
+    const byId = new Map(agencies.map((a) => [a.id, a]));
+
+    return top
+      // An admin's own reveals are not a customer using the product.
+      .filter((row) => byId.get(row.userId)?.agencyCode)
+      .map((row) => {
+        const agency = byId.get(row.userId);
+        return {
+          id: row.userId,
+          name: agency.agencyName,
+          agencyCode: agency.agencyCode,
+          city: agency.city,
+          reveals: row.reveals,
+          listings: posted.get(row.userId) || 0,
+        };
+      });
   },
 
   /** The families, for the filter bar. Named here so the panel invents none. */

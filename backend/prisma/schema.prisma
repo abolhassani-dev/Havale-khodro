@@ -397,6 +397,11 @@ model Listing {
   editedAt  DateTime?
   editCount Int       @default(0)
 
+  // کِی تعلیق شد. `suspendReason` از قبل بود ولی بدون تاریخ، و بدون تاریخ
+  // نمی‌شد در صندوق اطلاعیه‌ی نمایندگی نشانش داد — یعنی متنی که مدیر نوشته
+  // بود «نماینده همین را می‌بیند»، هیچ‌جا دیده نمی‌شد.
+  suspendedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

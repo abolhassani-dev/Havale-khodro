@@ -9,12 +9,10 @@ const monitoringRepository = {
    * Everything the dashboard puts on screen, in one round trip.
    *
    * Written as counts rather than as rows on purpose: this is the first page an
-   * admin opens and it must not read a table to tell them how big it is. The
-   * one exception is the daily series, which is a single grouped statement
-   * rather than fourteen counts.
+   * admin opens and it must not read a table to tell them how big it is.
    *
    * Grouped the way the screen is: what is waiting for somebody, what state the
-   * market is in, and what the last two weeks looked like.
+   * market is in, and what people are actually asking about.
    */
   async overview() {
     const now = new Date();
@@ -39,7 +37,7 @@ const monitoringRepository = {
       pendingSeatOrders,
       liveSubs,
       expiringSubs,
-      series,
+      topCars,
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'AGENT' } }),
       prisma.user.count({ where: { role: 'AGENT', status: 'ACTIVE' } }),
@@ -69,7 +67,7 @@ const monitoringRepository = {
       prisma.subscription.count({
         where: { status: 'ACTIVE', expiresAt: { gt: now, lte: weekAhead } },
       }),
-      this.dailyCounts(twoWeeksAgo),
+      this.topCars(monthAgo),
     ]);
 
     const byMarket = Object.fromEntries(liveByMarket.map((m) => [m.market, m._count._all]));
@@ -90,40 +88,30 @@ const monitoringRepository = {
       pendingSeatOrders,
       liveSubscriptions: liveSubs,
       expiringSubscriptions: expiringSubs,
-      series,
+      topCars: topCars.map((c) => ({
+        carType: c.carType,
+        reveals: c._sum.revealCount || 0,
+        listings: c._count._all,
+      })),
     };
   },
 
   /**
-   * Reveals and new listings per day, for the last fourteen.
+   * The cars people are actually asking about.
    *
-   * Raw SQL because bucketing by day is a database job: the alternative is
-   * reading every row of both tables into node and grouping them there, which
-   * costs more every week the product succeeds. Tehran time, so a «day» on the
-   * chart is the day the people looking at it lived through.
+   * Ranked by reveals rather than by how many advertisements exist: anybody can
+   * post ten Peugeots, but a reveal is somebody spending part of their day's
+   * allowance — it is the closest thing this system has to demand.
    */
-  async dailyCounts(since) {
-    const rows = await prisma.$queryRaw`
-      SELECT
-        to_char(d.day, 'YYYY-MM-DD') AS day,
-        COALESCE(r.n, 0)::int AS reveals,
-        COALESCE(l.n, 0)::int AS listings
-      FROM generate_series(
-        date_trunc('day', ${since}::timestamptz AT TIME ZONE 'Asia/Tehran'),
-        date_trunc('day', now() AT TIME ZONE 'Asia/Tehran'),
-        interval '1 day'
-      ) AS d(day)
-      LEFT JOIN (
-        SELECT date_trunc('day', "createdAt" AT TIME ZONE 'Asia/Tehran') AS day, count(*) AS n
-        FROM "ContactReveal" WHERE "createdAt" >= ${since} GROUP BY 1
-      ) r ON r.day = d.day
-      LEFT JOIN (
-        SELECT date_trunc('day', "createdAt" AT TIME ZONE 'Asia/Tehran') AS day, count(*) AS n
-        FROM "Listing" WHERE "createdAt" >= ${since} AND "deletedAt" IS NULL GROUP BY 1
-      ) l ON l.day = d.day
-      ORDER BY d.day
-    `;
-    return rows;
+  topCars(since, take = 6) {
+    return prisma.listing.groupBy({
+      by: ['carType'],
+      where: { createdAt: { gte: since }, deletedAt: null, revealCount: { gt: 0 } },
+      _sum: { revealCount: true },
+      _count: { _all: true },
+      orderBy: { _sum: { revealCount: 'desc' } },
+      take,
+    });
   },
 
   /**
