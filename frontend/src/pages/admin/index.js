@@ -653,6 +653,96 @@ function agentsPage() {
 }
 
 /** One labelled fact in the agent file: small icon, quiet label, bold value. */
+/**
+ * The agency's subscription: what is live, what has been bought, and the
+ * three things somebody on the telephone needs to be able to do about it.
+ *
+ * It answers «تا کی اشتراک دارد» in the first line, because that is the
+ * question this page is opened with. Under it, the periods themselves — an
+ * agency asking «I paid in Tir, where did it go?» is answered by a list, not
+ * by a number.
+ *
+ * Nothing here is shown for a sub-agency: its access rides on its parent's
+ * subscription, and a period issued to it directly would sit unused and read
+ * as an entitlement it does not have. The file page skips the card entirely
+ * for a child.
+ */
+function subscriptionCard(a) {
+  const sub = a.subscription || {};
+  const now = sub.current;
+  const may = can('subscriptions');
+
+  return html`
+  <div class="card">
+    <div class="card-h">
+      <h2>اشتراک ${qtip('دوره‌های اشتراک این نمایندگی. «صدور اشتراک» یک دوره‌ی کامل از امروز باز می‌کند و مبلغ پلن را در حساب‌ها ثبت می‌کند؛ «تمدید تا تاریخ» فقط تاریخ پایان را جابه‌جا می‌کند و مبلغی ثبت نمی‌کند — برای توافق تلفنی، تسویه، یا جبران روزهایی که سامانه در دسترس نبوده.')}</h2>
+      ${
+        now
+          ? html`<span class="tag ${now.daysLeft <= 7 ? 'o' : 'g'}">
+              ${faDigits(now.daysLeft)} روز مانده
+            </span>`
+          : html`<span class="tag r">اشتراک فعال ندارد</span>`
+      }
+    </div>
+
+    <div class="af-grid">
+      ${infoCell('clipboard', 'پلن فعلی', now?.plan?.name || '—')}
+      ${infoCell('clock', 'تا تاریخ', now ? date(now.expiresAt) : '—', !!now)}
+      ${infoCell('clock', 'از تاریخ', now ? date(now.startsAt) : '—', !!now)}
+      ${infoCell('layers', 'تعداد خرید', faDigits(sub.purchases ?? 0), true)}
+      ${infoCell('layers', 'مجموع پرداختی', sub.paidToman ? money(sub.paidToman) : '—', true)}
+      ${infoCell(
+        'eye',
+        'سقف روزانه / ماهانه',
+        now?.plan
+          ? `${faDigits(now.plan.dailyRevealLimit)} / ${faDigits(now.plan.monthlyRevealLimit)}`
+          : '—',
+        !!now
+      )}
+    </div>
+
+    ${
+      may
+        ? html`<div class="af-tools">
+            <button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>
+            <button class="btn sm" data-sub-expiry="${a.id}">تمدید تا تاریخ</button>
+            ${now ? html`<button class="btn danger sm" data-sub-cancel="${a.id}">ابطال اشتراک</button>` : ''}
+          </div>`
+        : ''
+    }
+
+    ${
+      sub.history?.length
+        ? html`<table class="agents-tbl">
+            <thead>
+              <tr><th>پلن</th><th>از</th><th>تا</th><th>مبلغ</th><th>وضعیت</th><th>یادداشت</th></tr>
+            </thead>
+            <tbody>
+              ${sub.history.map(
+                (h) => html`<tr>
+                  <td>${h.planName || '—'}${h.origin === 'PARENT_SEAT' ? html` <span class="tag n">ظرفیت مادر</span>` : ''}</td>
+                  <td class="num">${date(h.startsAt)}</td>
+                  <td class="num">${date(h.expiresAt)}</td>
+                  <td class="num">${h.priceToman ? money(h.priceToman) : '—'}</td>
+                  <td>${subStatusTag(h)}</td>
+                  <td class="hint">${h.note || '—'}</td>
+                </tr>`
+              )}
+            </tbody>
+          </table>`
+        : html`<div class="hint" style="padding:10px 16px 14px">هنوز هیچ اشتراکی برای این نمایندگی صادر نشده است.</div>`
+    }
+  </div>`;
+}
+
+/** Live, spent, or ended by hand — the three things a period can be. */
+function subStatusTag(h) {
+  if (h.status === 'CANCELLED') return html`<span class="tag r">باطل‌شده</span>`;
+  if (h.status === 'EXPIRED') return html`<span class="tag n">تمام‌شده</span>`;
+  if (new Date(h.expiresAt) < Date.now()) return html`<span class="tag n">منقضی</span>`;
+  return html`<span class="tag g">فعال</span>`;
+}
+
 function infoCell(iconName, label, value, num = false) {
   return html`<div class="af-cell">
     <span class="af-ci">${icon(iconName, 15)}</span>
@@ -681,14 +771,43 @@ function fieldCell(f) {
   return infoCell(f.icon || 'ticket', f.label, (num ? faDigits(f.value) : f.value) || '—', num);
 }
 
+/**
+ * The sections an agency's file is read in.
+ *
+ * The page used to be one column: identity, then a row of eight buttons, then
+ * statistics, then contact, then health, then the subscription, then the
+ * sub-agencies — everything at once, and the answer to whichever question was
+ * asked somewhere down it. Each of these is a different conversation with a
+ * different person, so each gets its own section and the file opens on the
+ * one that is asked for most.
+ *
+ * `children` and `access` are hidden when they would be empty: a file with a
+ * tab that says «nothing here» teaches the reader to stop trusting the tabs.
+ */
+const AGENT_TABS = [
+  ['', 'مرور کلی'],
+  ['sub', 'اشتراک'],
+  ['access', 'دسترسی و سقف‌ها'],
+  ['family', 'زیرنمایندگی‌ها'],
+];
+
 function agentPage() {
-  const { data } = getState();
+  const { data, params } = getState();
   const a = data.agent;
   if (!a) return emptyBox('نمایندگی پیدا نشد.');
 
-  const s = a.stats || {};
   const active = a.status === 'ACTIVE';
   const strikes = (a.fakeStrikes || 0) + (a.falseReportStrikes || 0);
+  // A sub-agency has no subscription of its own — its access rides on its
+  // parent's — and an agency with no children has no family to show.
+  const shown = AGENT_TABS.filter(([key]) => {
+    if (key === 'sub') return !a.parent;
+    if (key === 'family') return Boolean(a.children?.length) || a.isReseller;
+    if (key === 'access') return can('agents');
+    return true;
+  });
+  const tab = shown.some(([key]) => key === (params.tab || '')) ? params.tab || '' : '';
+  const link = (key) => new URLSearchParams(key ? { id: a.id, tab: key } : { id: a.id }).toString();
 
   return html`
   <div class="af">
@@ -720,43 +839,33 @@ function agentPage() {
         </div>
         <div class="af-cta">
           <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
-          ${
-            // A sub-agency's access rides on the parent's subscription — a
-            // subscription issued to it directly would sit unused and confuse.
-            can('subscriptions') && !a.parent
-              ? html`<button class="btn primary sm" data-grant="${a.id}">صدور اشتراک</button>`
-              : ''
-          }
         </div>
       </div>
-      ${
-        can('contactEdit') || can('agents')
-          ? html`<div class="af-tools">
-              ${
-                can('agents')
-                  ? html`
-                    <button class="btn sm" data-agent-brands="${a.id}">برندهای مجاز</button>
-                    <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>`
-                  : ''
-              }
-              ${can('contactEdit') ? html`<button class="btn sm" data-edit-agent="${a.id}">ویرایش تماس</button>` : ''}
-              ${
-                can('agents')
-                  ? html`
-                    <span class="af-gap"></span>
-                    <button class="btn sm" data-agent-password="${a.id}">تغییر رمز</button>
-                    <button class="btn sm" data-agent-logout="${a.id}">خروج اجباری</button>
-                    <button class="btn sm ${active ? 'danger' : 'primary'}" data-agent-status="${a.id}"
-                            data-status="${active ? 'SUSPENDED' : 'ACTIVE'}">
-                      ${active ? 'تعلیق حساب' : 'فعال‌سازی حساب'}
-                    </button>`
-                  : ''
-              }
-            </div>`
-          : ''
-      }
+
+      <!-- The sections, on the identity card so they are the first thing under
+           the name. Ordinary links: the open one is in the address, so a file
+           can be sent to somebody already open at the right page, and it
+           survives every re-render for free. -->
+      <div class="kind-tabs af-tabs">
+        ${shown.map(
+          ([key, label]) => html`<button class="tab ${tab === key ? 'on' : ''}"
+            data-go="adm-agent" data-go-params="${link(key)}">${label}</button>`
+        )}
+      </div>
     </div>
 
+    ${tab === 'sub' ? subscriptionCard(a) : ''}
+    ${tab === 'access' ? accessPanel(a) : ''}
+    ${tab === 'family' ? familyPanel(a) : ''}
+    ${tab === '' ? overviewPanel(a) : ''}
+  </div>`;
+}
+
+function overviewPanel(a) {
+  const s = a.stats || {};
+  const active = a.status === 'ACTIVE';
+
+  return html`
     <div class="stats af-stats">
       ${stat('حواله', faDigits(s.havales ?? 0), `${faDigits(s.activeHavales ?? 0)} فعال`, 'car')}
       ${stat('بازدید انجام‌شده', faDigits(s.reveals ?? 0), 'مشخصات تماس باز کرده', 'eye')}
@@ -772,7 +881,10 @@ function agentPage() {
 
     <div class="cols c2">
       <div class="card">
-        <div class="card-h"><h2>تماس و مشخصات</h2></div>
+        <div class="card-h">
+          <h2>تماس و مشخصات</h2>
+          ${can('contactEdit') ? html`<button class="btn sm" data-edit-agent="${a.id}">ویرایش</button>` : ''}
+        </div>
         <div class="af-grid">
           ${infoCell('user', 'مسئول', a.fullName)}
           ${infoCell('phone', 'موبایل', a.phone, true)}
@@ -808,56 +920,120 @@ function agentPage() {
           )}
         </div>
         ${a.adminNote ? html`<div class="af-note"><b>یادداشت داخلی:</b> ${a.adminNote}</div>` : ''}
+        ${
+          // The account's own controls, with the account's own facts rather
+          // than in a row of eight buttons at the top of the page where
+          // «تعلیق حساب» sat next to «برندهای مجاز».
+          can('agents')
+            ? html`<div class="af-tools">
+                <button class="btn sm" data-agent-password="${a.id}">تغییر رمز</button>
+                <button class="btn sm" data-agent-logout="${a.id}">خروج اجباری</button>
+                <button class="btn sm ${active ? 'danger' : 'primary'}" data-agent-status="${a.id}"
+                        data-status="${active ? 'SUSPENDED' : 'ACTIVE'}">
+                  ${active ? 'تعلیق حساب' : 'فعال‌سازی حساب'}
+                </button>
+              </div>`
+            : ''
+        }
         <div class="hint" style="padding:10px 16px 13px">
           آنچه این نمایندگی باز کرده و انجام داده، در
           <button class="btn sm" data-go="adm-monitor" data-go-params="userId=${a.id}">تایم‌لاین</button>
           ثبت است.
         </div>
       </div>
-    </div>
+    </div>`;
+}
 
-    ${
-      a.children?.length
-        ? html`<div class="card">
-            <div class="card-h">
-              <h2>زیرنمایندگی‌ها</h2>
-              <span class="tag n">${faDigits(a.children.length)} حساب</span>
-            </div>
-            <table class="agents-tbl">
-              <thead>
-                <tr><th>نمایندگی</th><th>شهر</th><th>وضعیت</th><th>آخرین ورود</th><th></th></tr>
-              </thead>
-              <tbody>
-                ${a.children.map(
-                  (c) => html`<tr class="${c.status === 'SUSPENDED' ? 'dim' : ''}">
-                    <td>
-                      <div class="agent-id">
-                        <span class="agent-av sm" style="--h:${hueOf(c.agencyCode)}">
-                          ${(c.agencyName || '؟').slice(0, 1)}
-                        </span>
-                        <span>
-                          <b>${c.agencyName}</b>
-                          <span class="sub"><span class="num">${c.agencyCode}</span> · ${c.fullName}</span>
-                        </span>
-                      </div>
-                    </td>
-                    <td>${c.city}</td>
-                    <td>
-                      <span class="tag ${c.status === 'ACTIVE' ? 'g' : 'r'}">
-                        ${c.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
-                      </span>
-                    </td>
-                    <td>${c.lastLoginAt ? relative(c.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
-                    <td style="text-align:left">
-                      <button class="btn sm" data-go="adm-agent" data-go-params="id=${c.id}">پرونده</button>
-                    </td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>`
-        : ''
-    }
+/**
+ * What this account may post under, and how much it may look at.
+ *
+ * The two buttons were in the toolbar with no hint of what they currently
+ * say, so the only way to read a limit was to open the form that changes it
+ * — and a form opened to read is a form that gets submitted by accident.
+ */
+function accessPanel(a) {
+  const daily = a.dailyRevealLimitOverride;
+  const monthly = a.monthlyRevealLimitOverride;
+
+  return html`
+  <div class="card">
+    <div class="card-h">
+      <h2>دسترسی و سقف‌ها ${qtip('برندهایی که این حساب اجازه‌ی ثبت آگهی زیرشان را دارد، و سقف روزانه/ماهانه‌ی «نمایش مشخصات». سقف خالی یعنی همان عدد پلن اشتراک؛ عددی که این‌جا نوشته شود جای پلن را می‌گیرد.')}</h2>
+    </div>
+    <div class="af-grid">
+      ${infoCell(
+        'eye',
+        'سقف روزانه',
+        daily ? html`<b class="num">${faDigits(daily)}</b>` : html`<span class="tag n">از روی پلن</span>`
+      )}
+      ${infoCell(
+        'eye',
+        'سقف ماهانه',
+        monthly ? html`<b class="num">${faDigits(monthly)}</b>` : html`<span class="tag n">از روی پلن</span>`
+      )}
+      ${infoCell(
+        'users',
+        'ماژول زیرنمایندگی',
+        a.isReseller ? html`<span class="tag g">روشن</span>` : html`<span class="tag n">خاموش</span>`
+      )}
+      ${infoCell('layers', 'ظرفیت زیرنمایندگی', faDigits(a.seatCredits ?? 0), true)}
+    </div>
+    <div class="af-tools">
+      <button class="btn sm" data-agent-brands="${a.id}">برندهای مجاز</button>
+      <button class="btn sm" data-agent-limits="${a.id}">سقف و حالت ماژول</button>
+    </div>
+  </div>`;
+}
+
+function familyPanel(a) {
+  if (!a.children?.length) {
+    return html`<div class="card">
+      <div class="card-h"><h2>زیرنمایندگی‌ها</h2></div>
+      <div class="hint" style="padding:12px 16px 16px">
+        این نمایندگی ماژول زیرنمایندگی دارد ولی هنوز حسابی نساخته است. حساب‌ها را خودِ
+        نمایندگی از پنل خودش می‌سازد و از ظرفیتش کم می‌شود.
+      </div>
+    </div>`;
+  }
+
+  return html`
+  <div class="card">
+    <div class="card-h">
+      <h2>زیرنمایندگی‌ها</h2>
+      <span class="tag n">${faDigits(a.children.length)} حساب</span>
+    </div>
+    <table class="agents-tbl">
+      <thead>
+        <tr><th>نمایندگی</th><th>شهر</th><th>وضعیت</th><th>آخرین ورود</th><th></th></tr>
+      </thead>
+      <tbody>
+        ${a.children.map(
+          (c) => html`<tr class="${c.status === 'SUSPENDED' ? 'dim' : ''}">
+            <td>
+              <div class="agent-id">
+                <span class="agent-av sm" style="--h:${hueOf(c.agencyCode)}">
+                  ${(c.agencyName || '؟').slice(0, 1)}
+                </span>
+                <span>
+                  <b>${c.agencyName}</b>
+                  <span class="sub"><span class="num">${c.agencyCode}</span> · ${c.fullName}</span>
+                </span>
+              </div>
+            </td>
+            <td>${c.city}</td>
+            <td>
+              <span class="tag ${c.status === 'ACTIVE' ? 'g' : 'r'}">
+                ${c.status === 'ACTIVE' ? 'فعال' : 'تعلیق‌شده'}
+              </span>
+            </td>
+            <td>${c.lastLoginAt ? relative(c.lastLoginAt) : html`<span class="sub">هرگز</span>`}</td>
+            <td style="text-align:left">
+              <button class="btn sm" data-go="adm-agent" data-go-params="id=${c.id}">پرونده</button>
+            </td>
+          </tr>`
+        )}
+      </tbody>
+    </table>
   </div>`;
 }
 
@@ -2034,6 +2210,8 @@ export function handleAdminClick(d, el) {
   if (d.agentBrands) return agentBrandsModal(d.agentBrands);
   if (d.editAgent) return editAgentModal(d.editAgent);
   if (d.grant) return grantModal(d.grant);
+  if (d.subExpiry) return expiryModal(d.subExpiry);
+  if (d.subCancel) return cancelSubModal(d.subCancel);
   if (d.editSetting) return editSettingModal(d.editSetting, d.type, d.value);
   return handleCatalogClick(d, el);
 }
@@ -2368,6 +2546,95 @@ function grantModal(userId) {
     onSubmit: async (form) => {
       await subscription.grant(userId, form.planId.value, form.note.value);
       toast('اشتراک صادر شد');
+      await resolve();
+    },
+  });
+}
+
+/**
+ * «تمدید تا تاریخ» — the date an administrator names, not a plan's length.
+ *
+ * The plan box only appears when there is nothing live to move: a live period
+ * keeps its own plan, because the plan is where the daily and monthly reveal
+ * allowances come from and a date change must not quietly change those.
+ *
+ * No money is recorded either way. This is the settlement, the goodwill week,
+ * the days the system was down — writing a plan's price against it would put
+ * money in the totals that nobody received.
+ */
+function expiryModal(userId) {
+  const { data } = getState();
+  const plans = data.plans || [];
+  const live = data.agent?.subscription?.current || null;
+
+  openModal({
+    type: 'form',
+    title: 'تمدید تا تاریخ',
+    body: html`
+      <p style="color:var(--ink-3);font-size:12px">
+        ${
+          live
+            ? html`اشتراک فعلی تا <b class="num">${date(live.expiresAt)}</b> است و پلنش
+                («${live.plan?.name || '—'}») دست‌نخورده می‌ماند — فقط تاریخ پایان جابه‌جا می‌شود.`
+            : 'این نمایندگی اشتراک فعالی ندارد، پس پلن را هم انتخاب کنید — سقف روزانه و ماهانه از همان پلن خوانده می‌شود.'
+        }
+        مبلغی ثبت نمی‌شود؛ برای دوره‌ای که پولش دریافت شده از «صدور اشتراک» استفاده کنید.
+      </p>
+      <div class="field">
+        <label for="m-until">تا تاریخ</label>
+        ${jalaliDate('expiresAt', { labelId: 'm-until', years: 3 })}
+      </div>
+      ${
+        live
+          ? ''
+          : html`<div class="field">
+              <label for="m-eplan">پلن</label>
+              <select class="in" id="m-eplan" name="planId" required>
+                ${plans.map((p) => html`<option value="${p.id}">${p.name}</option>`)}
+              </select>
+            </div>`
+      }
+      <div class="field">
+        <label for="m-enote">دلیل (در سابقه‌ی حساب می‌ماند)</label>
+        <input class="in" id="m-enote" name="note" placeholder="مثلاً: توافق تلفنی، جبران قطعی سرویس">
+      </div>`,
+    confirmLabel: 'ثبت تاریخ',
+    onSubmit: async (form) => {
+      const until = form.expiresAt.value;
+      if (!until) throw new Error('روز، ماه و سال را کامل انتخاب کنید');
+      await subscription.setExpiry(userId, until, form.planId?.value || null, form.note.value);
+      toast('تاریخ پایان اشتراک تغییر کرد');
+      await resolve();
+    },
+  });
+}
+
+function cancelSubModal(userId) {
+  openModal({
+    type: 'form',
+    tone: 'danger',
+    title: 'ابطال اشتراک',
+    body: html`
+      <p>دسترسی این نمایندگی همین حالا قطع می‌شود — ثبت آگهی و «نمایش مشخصات» برایش بسته
+      می‌شود و بنر «اشتراک تمام شده» را می‌بیند. آگهی‌های فعلی‌اش سر جایشان می‌مانند و
+      نمایندگی‌های دیگر همچنان می‌بینندشان.</p>
+      <p style="color:var(--ink-3);font-size:12px">
+        این با <b>تعلیق حساب</b> فرق دارد: تعلیق یعنی حساب بسته می‌شود، نشست‌هایش قطع و
+        آگهی‌هایش از بازار برداشته می‌شود — یک اقدام انضباطی. این‌جا فقط دوره‌ی مالی تمام
+        می‌شود؛ حساب باز می‌ماند و با یک اشتراک تازه برمی‌گردد.
+      </p>
+      <p style="color:var(--ink-3);font-size:12px">
+        دوره پاک نمی‌شود؛ «باطل‌شده» علامت می‌خورد و در همین صفحه می‌ماند — چون سه ماه بعد
+        سؤال «چرا دسترسی‌اش قطع شد؟» را همین سطر جواب می‌دهد.
+      </p>
+      <div class="field">
+        <label for="m-cnote">دلیل</label>
+        <input class="in" id="m-cnote" name="note" placeholder="مثلاً: بازگشت وجه" required>
+      </div>`,
+    confirmLabel: 'ابطال کن',
+    onSubmit: async (form) => {
+      await subscription.cancelFor(userId, form.note.value);
+      toast('اشتراک باطل شد');
       await resolve();
     },
   });

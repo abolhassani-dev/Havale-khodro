@@ -2334,3 +2334,12 @@ form.card[data-form="car"] { overflow: clip; }
 /* یک عکس در مودال ویرایش: بندانگشتی + دکمه‌ی حذف زیرش */
 .car-photo-edit { display: flex; flex-direction: column; gap: 4px; align-items: center; }
 .car-photo-edit .btn { width: 100%; }
+
+/* ---- بخش‌های پرونده‌ی نمایندگی ----
+   روی کارت هویت می‌نشیند، درست زیر نام — پرونده قبلاً یک ستون بلند بود و
+   جواب هر سؤالی جایی وسط آن. */
+.af-tabs { margin: 12px 16px 14px; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .af-tabs { margin: 10px 12px 12px; }
+  .af-tabs .tab { flex: 1 1 auto; }
+}

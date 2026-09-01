@@ -15,6 +15,8 @@ const MESSAGES = {
     // pages exactly as it does on حواله.
     EXPIRED: 'اشتراک شما تمام شده — برای ثبت آگهی و دیدن مشخصات تمدید کنید',
     GRANTED: 'اشتراک ثبت شد',
+    EXTENDED: 'تاریخ پایان اشتراک تغییر کرد',
+    CANCELLED: 'اشتراک باطل شد',
   },
   SEAT: {
     NOT_RESELLER: 'حالت ماژول برای این حساب فعال نیست',

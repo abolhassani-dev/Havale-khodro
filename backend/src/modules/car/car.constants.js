@@ -122,11 +122,21 @@ const PART_STATUS_FA = {
   REPLACE: 'تعویض',
 };
 
+/**
+ * The four shapes, as they are named on screen.
+ *
+ * PICKUP is «وانت» and not «وانت / دوکابین»: it covers both cabs, and a
+ * تک‌کابین labelled «دوکابین» in the catalogue is simply wrong — which is
+ * how it was found. The cut-out drawn for it is a double cab, the shape most
+ * of this catalogue's pickups are; a single cab shares every panel the map
+ * marks except its rear doors, and telling the two apart properly needs a
+ * second drawing and a parts list without them.
+ */
 const BODY_TYPE_FA = {
   SEDAN: 'سدان',
   HATCHBACK: 'هاچبک',
   SUV: 'شاسی‌بلند',
-  PICKUP: 'وانت / دوکابین',
+  PICKUP: 'وانت',
 };
 
 const PAINT_TOLERANCE = {

@@ -85,6 +85,11 @@ export const subscription = {
   reviewOrder: (id, approve, note) =>
     api.post(`/subscriptions/seat-orders/${id}/review`, { approve, note }),
   grant: (userId, planId, note) => api.post('/subscriptions/grant', { userId, planId, note }),
+  // «تا این تاریخ» rather than «one plan's worth»: a settlement, a goodwill
+  // week, a period agreed off the price list.
+  setExpiry: (userId, expiresAt, planId, note) =>
+    api.post('/subscriptions/expiry', { userId, expiresAt, planId, note }),
+  cancelFor: (userId, note) => api.post('/subscriptions/cancel', { userId, note }),
 };
 
 export const subAgents = {

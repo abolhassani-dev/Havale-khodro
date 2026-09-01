@@ -405,11 +405,157 @@ async function acknowledgeSeatOrder({ user, orderId }) {
   return { acknowledged: true };
 }
 
+
+/**
+ * An agency's subscription, as the file page shows it: what is live now, how
+ * many periods have been bought and for how much, and every period in order.
+ *
+ * The counters skip PARENT_SEAT rows. A seat is not a purchase — it is the
+ * access a parent hands one of its own sub-agencies, priced at nothing and
+ * expiring on a placeholder date — and counting them would tell whoever is
+ * on the phone that an agency has «bought» eleven subscriptions when it has
+ * bought one and opened ten seats.
+ */
+async function fileFor(userId) {
+  const rows = await subscriptionRepository.listForUser(userId);
+  const now = Date.now();
+  const bought = rows.filter((r) => r.origin === 'ADMIN');
+
+  const live = rows.find((r) => r.status === 'ACTIVE' && new Date(r.expiresAt).getTime() > now);
+
+  return {
+    current: live
+      ? {
+          id: live.id,
+          plan: planSummary(live.plan),
+          startsAt: live.startsAt,
+          expiresAt: live.expiresAt,
+          // Rounded up: an agency whose subscription ends in four hours has
+          // «۱ روز», not «۰ روز», left to renew in.
+          daysLeft: Math.max(0, Math.ceil((new Date(live.expiresAt).getTime() - now) / 86_400_000)),
+          origin: live.origin,
+          note: live.note,
+        }
+      : null,
+    purchases: bought.length,
+    paidToman: bought.reduce((sum, r) => sum + Number(r.priceToman || 0), 0),
+    history: rows.map((r) => ({
+      id: r.id,
+      planName: r.plan?.name || null,
+      startsAt: r.startsAt,
+      expiresAt: r.expiresAt,
+      status: r.status,
+      origin: r.origin,
+      priceToman: Number(r.priceToman || 0),
+      note: r.note,
+      createdAt: r.createdAt,
+    })),
+  };
+}
+
+/**
+ * Move the expiry to a date an administrator names.
+ *
+ * `grant` answers «they paid for a plan»; this answers the other half of the
+ * conversation — «give them until the end of Mehr», for a settlement, a
+ * goodwill week, or a period agreed off the price list. The plan still
+ * decides the daily and monthly allowances, so a live subscription keeps its
+ * own and only its end date moves; with nothing live there is nothing to
+ * take limits from, so a plan has to be named.
+ *
+ * The old date is written into the note it leaves behind. An expiry moved by
+ * hand is exactly the kind of change somebody asks about three months later,
+ * and «to 1405/09/30» without «from 1405/07/07» does not answer them.
+ */
+async function setExpiry({ actor, userId, expiresAt, planId, note }) {
+  const when = new Date(expiresAt);
+  if (Number.isNaN(when.getTime())) throw new BadRequestError('تاریخ معتبر نیست');
+  if (when.getTime() <= Date.now()) {
+    throw new BadRequestError('تاریخ باید در آینده باشد — برای پایان دادن به اشتراک از «ابطال» استفاده کنید');
+  }
+  if (when.getTime() > Date.now() + 5 * 365 * 86_400_000) {
+    throw new BadRequestError('تاریخ بیش از حد دور است');
+  }
+
+  const live = await subscriptionRepository.findLive(userId);
+
+  if (live) {
+    const from = live.expiresAt;
+    const updated = await subscriptionRepository.setExpiry(live.id, {
+      expiresAt: when,
+      note: [note, `تمدید دستی از ${from.toISOString().slice(0, 10)}`].filter(Boolean).join(' — '),
+    });
+
+    await authRepository.recordActivity({
+      userId: actor.id,
+      action: 'SUBSCRIPTION_EXTENDED',
+      targetType: 'USER',
+      targetId: userId,
+      summary: `${from.toISOString().slice(0, 10)} ← ${when.toISOString().slice(0, 10)}`,
+    });
+
+    return { id: updated.id, expiresAt: updated.expiresAt, plan: planSummary(updated.plan) };
+  }
+
+  if (!planId) throw new BadRequestError('این نمایندگی اشتراک فعالی ندارد — پلن را هم انتخاب کنید');
+  const plan = await subscriptionRepository.findPlan(planId);
+  if (!plan) throw new NotFoundError('پلن');
+
+  const created = await subscriptionRepository.replaceLive(userId, {
+    userId,
+    planId: plan.id,
+    startsAt: new Date(),
+    expiresAt: when,
+    // No price: this period was not sold at the list price, and recording one
+    // would put money in the totals that nobody received.
+    priceToman: 0n,
+    origin: 'ADMIN',
+    createdById: actor.id,
+    note: note || 'صدور دستی تا تاریخ مشخص',
+  });
+
+  await authRepository.recordActivity({
+    userId: actor.id,
+    action: 'SUBSCRIPTION_EXTENDED',
+    targetType: 'USER',
+    targetId: userId,
+    summary: `${plan.name} تا ${when.toISOString().slice(0, 10)}`,
+  });
+
+  return { id: created.id, expiresAt: created.expiresAt, plan: planSummary(created.plan) };
+}
+
+/**
+ * End a subscription now.
+ *
+ * The row is marked CANCELLED rather than deleted: it was a period this
+ * agency had, and the history is what answers «why did their access stop on
+ * the ninth?» later.
+ */
+async function cancelFor({ actor, userId, note }) {
+  const live = await subscriptionRepository.findLive(userId);
+  if (!live) throw new BadRequestError('این نمایندگی اشتراک فعالی ندارد');
+
+  await subscriptionRepository.cancel(live.id, note);
+  await authRepository.recordActivity({
+    userId: actor.id,
+    action: 'SUBSCRIPTION_CANCELLED',
+    targetType: 'USER',
+    targetId: userId,
+    summary: note || live.plan?.name || '',
+  });
+
+  return { id: live.id };
+}
+
 module.exports = {
   resolveAccess,
   latestPeriodStart,
   statusFor,
   grant,
+  fileFor,
+  setExpiry,
+  cancelFor,
   issueSeatSubscription,
   seatSummary,
   invoiceFor,

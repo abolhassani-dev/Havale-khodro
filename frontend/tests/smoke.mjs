@@ -755,6 +755,42 @@ await step('admin can sign in and see monitoring', async () => {
 });
 
 /**
+ * An agency's subscription, on the agency's own file.
+ *
+ * Two questions get asked on the telephone — «تا کی اشتراک دارد» and «چند بار
+ * خریده» — and one thing gets done about it: a date. All three used to mean
+ * opening the database by hand.
+ */
+await step('an agency file shows its subscription and can move the date', async () => {
+  await page.goto(`${BASE}#adm-agents`);
+  await page.waitForSelector('[data-go="adm-agent"]', { timeout: 8000 });
+  await page.locator('[data-go="adm-agent"]').first().click();
+  await page.waitForSelector('.af-tabs', { timeout: 8000 });
+
+  // The file is read in sections now, and this is one of them.
+  const tabs = await page.locator('.af-tabs .tab').allInnerTexts();
+  if (!tabs.includes('اشتراک')) throw new Error('the file has no اشتراک section: ' + tabs.join('/'));
+  await page.locator('.af-tabs .tab', { hasText: 'اشتراک' }).click();
+  await page.waitForTimeout(1200);
+
+  const card = page.locator('.card:has([data-sub-expiry])').first();
+  if (!(await card.count())) throw new Error('the file has no subscription card');
+  const text = (await card.innerText()).replace(/\s+/g, ' ');
+  for (const label of ['پلن فعلی', 'تا تاریخ', 'تعداد خرید', 'مجموع پرداختی']) {
+    if (!text.includes(label)) throw new Error(`«${label}» is not on the subscription card`);
+  }
+
+  // The date box is a Jalali picker, not a free-text field — a date typed by
+  // hand is how a subscription ends in 1305.
+  await card.locator('[data-sub-expiry]').click();
+  await page.waitForSelector('.modal [data-jdt]', { timeout: 8000 });
+  if (!(await page.locator('.modal [data-jdt-part="year"]').count())) {
+    throw new Error('the date is not a picker');
+  }
+  await page.click('[data-close-modal]');
+});
+
+/**
  * Every button in the kartabl actually goes somewhere.
  *
  * The dashboard's «اشتراک رو به پایان» row linked to the agencies list with

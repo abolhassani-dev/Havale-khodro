@@ -57,6 +57,24 @@ const subscriptionRepository = {
     });
   },
 
+  /** Moves the end date of one period, leaving everything else as it was. */
+  setExpiry(id, { expiresAt, note }) {
+    return prisma.subscription.update({
+      where: { id },
+      data: { expiresAt, ...(note ? { note } : {}) },
+      include: { plan: true },
+    });
+  },
+
+  /** Ends a period now. The row stays — it is what the history is made of. */
+  cancel(id, note) {
+    return prisma.subscription.update({
+      where: { id },
+      data: { status: 'CANCELLED', ...(note ? { note } : {}) },
+      include: { plan: true },
+    });
+  },
+
   // ── seat orders ───────────────────────────────────────────────────────────
 
   createSeatOrder(data) {

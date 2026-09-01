@@ -166,6 +166,124 @@ maybe('subscription and module mode', () => {
     });
   });
 
+  /**
+   * The other half of the billing conversation.
+   *
+   * `grant` answers «they paid for a plan». This answers «give them until the
+   * end of Mehr» — a settlement, a goodwill week, a period agreed off the
+   * price list — and «stop it today». Both are things an administrator on the
+   * telephone needs, and both used to mean editing the database by hand.
+   */
+  describe('managing a subscription by hand', () => {
+    it('moves the end date and keeps the plan, and refuses support staff', async () => {
+      const target = await agent();
+      const plan = await ensurePlan();
+      const finance = await admin('FINANCE');
+
+      await request(app)
+        .post(api('/subscriptions/grant'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, planId: plan.id })
+        .expect(201);
+
+      const until = new Date(Date.now() + 200 * 24 * 60 * 60 * 1000);
+
+      const support = await admin('SUPPORT');
+      await request(app)
+        .post(api('/subscriptions/expiry'))
+        .set('Cookie', support.cookie)
+        .send({ userId: target.user.id, expiresAt: until.toISOString() })
+        .expect(403);
+
+      const res = await request(app)
+        .post(api('/subscriptions/expiry'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, expiresAt: until.toISOString(), note: 'توافق تلفنی' })
+        .expect(200);
+      expect(new Date(res.body.data.expiresAt).toDateString()).toBe(until.toDateString());
+      // The allowances come from the plan, so moving a date must not move them.
+      expect(res.body.data.plan.name).toBe(plan.name);
+
+      // Still exactly one live row: the date moved, it did not add a period.
+      const live = await prisma.subscription.count({
+        where: { userId: target.user.id, status: 'ACTIVE' },
+      });
+      expect(live).toBe(1);
+    });
+
+    it('refuses a date in the past, and needs a plan when nothing is live', async () => {
+      const target = await agent();
+      const finance = await admin('FINANCE');
+      const until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await request(app)
+        .post(api('/subscriptions/expiry'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, expiresAt: new Date(Date.now() - 1000).toISOString() })
+        .expect(422);
+
+      // Nothing live: there is no plan to take the daily and monthly
+      // allowances from, so one has to be named.
+      await prisma.subscription.updateMany({
+        where: { userId: target.user.id },
+        data: { status: 'EXPIRED' },
+      });
+      await request(app)
+        .post(api('/subscriptions/expiry'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, expiresAt: until.toISOString() })
+        .expect(400);
+
+      const plan = await ensurePlan();
+      await request(app)
+        .post(api('/subscriptions/expiry'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, expiresAt: until.toISOString(), planId: plan.id })
+        .expect(200);
+    });
+
+    it('cancels, and the file counts what was bought without counting seats', async () => {
+      const target = await agent();
+      const plan = await ensurePlan();
+      const finance = await admin('FINANCE');
+
+      await request(app)
+        .post(api('/subscriptions/grant'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, planId: plan.id })
+        .expect(201);
+
+      // Reading the file needs the `agents` permission, which finance does
+      // not hold — the money and the accounts are separate keys.
+      const boss = await admin('SUPER_ADMIN');
+      const file = await request(app)
+        .get(api(`/admin/agents/${target.user.id}`))
+        .set('Cookie', boss.cookie)
+        .expect(200);
+      const sub = file.body.data.subscription;
+      expect(sub.current).not.toBeNull();
+      expect(sub.current.daysLeft).toBeGreaterThan(0);
+      expect(sub.purchases).toBeGreaterThanOrEqual(1);
+      expect(sub.history.length).toBeGreaterThanOrEqual(1);
+      // A seat is access a parent hands down, not a purchase.
+      expect(sub.history.every((h) => h.origin !== 'PARENT_SEAT' || h.priceToman === 0)).toBe(true);
+
+      await request(app)
+        .post(api('/subscriptions/cancel'))
+        .set('Cookie', finance.cookie)
+        .send({ userId: target.user.id, note: 'بازگشت وجه' })
+        .expect(200);
+
+      const after = await request(app)
+        .get(api(`/admin/agents/${target.user.id}`))
+        .set('Cookie', boss.cookie)
+        .expect(200);
+      expect(after.body.data.subscription.current).toBeNull();
+      // The period is kept, not deleted: it is what the history is made of.
+      expect(after.body.data.subscription.history.length).toBe(sub.history.length);
+    });
+  });
+
   describe('buying capacity', () => {
     // Capacity is prepaid by bank transfer, so every order carries the slip.
     const RECEIPT = Buffer.from(

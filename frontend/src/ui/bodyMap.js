@@ -90,7 +90,7 @@ export const BODY_TYPE_FA = {
   SEDAN: 'سدان',
   HATCHBACK: 'هاچبک',
   SUV: 'شاسی‌بلند',
-  PICKUP: 'وانت / دوکابین',
+  PICKUP: 'وانت',
 };
 
 /** The client-side twin of the server's ladder, for live labels only. */

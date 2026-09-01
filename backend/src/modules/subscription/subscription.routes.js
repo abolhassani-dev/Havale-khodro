@@ -234,6 +234,72 @@ router.post(
 
 /**
  * @openapi
+ * /subscriptions/expiry:
+ *   post:
+ *     tags: [Subscription]
+ *     summary: Move a subscription's end date to a named day
+ *     description: >
+ *       The other half of the billing conversation from /grant: «give them
+ *       until the end of Mehr» — a settlement, a goodwill week, a period
+ *       agreed off the price list. A live subscription keeps its plan and its
+ *       allowances and only its end date moves; with nothing live there is
+ *       nothing to take limits from, so a plan must be named.
+ */
+router.post(
+  '/expiry',
+  requirePermission('subscriptions'),
+  validate({
+    body: Joi.object({
+      userId: Joi.string().trim().max(40).required(),
+      expiresAt: Joi.date().iso().greater('now').required(),
+      planId: Joi.string().trim().max(40).allow('', null),
+      note: Joi.string().trim().max(500).allow('', null),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const result = await subscriptionService.setExpiry({
+      actor: req.user,
+      userId: req.body.userId,
+      expiresAt: req.body.expiresAt,
+      planId: req.body.planId || null,
+      note: req.body.note,
+    });
+    return success(res, result, MESSAGES.SUBSCRIPTION.EXTENDED);
+  })
+);
+
+/**
+ * @openapi
+ * /subscriptions/cancel:
+ *   post:
+ *     tags: [Subscription]
+ *     summary: End a subscription now
+ *     description: >
+ *       The row is kept and marked cancelled — it is a period this agency
+ *       had, and the history is what answers «why did their access stop on
+ *       the ninth?» three months later.
+ */
+router.post(
+  '/cancel',
+  requirePermission('subscriptions'),
+  validate({
+    body: Joi.object({
+      userId: Joi.string().trim().max(40).required(),
+      note: Joi.string().trim().max(500).allow('', null),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const result = await subscriptionService.cancelFor({
+      actor: req.user,
+      userId: req.body.userId,
+      note: req.body.note,
+    });
+    return success(res, result, MESSAGES.SUBSCRIPTION.CANCELLED);
+  })
+);
+
+/**
+ * @openapi
  * /subscriptions/seat-orders/pending:
  *   get:
  *     tags: [Subscription]

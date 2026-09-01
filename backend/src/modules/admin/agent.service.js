@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const config = require('../../config');
 const agentRepository = require('./agent.repository');
 const authRepository = require('../auth/auth.repository');
+const subscriptionService = require('../subscription/subscription.service');
 const brandAccess = require('../catalog/brandAccess.service');
 const { MESSAGES } = require('../../constants/messages');
 const { ConflictError, NotFoundError, BadRequestError } = require('../../errors/AppError');
@@ -108,7 +109,16 @@ const agentService = {
   async get(id) {
     const agent = await agentRepository.findById(id);
     if (!agent) throw new NotFoundError('نمایندگی');
-    return { ...agent, stats: await agentRepository.stats(id) };
+
+    // The subscription rides with the file rather than arriving in a second
+    // request: «تا کی اشتراک دارد» is one of the two questions this page is
+    // opened to answer, and a page that shows the account and then fills in
+    // the money a moment later is a page that gets read too early.
+    const [stats, subscription] = await Promise.all([
+      agentRepository.stats(id),
+      subscriptionService.fileFor(id),
+    ]);
+    return { ...agent, stats, subscription };
   },
 
   /**

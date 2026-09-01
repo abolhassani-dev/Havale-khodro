@@ -331,7 +331,7 @@ const CLICK_KEYS = new Set([
   'activity', 'reviewReport', 'approveSuspension', 'seatReview',
   'havaleSuspend', 'havaleUnsuspend', 'havaleRemove', 'havaleRestore',
   'agentStatus', 'agentPassword', 'agentLogout', 'agentLimits', 'agentBrands', 'editAgent',
-  'grant', 'editSetting',
+  'grant', 'subExpiry', 'subCancel', 'editSetting',
   'newStaff', 'editStaff', 'staffPassword', 'staffStatus', 'permAll', 'permNone',
   'error', 'resolveError', 'testAlert',
   'secEvent', 'secResolve', 'block', 'unblock',
