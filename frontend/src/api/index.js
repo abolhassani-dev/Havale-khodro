@@ -53,6 +53,21 @@ export const registration = {
   reveal: (id) => api.post(`/registrations/${id}/reveal`),
 };
 
+export const car = {
+  list: (filters) => api.get('/cars', filters),
+  mine: (filters) => api.get('/cars/mine', filters),
+  get: (id) => api.get(`/cars/${id}`),
+  create: (payload) => api.post('/cars', payload),
+  update: (id, payload) => api.patch(`/cars/${id}`, payload),
+  renew: (id) => api.post(`/cars/${id}/renew`),
+  fulfill: (id) => api.post(`/cars/${id}/fulfill`),
+  remove: (id) => api.delete(`/cars/${id}`),
+  reveal: (id) => api.post(`/cars/${id}/reveal`),
+  // FormData: the photos ride as multipart after the row exists.
+  addPhotos: (id, formData) => api.post(`/cars/${id}/photos`, formData),
+  removePhoto: (photoId) => api.delete(`/cars/photos/${photoId}`),
+};
+
 export const subscription = {
   me: () => api.get('/subscriptions/me'),
   invoice: () => api.get('/subscriptions/invoice'),

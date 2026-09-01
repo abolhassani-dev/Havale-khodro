@@ -46,12 +46,11 @@ const AGENT_NAV = [
     id: 'car',
     icon: 'car',
     label: 'خودرو',
-    soon: true,
     children: [
       { page: 'car-search', icon: 'search', label: 'استعلام خودرو' },
       { page: 'car-sell', icon: 'plus', label: 'ثبت آگهی فروش' },
       { page: 'car-buy', icon: 'inbox', label: 'ثبت درخواست خرید' },
-      { page: 'car-mine', icon: 'list', label: 'آگهی‌های من' },
+      { page: 'car-mine', icon: 'list', label: 'خودروهای من' },
     ],
   },
 

@@ -2112,3 +2112,22 @@ button.af-parent:hover { text-decoration: underline; }
 .bm-chip.st-DAMAGE.on { background: var(--st-DAMAGE); }
 .bm-chip.st-REPLACE.on { background: var(--st-REPLACE); }
 .bm-hint { grid-column: 1 / -1; font-size: 12px; color: var(--ink-3); margin: 0; padding: 8px 12px; }
+/* display:grid beats the UA's [hidden] rule, so the rule is restated here. */
+.bm-parts[hidden] { display: none; }
+
+/* مشخصات بالای مودال جزئیات خودرو */
+.modal-specs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px; background: var(--line-2); border: 1px solid var(--line-2);
+  border-radius: 10px; overflow: hidden; margin: 0 0 12px;
+}
+.modal-specs > div { background: var(--card); padding: 7px 12px; }
+.modal-specs dt { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+.modal-specs dd { margin: 0; font-weight: 700; font-size: 13px; }
+
+/* عکس‌های بازشده در مودال */
+.car-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.car-photos img {
+  width: 110px; height: 82px; object-fit: cover;
+  border-radius: 8px; border: 1px solid var(--line);
+}

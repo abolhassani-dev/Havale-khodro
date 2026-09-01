@@ -42,6 +42,11 @@ import {
 import { handleJalaliDateChange } from './ui/dateInput.js';
 import { handleMoneyInput } from './ui/moneyInput.js';
 import { handleBodyChip, handleBodyToggle } from './ui/bodyMap.js';
+import {
+  loadCarSearch, loadCarForm, loadCarMine, carSearchPage, carFormPage, carMinePage,
+  submitCar, applyCarFilters, onCarBrandChange, onCarModelChange, confirmCarReveal,
+  openCarModal, carEditModal, carRenew, carFulfill, carDelete,
+} from './pages/agent/car.js';
 import { loadNotices, noticesPage } from './pages/agent/notices.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
@@ -54,6 +59,10 @@ const TITLES = {
   'new-offer': ['ثبت حواله فروش', 'حواله‌ای که دارید و می‌فروشید'],
   'new-request': ['ثبت درخواست خرید', 'حواله‌ای که می‌خواهید بخرید'],
   mine: ['حواله‌های من', 'همه‌ی آگهی‌های شما'],
+  'car-search': ['استعلام خودرو', 'خودروهای فروشی و درخواست‌های خرید'],
+  'car-sell': ['ثبت آگهی فروش خودرو', 'خودرویی که دارید و می‌فروشید'],
+  'car-buy': ['ثبت درخواست خرید', 'خودرویی که دنبالش هستید'],
+  'car-mine': ['خودروهای من', 'همه‌ی آگهی‌های خودروی شما'],
   'reg-search': ['استعلام ثبت‌نامی', 'ظرفیت‌ها و درخواست‌های ثبت‌نام'],
   'reg-offer': ['اعلام ظرفیت ثبت‌نام', 'ظرفیتی که دارید و واگذار می‌کنید'],
   'reg-request': ['ثبت درخواست ثبت‌نام', 'ظرفیتی که دنبالش هستید'],
@@ -83,6 +92,11 @@ function registerRoutes() {
   route('new-offer', loadCatalogForm);
   route('new-request', loadCatalogForm);
   route('mine', loadMine);
+
+  route('car-search', loadCarSearch);
+  route('car-sell', loadCarForm);
+  route('car-buy', loadCarForm);
+  route('car-mine', loadCarMine);
 
   route('reg-search', loadRegSearch);
   route('reg-offer', loadRegForm);
@@ -134,6 +148,10 @@ function pageBody() {
     case 'new-offer': return havaleFormPage('OFFER');
     case 'new-request': return havaleFormPage('REQUEST');
     case 'mine': return minePage();
+    case 'car-search': return carSearchPage();
+    case 'car-sell': return carFormPage('OFFER');
+    case 'car-buy': return carFormPage('REQUEST');
+    case 'car-mine': return carMinePage();
     case 'reg-search': return regSearchPage();
     case 'reg-offer': return regFormPage('OFFER');
     case 'reg-request': return regFormPage('REQUEST');
@@ -320,6 +338,7 @@ const CLICK_KEYS = new Set([
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone', 'brandExpand',
   'bodyChip', 'bodyClean', 'bodyMarked',
+  'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete',
 ]);
 
 function findTarget(node) {
@@ -365,6 +384,12 @@ function onClick(event) {
 
   if (d.reveal) return confirmReveal(d.reveal);
   if (d.regReveal) return confirmRegReveal(d.regReveal);
+  if (d.carReveal) return confirmCarReveal(d.carReveal);
+  if (d.openCar) return openCarModal(d.openCar);
+  if (d.editCar) return carEditModal(d.editCar);
+  if (d.carRenew) return carRenew(d.carRenew);
+  if (d.carFulfill) return carFulfill(d.carFulfill);
+  if (d.carDelete) return carDelete(d.carDelete);
   if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);
@@ -459,6 +484,8 @@ function onSubmit(event) {
     case 'change-password': return submitChangePassword(form);
     case 'havale': return submitHavale(form);
     case 'registration': return submitRegistration(form);
+    case 'car': return submitCar(form);
+    case 'car-filters': return applyCarFilters(form);
     case 'reg-filters': return applyRegFilters(form);
     case 'profile-password': return submitProfilePassword(form);
     case 'ticket-reply': return submitTicketReply(form);
@@ -543,7 +570,19 @@ function onChange(event) {
       onRegBrandChange(form);
       return;
     }
+    if (form?.dataset.form === 'car') {
+      onCarBrandChange(form);
+      return;
+    }
     onBrandChange(form);
+  }
+  // The خودرو form shows the model's catalogue-decided body shape the moment
+  // a model is picked — read off the option, no extra request.
+  if (event.target.name === 'carModelId' && event.target.form?.dataset.form === 'car') {
+    onCarModelChange(event.target.form);
+  }
+  if (event.target.name === 'brandId' && event.target.form?.dataset.form === 'car-filters') {
+    onCarBrandChange(event.target.form);
   }
   // The ticket composer's paperclip: echo the chosen filenames next to it, so
   // «پیوست شد» is visible before anything is sent.

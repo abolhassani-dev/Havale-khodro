@@ -500,7 +500,8 @@ await step('the notice box opens and marks itself read', async () => {
 // copy rather than an empty frame — and must not silently bounce home, which
 // is what an unregistered route would do.
 await step('a not-yet-built section explains itself instead of dead-ending', async () => {
-  await navigate('car-search');
+  // قطعات is the placeholder now that the خودرو market went live.
+  await navigate('parts-search');
   await page.waitForSelector('.soon-card', { timeout: 8000 });
   const t = await page.textContent('.soon-card');
   if (t.trim().length < 80) throw new Error('placeholder has no explanation: ' + t.trim());
@@ -952,7 +953,8 @@ await step('phone: the drawer survives expanding a section', async () => {
   await phone.click('.nav [data-go="car-search"]');
   await phone.waitForTimeout(700);
   if (await drawerOpen()) throw new Error('following a link left the menu covering the page');
-  await phone.waitForSelector('.soon-card', { timeout: 8000 });
+  // The خودرو market is live now — the search screen, not a placeholder.
+  await phone.waitForSelector('.kind-tabs, .grid, .empty', { timeout: 8000 });
   if (await scrollsSideways()) throw new Error('the page scrolls sideways');
 });
 
