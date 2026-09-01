@@ -56,6 +56,23 @@ enum SubscriptionOrigin {
 enum ListingMarket {
   HAVALE // حواله خودرو
   REGISTRATION // ثبت‌نامی
+  CAR // خودروی آماده — صفر یا کارکرده
+}
+
+/// خلاصه‌ی وضعیت بدنه، مشتق‌شده از جدول قطعه‌به‌قطعه — روی کارت و در فیلتر جستجو
+enum CarBodyGrade {
+  NO_PAINT // بدون رنگ
+  MINOR_PAINT // رنگ جزئی
+  PAINTED // رنگ‌شده
+  REPLACED // تعویض‌دار
+  CHASSIS_DAMAGED // شاسی‌خورده
+}
+
+/// در «درخواست خودرو»: خریدار تا چه وضعیت بدنه‌ای را قبول می‌کند
+enum CarPaintTolerance {
+  NO_PAINT_ONLY // فقط بدون رنگ
+  MINOR_OK // تا رنگ جزئی
+  ANY // فرقی نمی‌کند
 }
 
 // The body shape of a catalogue model — decided by the platform, not the seller.
@@ -418,6 +435,9 @@ model Listing {
 
   /// جزئیات بازار ثبت‌نامی. برای آگهی حواله خالی است و برعکس.
   registration RegistrationDetail?
+  /// جزئیات بازار خودرو، به همان قاعده.
+  car          CarDetail?
+  carPhotos    CarPhoto[]
 
   @@index([market, status, createdAt])
   @@index([status, closesAt])
@@ -476,6 +496,62 @@ model RegistrationDetail {
   conditions       String?
 
   @@index([method, saleType])
+}
+
+/// جزئیات بازار خودرو — یک ردیف برای هر آگهی این بازار
+model CarDetail {
+  listingId String  @id
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  /// نوع بدنه، اسنپ‌شات از کاتالوگ در لحظه‌ی ثبت — مثل carType. آگهی هفت روز
+  /// عمر دارد؛ اگر مدل از کاتالوگ حذف شود نقشه‌ی بدنه نباید بشکند.
+  bodyType BodyType
+
+  /// سال ساخت شمسی، ۴ رقم. در فروش الزامی است.
+  year Int?
+  /// در درخواست، بازه‌ی قابل قبول
+  yearFrom Int?
+  yearTo   Int?
+
+  /// کارکرد به کیلومتر. صفر یعنی صفرکیلومتر. در فروش الزامی است.
+  mileageKm    Int?
+  /// در درخواست: حداکثر کارکرد قابل قبول
+  maxMileageKm Int?
+
+  /// کف قیمت در درخواست («قیمت از»)؛ سقفش در Listing.carPriceToman می‌نشیند
+  priceFromToman BigInt?
+
+  /// وضعیت قطعه‌به‌قطعه‌ی بدنه: { کلید قطعه: وضعیت }. فقط قطعه‌های مشکل‌دار
+  /// ثبت می‌شوند — نبودن کلید یعنی سالم. کلیدها و وضعیت‌های مجاز در
+  /// car.constants.js تعریف و در سرویس اعتبارسنجی می‌شوند.
+  bodyStatus Json?
+
+  /// خلاصه‌ی مشتق‌شده از bodyStatus — همیشه توسط سرویس محاسبه می‌شود، هرگز از
+  /// ورودی نمی‌آید، پس نمی‌تواند با جدولش تناقض داشته باشد.
+  bodyGrade CarBodyGrade @default(NO_PAINT)
+
+  /// در درخواست: چه وضعیتی قابل قبول است
+  paintTolerance CarPaintTolerance?
+
+  @@index([bodyType, bodyGrade])
+}
+
+/// عکس‌های آگهی خودرو. خودِ فایل روی دیسک است؛ این ردیف نام تصادفی و مالکیتش.
+/// عکس مثل متنِ آزاد پشت «نمایش مشخصات» است — روی شیشه می‌شود شماره نوشت.
+model CarPhoto {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  /// نام فایل روی دیسک — تصادفی، تا نشود حدسش زد؛ سرو شدنش هم پشت مجوز است
+  fileName  String @unique
+  mime      String
+  size      Int
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
 }
 
 /// هر بار که یک نماینده «مشخصات فروشنده» یک حواله را باز می‌کند اینجا ثبت می‌شود
