@@ -262,7 +262,7 @@ function withoutPage(params) {
 function card(c) {
   const offer = c.kind === 'OFFER';
   return html`
-  <article class="hcard ${c.isOwn ? 'own' : ''}">
+  <article class="hcard car ${c.isOwn ? 'own' : ''}">
     <header>
       <div>
         <span class="tag ${offer ? '' : 'c'}">${CAR_KIND_LABEL[c.kind]}</span>
@@ -285,11 +285,16 @@ function card(c) {
       }
     </header>
 
-    <!-- «عنوان: پاسخ», one line per fact — the same shape the other two
-         markets use. It was a row of bare chips for a while: shorter, and
-         unreadable, because «تا ۸۰ هزار کیلومتر» floating on its own says
-         nothing about which number it is. What the chips fixed stays fixed:
-         the label and its answer share a line instead of taking two. -->
+    <!-- «عنوان … پاسخ», one line per fact, in two groups: what the car is,
+         then who is selling it and until when. It was a row of bare chips for
+         a while — shorter, and unreadable, because «تا ۸۰ هزار کیلومتر»
+         floating on its own does not say which number it is. What the chips
+         fixed stays fixed: a label and its answer share a line.
+
+         Every card of a kind carries the same rows in the same order, and a
+         row with nothing in it says «—» rather than disappearing: a list of
+         cards is read down the labels, and a label that comes and goes moves
+         every line under it. -->
     <dl>
       ${
         offer
@@ -317,15 +322,9 @@ function card(c) {
       ${offer ? field('رنگ', c.carColor || '—') : ''}
       ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
       ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
-      ${
-        // Only when there is something behind the lock — «عکس: —» on every
-        // photo-less card would be a row of noise.
-        offer && !c.contactRevealed && c.photoCount
-          ? field('عکس', `${faDigits(c.photoCount)} عکس 🔒`)
-          : ''
-      }
-      ${metaRows(c)}
     </dl>
+
+    <dl class="card-meta">${metaRows(c)}</dl>
 
     ${c.description ? html`<p class="desc">${c.description}</p>` : ''}
 
@@ -485,13 +484,20 @@ export async function openCarModal(id) {
 
       ${offer ? bodyMapView(c.bodyType, c.bodyStatus) : ''}
 
+      <!-- The photographs, or a sentence about them. The card used to carry
+           «۳ عکس 🔒» as if it were a specification of the car; what a reader
+           needs is not the number on the card but the way to see them, said
+           where they would be. -->
       ${
         c.photos?.length
           ? html`<div class="car-photos">
               ${c.photos.map((p) => html`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" alt="عکس خودرو" loading="lazy"></a>`)}
             </div>`
           : offer && c.photoCount && !c.contactRevealed
-            ? html`<p class="hint" style="margin:10px 0 0">${faDigits(c.photoCount)} عکس دارد — با «نمایش مشخصات» باز می‌شود.</p>`
+            ? html`<p class="hint" style="margin:10px 0 0">
+                این آگهی ${faDigits(c.photoCount)} عکس دارد — برای مشاهده‌ی عکس‌ها
+                «نمایش مشخصات» را بزنید.
+              </p>`
             : ''
       }
 

@@ -235,20 +235,40 @@ textarea.in { resize: vertical; min-height: 60px; }
 .hcard dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px 18px;
-  padding: 2px 14px 10px;
+  gap: 5px 12px;
+  padding: 0 14px 10px;
   font-size: 13.5px;
 }
-.hcard dl > div {
+.hcard dt { color: var(--ink-3); display: inline; }
+.hcard dd { font-weight: 600; }
+
+/* ---- کارت خودرو ----
+   فقط این بازار: هر واقعیت یک سطرِ «عنوان … پاسخ» است، نه عنوان روی یک سطر
+   و جواب روی سطر بعد. کارت خودرو هشت-نه قلم دارد و با چیدمان دوسطری یک
+   صفحه‌ی کامل گوشی می‌شد؛ حواله و ثبت‌نامی چیدمان خودشان را نگه می‌دارند. */
+
+.hcard.car dl {
+  /* یک ستون، حتی روی دسکتاپ: هر سطر یک عنوان و یک پاسخ. دو ستونی روی صفحه‌ی
+     بزرگ جا صرفه‌جویی می‌کرد ولی چشم برای خواندنش باید زیگزاگ می‌رفت. */
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 2px 14px 4px;
+}
+.hcard.car dl > div {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 3px 0;
+  padding: 4px 0;
   border-bottom: 1px dotted var(--line-2);
 }
-.hcard dt { color: var(--ink-3); flex: none; }
-.hcard dd { font-weight: 700; margin-inline-start: auto; text-align: end; }
-.hcard dd.big { font-size: 15.5px; font-weight: 800; color: var(--primary-2); letter-spacing: -.01em; }
+.hcard.car dt { color: var(--ink-3); flex: none; display: inline; }
+.hcard.car dd { font-weight: 700; margin-inline-start: auto; text-align: end; }
+.hcard.car dd.big {
+  font-size: 16px; font-weight: 800; color: var(--primary-2); letter-spacing: -.01em;
+}
+/* گروه دوم — نمایندگی و مهلت — با یک فاصله از مشخصات خودرو جدا می‌شود. */
+.hcard.car dl.card-meta { padding: 6px 14px 10px; }
+.hcard.car dl.card-meta > div { border-bottom: 0; padding: 2px 0; }
 
 /* ---- سطرهای «عنوان: پاسخ» روی کارت ----
    قبلاً عنوان یک سطر بود و مقدار سطر بعد، و کارت روی گوشی یک صفحه‌ی کامل

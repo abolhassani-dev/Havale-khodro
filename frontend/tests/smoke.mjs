@@ -1189,6 +1189,9 @@ await step('phone: a market shows advertisements before it shows a form', async 
     const box = await first.boundingBox();
     if (box && box.y > 844) throw new Error(`${market} shows nothing on the first screen`);
   }
+  // Leave the phone on a settled page: the next step reads a computed style,
+  // and reading one mid-render is how this suite gets a flake.
+  await phone.waitForTimeout(400);
 });
 
 await step('phone: menu items take a pointer, not a text caret', async () => {
