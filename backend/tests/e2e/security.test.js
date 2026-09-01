@@ -220,6 +220,36 @@ maybe('the intrusion log', () => {
       expect(event.sample).toContain('sqlmap');
     });
 
+    /**
+     * What a person sees when they walk the API by hand.
+     *
+     * Not a boundary — nothing here decides what is allowed, and the refusal
+     * is the same refusal either way. What it decides is the form: a person
+     * typing an address into the browser gets the site's page with a way
+     * back, and a program gets the JSON its error handling reads. The
+     * counting above happens first, so a scanner is recorded whichever form
+     * it asked for.
+     */
+    it('answers a browser with the site page and a program with JSON', async () => {
+      const asBrowser = await request(app)
+        .get(api('/nothing-here'))
+        .set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+        .expect(302);
+      expect(asBrowser.headers.location).toBe('/error.html');
+
+      // Including the refusals that come before any route: a signed-out
+      // visitor typing a protected address is a person too.
+      const signedOut = await request(app)
+        .get(api('/havales'))
+        .set('Accept', 'text/html,*/*;q=0.8')
+        .expect(302);
+      expect(signedOut.headers.location).toBe('/error.html');
+
+      // The panel asks for anything and keeps getting json.
+      const asPanel = await request(app).get(api('/nothing-here')).expect(404);
+      expect(asPanel.body.error.code).toBe('NOT_FOUND');
+    });
+
     it('leaves an ordinary browser alone', async () => {
       await forget('SCANNER_UA');
       await request(app)

@@ -13,6 +13,23 @@ const { threats } = require('./threatDetect');
  * gets logged in full and returned as a generic 500, because driver messages and
  * stack traces tell an attacker about your internals.
  */
+/**
+ * Who is on the other end of a refusal.
+ *
+ * The panel's fetch() asks for anything, and `accepts` resolves «anything» to
+ * the first type offered — json — so it keeps getting the machine-readable
+ * body its error handling branches on. A browser navigating to an address
+ * sends `Accept: text/html,…`, and a person who has just typed an API path
+ * into the bar should be given the site's page with a way back, not a line of
+ * JSON that reads like the inside of the machine.
+ *
+ * It is the same refusal either way. Nothing here decides what is allowed;
+ * this only chooses the form the «no» is written in.
+ */
+function wantsPage(req) {
+  return req.accepts(['json', 'html']) === 'html';
+}
+
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   if (err instanceof AppError && err.isOperational) {
@@ -22,6 +39,9 @@ function errorHandler(err, req, res, next) {
     // threatDetect are what tell the two apart.
     if (err.statusCode === 403) threats.forbidden(req);
     if (err.statusCode === 404) threats.notFound(req);
+    // Counted first, then answered: a scanner walking the API is recorded
+    // whichever form its request asked for.
+    if (wantsPage(req)) return res.redirect(302, '/error.html');
     return failure(res, {
       message: err.message,
       code: err.code,

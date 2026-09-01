@@ -436,7 +436,6 @@ const registrationService = {
       access,
       id,
       ip,
-      notFound: NOT_FOUND,
       targetType: 'REGISTRATION',
     });
   },

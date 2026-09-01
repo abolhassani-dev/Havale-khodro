@@ -49,6 +49,14 @@ const MESSAGES = {
     NOT_EDITABLE: 'این آگهی در وضعیت فعلی قابل ویرایش نیست',
     SUSPENDED: 'این آگهی تعلیق شده است',
     OWN_CONTACT: 'این آگهی متعلق به خودتان است',
+    // The two ways a listing a reader could see a second ago stops being
+    // there. They said the same sentence for a while, and the reader —
+    // looking at a card that is still on the page — could not tell whether
+    // the advertisement had gone or its agency had. Both are about a listing
+    // that was public a moment earlier, so neither sentence discloses
+    // anything the card had not already shown.
+    GONE: 'این آگهی برداشته شده است',
+    OWNER_INACTIVE: 'نمایندگی این آگهی دیگر فعال نیست',
     UNKNOWN_MODEL: 'مدل خودرو در فهرست سامانه نیست',
     UNKNOWN_COLOR: 'رنگ انتخاب‌شده در فهرست سامانه نیست',
     DAILY_LIMIT: 'سقف نمایش مشخصات امروز پر شده است',

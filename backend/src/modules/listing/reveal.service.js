@@ -3,7 +3,7 @@ const authRepository = require('../auth/auth.repository');
 const { startOfTehranDay } = require('../../utils/time');
 const { MESSAGES } = require('../../constants/messages');
 const { ERROR_CODES } = require('../../constants/errorCodes');
-const { NotFoundError, BadRequestError, ForbiddenError } = require('../../errors/AppError');
+const { AppError, BadRequestError, ForbiddenError } = require('../../errors/AppError');
 
 /**
  * Showing a contact, and what it costs — for every market at once.
@@ -122,12 +122,11 @@ async function usageFor({ user, access }) {
  * @param {object} args.access      the entitlement, from the access table
  * @param {string} args.id          the listing
  * @param {string} [args.ip]
- * @param {string} [args.notFound]  what to call the thing when it is not there
  * @param {string} [args.targetType] how the activity log names it
  */
-async function reveal({ user, access, id, ip, notFound = 'آگهی', targetType = 'LISTING' }) {
+async function reveal({ user, access, id, ip, targetType = 'LISTING' }) {
   const listing = await revealRepository.findListing(id);
-  if (!listing) throw new NotFoundError(notFound);
+  if (!listing) throw new AppError(MESSAGES.LISTING.GONE, 404, ERROR_CODES.NOT_FOUND);
 
   if (listing.ownerId === user.id) {
     throw new BadRequestError(MESSAGES.LISTING.OWN_CONTACT);
@@ -135,7 +134,9 @@ async function reveal({ user, access, id, ip, notFound = 'آگهی', targetType 
 
   // A suspended agency's listings are not in the market, and paying to reach
   // one would be paying for a number nobody will answer.
-  if (listing.owner.status !== 'ACTIVE') throw new NotFoundError(notFound);
+  if (listing.owner.status !== 'ACTIVE') {
+    throw new AppError(MESSAGES.LISTING.OWNER_INACTIVE, 404, ERROR_CODES.NOT_FOUND);
+  }
 
   // Already opened: hand it back without charging again. The unique constraint
   // on (listing, viewer) makes that the natural behaviour rather than something

@@ -546,9 +546,24 @@ maybe('car market', () => {
       const viewer = await agent();
       for (const path of ['/cars/photos', '/cars/photos/', '/cars/x', '/cars/..']) {
         const res = await request(app).get(api(path)).set('Cookie', viewer.cookie).expect(404);
-        expect(res.body.error.message).toMatch(/^مسیر /);
-        expect(res.body.error.message).not.toMatch(/آگهی خودرو/);
+        expect(res.body.error.message).toBe('مسیر درخواستی پیدا نشد');
+        // Not the market's answer about an advertisement, and not the address
+        // the caller just typed echoed back at them.
+        expect(res.body.error.message).not.toMatch(/آگهی خودرو|cars/);
       }
+
+      // A person who typed it into the browser's bar is sent to the site's
+      // own error page instead — same refusal, in the form that caller can
+      // read. Every refusal behaves this way, not only 404: errorHandler
+      // decides the form once, from what was asked for. The panel's own
+      // fetch() is unaffected — it asks for anything, and «anything»
+      // resolves to json.
+      const browser = await request(app)
+        .get(api('/cars/photos'))
+        .set('Cookie', viewer.cookie)
+        .set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+        .expect(302);
+      expect(browser.headers.location).toBe('/error.html');
 
       // And a real id still reaches the market.
       const owner = await agent();

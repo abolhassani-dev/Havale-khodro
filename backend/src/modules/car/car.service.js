@@ -407,7 +407,6 @@ const carService = {
       access,
       id,
       ip,
-      notFound: NOT_FOUND,
       targetType: 'CAR',
     });
   },

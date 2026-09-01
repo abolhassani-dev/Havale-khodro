@@ -123,12 +123,25 @@ else
   bad "محتویات این پوشه‌ها از وب فهرست می‌شود:$listed" "autoindex off; در app.conf"
 fi
 
+# «تنظیم نشده» و «تنظیم شده ولی nginx هنوز نخوانده» دو مشکل جدا با دو راه‌حل
+# جدا هستند، و راهنمای اشتباه، ساعت‌ها ویرایش فایلی را می‌گیرد که از قبل درست
+# بوده. پس اول از روی دیسک می‌پرسیم پیکربندی چه می‌گوید.
+if [ -f "$ROOT/frontend/error.html" ] && grep -q 'error_page 403 404' "$ROOT/deploy/nginx/app.conf" 2>/dev/null; then
+  ERR_FIX="کانتینر وب هنوز پیکربندی جدید را نخوانده: docker compose up -d --force-recreate --no-deps web"
+else
+  ERR_FIX="error_page 403 404 /error.html; در app.conf و وجود frontend/error.html"
+fi
+if grep -q 'security-headers.inc' "$ROOT/deploy/nginx/app.conf" 2>/dev/null; then
+  HDR_FIX="$ERR_FIX"
+else
+  HDR_FIX="include /etc/nginx/conf.d/security-headers.inc; داخل location /src/ و /assets/"
+fi
+
 miss="$(curl -s --max-time 10 "${CURL_OPTS[@]}" "$BASE/assets/" 2>/dev/null | head -c 4000)"
 if echo "$miss" | grep -q 'بازگشت به صفحه‌ی اصلی'; then
   ok "خطاها صفحه‌ی خطای خود سایت را نشان می‌دهند"
 elif echo "$miss" | grep -qi '<center>nginx</center>\|<title>40'; then
-  warn "صفحه‌ی خطای پیش‌فرض nginx نمایش داده می‌شود" \
-       "error_page 403 404 /error.html; در app.conf و وجود frontend/error.html"
+  warn "صفحه‌ی خطای پیش‌فرض nginx نمایش داده می‌شود" "$ERR_FIX"
 else
   skip "صفحه‌ی خطا شناسایی نشد"
 fi
@@ -139,9 +152,19 @@ hdrs="$(curl -s -I --max-time 10 "${CURL_OPTS[@]}" "$BASE/src/main.js" 2>/dev/nu
 if echo "$hdrs" | grep -qi 'x-content-type-options' && echo "$hdrs" | grep -qi 'content-security-policy'; then
   ok "سربرگ‌های امنیتی روی فایل‌های /src/ هم هست"
 else
-  bad "فایل‌های /src/ بدون سربرگ امنیتی سرو می‌شوند" \
-      "include /etc/nginx/conf.d/security-headers.inc; داخل location /src/ و /assets/"
+  bad "فایل‌های /src/ بدون سربرگ امنیتی سرو می‌شوند" "$HDR_FIX"
 fi
+
+# و آدرس API که کسی در نوار مرورگر تایپ کرده، به‌جای JSON صفحه‌ی خطا را
+# می‌بیند. برنامه‌ها دست‌نخورده می‌مانند: آن‌ها html نمی‌خواهند.
+api404="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${CURL_OPTS[@]}" \
+  -H 'Accept: text/html' "$BASE$API_PREFIX/does-not-exist" 2>/dev/null)"
+case "$api404" in
+  30*) ok "آدرس API در مرورگر به صفحه‌ی خطای سایت می‌رود، نه JSON" ;;
+  404) warn "آدرس ناموجود API در مرورگر هنوز JSON برمی‌گرداند" \
+            "کانتینر api هنوز کد جدید را ندارد: ./deploy/update.sh" ;;
+  *)   skip "پاسخ API به مرورگر شناسایی نشد ($api404)" ;;
+esac
 
 # Compression: not correctness, but the difference between a panel that feels
 # fast on a phone connection and one that does not.
