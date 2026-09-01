@@ -61,6 +61,26 @@ const REVEAL_PERIOD_DAYS = 30;
 
 const LIST_PAGE_SIZE = { DEFAULT: 20, MAX: 50 };
 
+/**
+ * How deep a numbered page may go.
+ *
+ * Numbered pages are offset pages, and an offset page re-scans and throws away
+ * every row before it: page 500 costs five hundred times page one, and that
+ * cost grows with the market rather than staying still. The cap turns a
+ * problem that arrives silently — a page that quietly takes eight seconds one
+ * day next year — into a boundary that is visible from the first day and can be
+ * argued about.
+ *
+ * Fifty pages is a thousand advertisements at the default page size. Nobody
+ * looking for a car reads a thousand cards; somebody who reaches page fifty has
+ * not found what they want, and the answer to that is a narrower filter, not a
+ * deeper page. So the panel says exactly that when the cap is reached.
+ *
+ * Anything that genuinely has to walk the whole list — an export, a job — uses
+ * the cursor path instead, which stays the same speed at any depth.
+ */
+const MAX_PAGE = 50;
+
 module.exports = {
   HAVALE_KIND,
   HAVALE_STATUS,
@@ -72,4 +92,5 @@ module.exports = {
   DEFAULT_REVEAL_LIMITS,
   REVEAL_PERIOD_DAYS,
   LIST_PAGE_SIZE,
+  MAX_PAGE,
 };

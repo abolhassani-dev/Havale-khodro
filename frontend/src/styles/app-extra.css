@@ -424,6 +424,9 @@ tr.dim, .dim { opacity: 0.55; }
 }
 .pg-dots { color: var(--ink-3); padding: 0 3px; }
 
+/* پیام «ته صفحه‌بندی»: وقتی خواننده روی آخرین صفحه‌ی قابل نمایش ایستاده */
+.pg-end { padding: 0 14px 16px; text-align: center; }
+
 /* تب‌های تفکیک نوع در استعلام — باید جلوی چشم باشند، نه ته فیلترها */
 .kind-tabs { display: flex; gap: 5px; }
 .kind-tabs .tab { font-size: 13.5px; padding: 6px 15px; font-weight: 700; }

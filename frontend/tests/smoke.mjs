@@ -599,6 +599,35 @@ await step('timeline entry explains itself in a sentence', async () => {
 await page.click('[data-close-modal]');
 
 /**
+ * Page two actually being page two.
+ *
+ * The pager is one shared component and every list in the panel draws it, so a
+ * mistake in it is a mistake everywhere at once — and the way it fails is
+ * silent: buttons that render, click, and leave the same rows on screen. The
+ * timeline is where it can be pressed for real, because the log is the one list
+ * that always has more rows than a page in any database old enough to test on.
+ */
+await step('the pager moves to the next page', async () => {
+  await page.goto(`${BASE}#adm-monitor`);
+  await page.waitForSelector('.tl-row, .empty', { timeout: 8000 });
+  if (!(await page.locator('.pager .pg').count())) return; // a fresh database, nothing to page
+  const first = await page.locator('.tl-row').first().innerText();
+
+  await page.locator('.pager .pg', { hasText: 'بعدی' }).click();
+  await page.waitForTimeout(1200);
+  await page.waitForSelector('.tl-row', { timeout: 8000 });
+
+  if (await page.locator('.content > .banner.danger').count()) {
+    throw new Error('page two landed on an error banner');
+  }
+  const current = await page.locator('.pager .pg.on').innerText();
+  if (!/۲/.test(current)) throw new Error(`pager did not advance — still on ${current}`);
+  if ((await page.locator('.tl-row').first().innerText()) === first) {
+    throw new Error('page two shows the same rows as page one');
+  }
+});
+
+/**
  * The log as something you can search.
  *
  * The failure this guards against is the quiet one: a filter that stops

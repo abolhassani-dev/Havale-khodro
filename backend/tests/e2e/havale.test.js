@@ -381,13 +381,66 @@ maybe('havale', () => {
       expect(page1.body.data.total).toBeGreaterThanOrEqual(3);
       expect(page1.body.data.pages).toBe(Math.ceil(page1.body.data.total / 2));
 
-      // The second page continues where the first stopped — no overlap, no gap.
+      // The second page exists and is a page, not the first one again.
+      //
+      // Not asserted here: that the two pages share no row. The market list is
+      // every agency's listings at once, and the suites run in parallel against
+      // one database — a listing posted by another test between the two
+      // requests shifts the window, and the overlap that follows is the test
+      // colliding with its neighbours rather than the pager being wrong. The
+      // no-overlap guarantee is checked on «my listings» below, where the data
+      // belongs to one freshly-made agency and nothing else can touch it.
       const page2 = await request(app)
         .get(api('/havales?page=2&limit=2'))
         .set('Cookie', cookie)
         .expect(200);
+      expect(page2.body.data.page).toBe(2);
+      expect(page2.body.data.items.length).toBeLessThanOrEqual(2);
+    });
+
+    /**
+     * «حواله‌های من» is paged too.
+     *
+     * It used to take a bare `limit` and nothing else, so an agency with more
+     * listings than the page size saw the first fifty and was told nothing —
+     * a list that is quietly short reads as «that is all of it», which is the
+     * worst way for a record of your own advertisements to be wrong.
+     */
+    it('slices the agency’s own listings by page as well', async () => {
+      const poster = await agent();
+      for (let i = 0; i < 3; i += 1) {
+        await request(app)
+          .post(api('/havales'))
+          .set('Cookie', poster.cookie)
+          .send(await offer())
+          .expect(201);
+      }
+
+      const page1 = await request(app)
+        .get(api('/havales/mine?page=1&limit=2'))
+        .set('Cookie', poster.cookie)
+        .expect(200);
+      expect(page1.body.data.items).toHaveLength(2);
+      expect(page1.body.data.total).toBe(3);
+      expect(page1.body.data.pages).toBe(2);
+
+      const page2 = await request(app)
+        .get(api('/havales/mine?page=2&limit=2'))
+        .set('Cookie', poster.cookie)
+        .expect(200);
+      expect(page2.body.data.items).toHaveLength(1);
       const ids1 = page1.body.data.items.map((h) => h.id);
       page2.body.data.items.forEach((h) => expect(ids1).not.toContain(h.id));
+    });
+
+    // The offset depth is capped on purpose (MAX_PAGE): an offset page re-scans
+    // everything before it, so the panel must never draw a button past the cap.
+    // It refuses rather than silently clamping, which is what makes a pager that
+    // over-reaches show up as a failure instead of a mystery.
+    it('refuses a page past the cap on both the market and the own list', async () => {
+      const { cookie } = await agent();
+      await request(app).get(api('/havales?page=51')).set('Cookie', cookie).expect(422);
+      await request(app).get(api('/havales/mine?page=51')).set('Cookie', cookie).expect(422);
     });
   });
 

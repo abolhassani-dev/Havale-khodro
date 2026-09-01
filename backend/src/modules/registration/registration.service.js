@@ -8,7 +8,7 @@ const authRepository = require('../auth/auth.repository');
 const { addDays } = require('../../utils/time');
 const { diffOf } = require('../../utils/diff');
 const { assertClean } = require('../../utils/textGuard');
-const { LIST_PAGE_SIZE } = require('../../constants/havale');
+const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 const { MESSAGES } = require('../../constants/messages');
 const { NotFoundError, BadRequestError } = require('../../errors/AppError');
 
@@ -218,6 +218,43 @@ const registrationService = {
     if (filters.maxPremium) detail.premiumToman = { lte: BigInt(filters.maxPremium) };
     if (Object.keys(detail).length) where.registration = detail;
 
+    // One row, serialised the way this viewer is entitled to see it.
+    const serialise = (rows, revealed) =>
+      rows.map((row) =>
+        row.ownerId === user.id
+          ? toOwn(row, { viewerId: user.id })
+          : toCard(row, { subscriptionActive: access.active, revealed: revealed.has(row.id) })
+      );
+
+    // Two paginations, the same pair the حواله market carries and for the same
+    // reason. The panel shows people numbered pages, because «۳ از ۱۲» answers
+    // «how much is there?» and a bare next-cursor never can — and until this
+    // existed the ثبت‌نامی page showed the first twenty advertisements and said
+    // nothing at all about the rest, which reads as «this is the whole market».
+    //
+    // Offset does re-scan the rows it skips, so the page number is capped: see
+    // MAX_PAGE. The cursor path below stays for anything that walks the whole
+    // list, where depth is exactly the problem.
+    if (filters.page) {
+      const page = Math.min(filters.page, MAX_PAGE);
+      const [rows, total] = await Promise.all([
+        registrationRepository.listPublic({ where, skip: (page - 1) * take, take }),
+        registrationRepository.count(where),
+      ]);
+
+      const revealed = await revealService.revealRepository.revealedIds(
+        rows.map((r) => r.id),
+        user.id
+      );
+
+      return {
+        items: serialise(rows, revealed),
+        total,
+        page,
+        pages: Math.max(1, Math.ceil(total / take)),
+      };
+    }
+
     const rows = await registrationRepository.listPublic({
       where,
       take: take + 1,
@@ -233,11 +270,7 @@ const registrationService = {
     );
 
     return {
-      items: page.map((row) =>
-        row.ownerId === user.id
-          ? toOwn(row, { viewerId: user.id })
-          : toCard(row, { subscriptionActive: access.active, revealed: revealed.has(row.id) })
-      ),
+      items: serialise(page, revealed),
       nextCursor: hasNext ? page[page.length - 1].id : null,
     };
   },
@@ -274,8 +307,21 @@ const registrationService = {
 
     if (filters.status) where.status = filters.status;
 
-    const rows = await registrationRepository.listOwn({ where, take });
-    return { items: rows.map((row) => toOwn(row, { viewerId: user.id })) };
+    // Numbered, like the market list. An agency with sixty advertisements used
+    // to see fifty of them and nothing said the other ten existed — a list that
+    // is quietly short tells the reader «that is all of it».
+    const page = Math.min(filters.page || 1, MAX_PAGE);
+    const [rows, total] = await Promise.all([
+      registrationRepository.listOwn({ where, skip: (page - 1) * take, take }),
+      registrationRepository.count(where),
+    ]);
+
+    return {
+      items: rows.map((row) => toOwn(row, { viewerId: user.id })),
+      total,
+      page,
+      pages: Math.max(1, Math.ceil(total / take)),
+    };
   },
 
   async update({ user, id, payload }) {

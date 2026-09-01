@@ -68,11 +68,12 @@ const registrationRepository = {
   },
 
   /** The public list, newest first, one page at a time. */
-  listPublic({ where, take, cursor }) {
+  listPublic({ where, take, cursor, skip = 0 }) {
     return prisma.listing.findMany({
       where: { ...where, market: MARKET },
       include: WITH_DETAIL,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip,
       take,
       ...(cursor
         ? {
@@ -86,13 +87,25 @@ const registrationRepository = {
     });
   },
 
-  listOwn({ where, take }) {
+  listOwn({ where, take, skip = 0 }) {
     return prisma.listing.findMany({
       where: { ...where, market: MARKET },
       include: WITH_DETAIL,
       orderBy: { createdAt: 'desc' },
+      skip,
       take,
     });
+  },
+
+  /**
+   * How many rows a filter really matches — the number behind «۳ از ۱۲».
+   *
+   * Always scoped to this market, like every other query in this file: the
+   * `market` column is the only thing keeping two markets out of each other's
+   * lists, so it is added here rather than trusted from the caller.
+   */
+  count(where) {
+    return prisma.listing.count({ where: { ...where, market: MARKET } });
   },
 
   countOwnActive(ownerId) {

@@ -1,6 +1,7 @@
 import { html, raw } from './html.js';
 import { getState, setState } from '../state/store.js';
 import { faDigits } from './format.js';
+import { MAX_PAGE } from '../constants.js';
 
 /** Transient messages and the modal layer. */
 
@@ -140,8 +141,15 @@ export function qtip(text) {
  * `params` are the filters to carry along — every button re-enters the same
  * route with the same filters and only the page changed.
  */
-export function pager({ page = 1, pages = 1, go: target, params = {} }) {
-  if (!pages || pages <= 1) return raw('');
+export function pager({ page = 1, pages = 1, go: target, params = {}, maxPage = MAX_PAGE }) {
+  // The honest total, and the deepest page anybody may actually ask for. Past
+  // the market cap the server answers 422, so the pager must not offer the
+  // button. `maxPage` is raised only by screens whose endpoint takes skip/take
+  // and has no such rule — the admin timeline, where paging back through the
+  // record is the whole job.
+  const capped = pages > maxPage;
+  const last = capped ? maxPage : pages;
+  if (!last || last <= 1) return raw('');
 
   const query = (p) => {
     const q = new URLSearchParams();
@@ -155,8 +163,8 @@ export function pager({ page = 1, pages = 1, go: target, params = {} }) {
     html`<button class="pg" data-go="${target}" data-go-params="${query(p)}">${label}</button>`;
 
   const numbers = [];
-  for (let p = 1; p <= pages; p += 1) {
-    if (p === 1 || p === pages || Math.abs(p - page) <= 2) numbers.push(p);
+  for (let p = 1; p <= last; p += 1) {
+    if (p === 1 || p === last || Math.abs(p - page) <= 2) numbers.push(p);
   }
 
   const parts = [];
@@ -170,6 +178,18 @@ export function pager({ page = 1, pages = 1, go: target, params = {} }) {
   return html`<nav class="pager">
     ${page > 1 ? link(page - 1, 'قبلی') : ''}
     ${parts}
-    ${page < pages ? link(page + 1, 'بعدی') : ''}
-  </nav>`;
+    ${page < last ? link(page + 1, 'بعدی') : ''}
+  </nav>
+  ${
+    // Only once the reader is actually standing on the last page they can
+    // reach. Said earlier it would be a warning about a wall nobody is walking
+    // towards; said here it answers the question they are about to ask.
+    capped && page >= last
+      ? html`<div class="hint pg-end">
+          این آخرین صفحه‌ای است که نمایش داده می‌شود
+          (${faDigits(last)} صفحه از ${faDigits(pages)}).
+          برای رسیدن به بقیه‌ی موارد، فیلترها را باریک‌تر کنید.
+        </div>`
+      : ''
+  }`;
 }

@@ -5,7 +5,7 @@ import {
   money, faDigits, until, date, KIND_LABEL, SOLH_LABEL, HAVALE_STATUS_LABEL,
   PAYMENT_TYPES, PAYMENT_TYPE_LABEL,
 } from '../../ui/format.js';
-import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError } from '../../ui/feedback.js';
+import { emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError, pager } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import { enDigits } from '../../ui/format.js';
@@ -28,7 +28,7 @@ export async function loadMine(params) {
   // رنگ» — so opening the dialogue on a white car and pressing save quietly
   // erased its colour.
   const [mine, tree] = await Promise.all([
-    havale.mine({ status: params.status, scope, limit: 50 }),
+    havale.mine({ status: params.status, scope, page: params.page || 1, limit: 20 }),
     catalog.get(),
   ]);
   return { mine, tree };
@@ -438,6 +438,18 @@ export function minePage() {
           </table>`
         : emptyBox('حواله‌ای در این وضعیت ندارید.')
     }
+
+    ${pager({
+      page: data.mine?.page || 1,
+      pages: data.mine?.pages || 1,
+      go: 'mine',
+      // The tab and the scope have to ride along, or page two of «فعال» would
+      // come back as page two of everything.
+      params: {
+        ...(params.status ? { status: params.status } : {}),
+        ...(reseller ? { scope } : {}),
+      },
+    })}
   </div>`;
 }
 

@@ -316,6 +316,49 @@ maybe('registration market', () => {
         .expect(200);
       expect(havMine.body.data.items.some((r) => r.id === reg.body.data.id)).toBe(false);
     });
+
+    /**
+     * Both lists in this market are numbered.
+     *
+     * The public one used to be cursor-only with no pager drawn at all, so a
+     * market with more than twenty advertisements showed twenty and hid the
+     * rest; «my advertisements» took a bare limit. Same fix as the حواله side,
+     * and the same cap, so the two markets page identically.
+     */
+    it('slices the market and the agency’s own list by page, and refuses a page past the cap', async () => {
+      const owner = await agent();
+      for (let i = 0; i < 3; i += 1) await post(owner.cookie, capacity()).expect(201);
+
+      const mine1 = await request(app)
+        .get(api('/registrations/mine?page=1&limit=2'))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      expect(mine1.body.data.items).toHaveLength(2);
+      expect(mine1.body.data.total).toBe(3);
+      expect(mine1.body.data.pages).toBe(2);
+
+      const mine2 = await request(app)
+        .get(api('/registrations/mine?page=2&limit=2'))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      expect(mine2.body.data.items).toHaveLength(1);
+      const seen = mine1.body.data.items.map((r) => r.id);
+      mine2.body.data.items.forEach((r) => expect(seen).not.toContain(r.id));
+
+      const viewer = await agent();
+      const market = await request(app)
+        .get(api('/registrations?page=1&limit=2'))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      expect(market.body.data.total).toBeGreaterThanOrEqual(3);
+      expect(market.body.data.pages).toBe(Math.ceil(market.body.data.total / 2));
+
+      await request(app).get(api('/registrations?page=51')).set('Cookie', viewer.cookie).expect(422);
+      await request(app)
+        .get(api('/registrations/mine?page=51'))
+        .set('Cookie', owner.cookie)
+        .expect(422);
+    });
   });
 
   describe('the agency’s own advertisements', () => {

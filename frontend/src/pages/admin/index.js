@@ -1692,6 +1692,11 @@ function monitorPage() {
       pages: Math.max(1, Math.ceil((data.activity?.total ?? 0) / 50)),
       go: 'adm-monitor',
       params: params?.userId ? { userId: params.userId } : {},
+      // The timeline runs on skip/take with no page rule of its own, and an
+      // investigation that has to reach last spring is the point of it. Still
+      // bounded — ten thousand rows — because an offset that deep is a table
+      // scan, and the date filter is the better tool past that.
+      maxPage: 200,
     })}
   </div>
 

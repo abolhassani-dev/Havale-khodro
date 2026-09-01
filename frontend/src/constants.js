@@ -20,3 +20,16 @@ export const LIMITS = {
   depositDaysMin: 1,
   depositDaysMax: 30,
 };
+
+/**
+ * The deepest numbered page the server will serve — mirrors `MAX_PAGE` in the
+ * backend's `constants/havale.js`.
+ *
+ * It has to be here as well as there: the total page count the server reports
+ * is honest — three hundred pages means three hundred pages — but the query
+ * validator refuses anything past fifty. A pager that drew a button for page
+ * three hundred would be drawing a button that answers 422, which is precisely
+ * the sort of dead control this panel has been bitten by before. So the pager
+ * stops at fifty and says why.
+ */
+export const MAX_PAGE = 50;

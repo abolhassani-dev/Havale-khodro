@@ -6,7 +6,7 @@ const {
   REGISTRATION_SALE_TYPE,
   LIMITS,
 } = require('./registration.constants');
-const { LIST_PAGE_SIZE } = require('../../constants/havale');
+const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 
 /**
  * What may be posted in this market, and in what shape.
@@ -83,6 +83,7 @@ const listQuery = Joi.object({
   city: Joi.string().trim().max(60),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
   cursor: Joi.string().trim().max(120),
+  page: Joi.number().integer().min(1).max(MAX_PAGE),
 });
 
 const ownQuery = Joi.object({
@@ -91,6 +92,7 @@ const ownQuery = Joi.object({
   // because a parent agency thinks about its family the same way in either.
   scope: Joi.string().valid('own', 'children', 'all'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
+  page: Joi.number().integer().min(1).max(MAX_PAGE),
 });
 
 const byId = Joi.object({ id: Joi.string().trim().max(40).required() });

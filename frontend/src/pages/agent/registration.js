@@ -4,7 +4,7 @@ import { registration, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
 import { money, faDigits, until, date, enDigits } from '../../ui/format.js';
 import {
-  emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError,
+  emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError, pager,
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { jalaliDate } from '../../ui/dateInput.js';
@@ -59,6 +59,7 @@ export async function loadRegSearch(params) {
       method: params.method,
       saleType: params.saleType,
       maxPremium: params.maxPremium,
+      page: params.page || 1,
       limit: 20,
     }),
     catalog.get(),
@@ -74,7 +75,9 @@ export async function loadRegForm() {
 export async function loadRegMine(params) {
   const reseller = Boolean(getState().user?.isReseller);
   const scope = reseller ? params.scope || 'all' : undefined;
-  return { mine: await registration.mine({ status: params.status, scope, limit: 50 }) };
+  return {
+    mine: await registration.mine({ status: params.status, scope, page: params.page || 1, limit: 20 }),
+  };
 }
 
 // ── the market ──────────────────────────────────────────────────────────────
@@ -135,7 +138,20 @@ export function regSearchPage() {
     </form>
 
     ${items.length ? html`<div class="grid">${items.map(regCard)}</div>` : emptyBox('آگهی‌ای با این فیلترها پیدا نشد.')}
+
+    ${pager({
+      page: data.list?.page || 1,
+      pages: data.list?.pages || 1,
+      go: 'reg-search',
+      params: withoutPage(params),
+    })}
   </div>`;
+}
+
+/** The same filters with the page dropped — the pager re-adds its own. */
+function withoutPage(params) {
+  const { page, ...rest } = params;
+  return rest;
 }
 
 function filterSelect(name, label, options, current) {
@@ -621,6 +637,16 @@ export function regMinePage() {
           </table>`
         : emptyBox('هنوز آگهی ثبت‌نامی ندارید.')
     }
+
+    ${pager({
+      page: data.mine?.page || 1,
+      pages: data.mine?.pages || 1,
+      go: 'reg-mine',
+      params: {
+        ...(params.status ? { status: params.status } : {}),
+        ...(reseller ? { scope } : {}),
+      },
+    })}
   </div>`;
 }
 

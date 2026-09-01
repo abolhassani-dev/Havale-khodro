@@ -7,6 +7,7 @@ const {
   PAYMENT_TYPE,
   DEPOSIT_DAYS,
   LIST_PAGE_SIZE,
+  MAX_PAGE,
 } = require('../../constants/havale');
 const { normalise } = require('../../utils/textGuard');
 
@@ -151,7 +152,7 @@ const listQuery = Joi.object({
   maxAmount: toman,
   maxDeliveryDays: days,
   cursor: Joi.string().max(200),
-  page: Joi.number().integer().min(1).max(10000),
+  page: Joi.number().integer().min(1).max(MAX_PAGE),
   network: Joi.string().valid('mine'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
 });
@@ -162,6 +163,7 @@ const ownQuery = Joi.object({
   // sends it in vain — the service pins them to their own.
   scope: Joi.string().valid('own', 'children', 'all').default('own'),
   cursor: Joi.string().max(200),
+  page: Joi.number().integer().min(1).max(MAX_PAGE),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
 });
 

@@ -14,6 +14,7 @@ const {
   HAVALE_STATUS,
   REQUEST_LIFETIME_DAYS,
   LIST_PAGE_SIZE,
+  MAX_PAGE,
 } = require('../../constants/havale');
 
 /**
@@ -194,8 +195,12 @@ const havaleService = {
     // stays shallow; the cursor path below remains for clients that walk the
     // whole list, where depth is exactly the problem.
     if (filters.page) {
+      // Capped: an offset page re-scans everything before it, so page 500 costs
+      // five hundred times page one and gets worse as the market grows. See
+      // MAX_PAGE — past it the answer is a narrower filter, not a deeper page.
+      const page = Math.min(filters.page, MAX_PAGE);
       const [rows, total] = await Promise.all([
-        havaleRepository.list({ where, skip: (filters.page - 1) * take, take }),
+        havaleRepository.list({ where, skip: (page - 1) * take, take }),
         havaleRepository.count(where),
       ]);
 
@@ -213,7 +218,7 @@ const havaleService = {
             : toHavaleCard(h, { subscriptionActive: access.active, revealed: revealed.has(h.id) })
         ),
         total,
-        page: filters.page,
+        page,
         pages: Math.max(1, Math.ceil(total / take)),
       };
     }
@@ -275,8 +280,6 @@ const havaleService = {
    */
   async listOwn({ user, filters }) {
     const take = Math.min(filters.limit || LIST_PAGE_SIZE.DEFAULT, LIST_PAGE_SIZE.MAX);
-    const cursor = decodeCursor(filters.cursor);
-
     const scope = user.isReseller ? filters.scope || 'own' : 'own';
     const where =
       scope === 'children'
@@ -286,13 +289,19 @@ const havaleService = {
           : { ownerId: user.id, deletedAt: null };
     if (filters.status) where.status = filters.status;
 
-    const rows = await havaleRepository.list({ where, cursor, take: take + 1 });
-    const hasNext = rows.length > take;
-    const page = hasNext ? rows.slice(0, take) : rows;
+    // Numbered, like the market list beside it. An agency with sixty listings
+    // used to see fifty and nothing said the other ten existed.
+    const page = Math.min(filters.page || 1, MAX_PAGE);
+    const [rows, total] = await Promise.all([
+      havaleRepository.list({ where, skip: (page - 1) * take, take }),
+      havaleRepository.count(where),
+    ]);
 
     return {
-      items: page.map((h) => ({ ...toOwnHavale(h), isOwn: h.ownerId === user.id })),
-      nextCursor: hasNext ? encodeCursor(page[page.length - 1]) : null,
+      items: rows.map((h) => ({ ...toOwnHavale(h), isOwn: h.ownerId === user.id })),
+      total,
+      page,
+      pages: Math.max(1, Math.ceil(total / take)),
     };
   },
 
