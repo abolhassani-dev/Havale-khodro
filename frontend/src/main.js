@@ -41,6 +41,7 @@ import {
 } from './ui/pickSelect.js';
 import { handleJalaliDateChange } from './ui/dateInput.js';
 import { handleMoneyInput } from './ui/moneyInput.js';
+import { handleBodyChip, handleBodyToggle } from './ui/bodyMap.js';
 import { loadNotices, noticesPage } from './pages/agent/notices.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
@@ -318,6 +319,7 @@ const CLICK_KEYS = new Set([
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone', 'brandExpand',
+  'bodyChip', 'bodyClean', 'bodyMarked',
 ]);
 
 function findTarget(node) {
@@ -354,6 +356,12 @@ function onClick(event) {
   if (d.closeModal !== undefined || el.hasAttribute('data-overlay')) return closeModal();
   if (d.confirm !== undefined) return runModalAction(null);
   if (d.logout !== undefined) return doLogout();
+
+  // The body matrix keeps its state in the DOM (rule 3.4) — these never
+  // touch the store, so nothing typed elsewhere in the form is lost.
+  if (d.bodyChip) return handleBodyChip(el);
+  if (d.bodyClean !== undefined) return handleBodyToggle(el, false);
+  if (d.bodyMarked !== undefined) return handleBodyToggle(el, true);
 
   if (d.reveal) return confirmReveal(d.reveal);
   if (d.regReveal) return confirmRegReveal(d.regReveal);
