@@ -43,6 +43,10 @@ if [ "$SEED_DEMO" = "true" ]; then
   # not an error worth stopping the application for.
   if ! node scripts/seed-demo.js; then
     echo "→ demo data skipped — see the message above. The application is starting anyway."
+  # The sample خودرو advertisements ride on the demo agencies, so they only
+  # make sense once those exist — and are just as optional.
+  elif ! node scripts/seed-cars.js; then
+    echo "→ sample خودرو advertisements skipped — see the message above."
   fi
 fi
 
