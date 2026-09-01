@@ -12,6 +12,7 @@ import { brandPickValue } from '../../ui/brandPicker.js';
 import { brandFilter } from '../../ui/brandFilter.js';
 import { filterBox, countFilters } from '../../ui/filterBox.js';
 import { checkChips } from '../../ui/checkChips.js';
+import { metaRows, lockNote } from '../../ui/cardMeta.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import {
   bodyMatrix, bodyMapView, bodyStatusOf, bodyMatrixIncomplete, setBodyPreviewType,
@@ -284,62 +285,56 @@ function card(c) {
       }
     </header>
 
-    <p class="car-price">
-      ${
-        c.carPriceToman
-          ? html`${offer ? '' : html`<small>تا</small>`} <b class="num">${money(c.carPriceToman)}</b>`
-          : html`<b class="none">${offer ? 'قیمت اعلام نشده' : 'سقف قیمت ندارد'}</b>`
-      }
-    </p>
-
-    <!-- One wrapping line instead of a two-line row per fact. Each of these
-         is a whole line on a phone in a definition list, and six of them
-         made a card taller than the screen it was read on. -->
-    <ul class="car-facts">
+    <!-- «عنوان: پاسخ», one line per fact — the same shape the other two
+         markets use. It was a row of bare chips for a while: shorter, and
+         unreadable, because «تا ۸۰ هزار کیلومتر» floating on its own says
+         nothing about which number it is. What the chips fixed stays fixed:
+         the label and its answer share a line instead of taking two. -->
+    <dl>
       ${
         offer
-          ? fact(c.year ? `${faDigits(c.year)}` : null)
-          : fact(
+          ? field('قیمت خودرو', c.carPriceToman ? money(c.carPriceToman) : 'اعلام نشده', 'big')
+          : field('حداکثر قیمت', c.carPriceToman ? money(c.carPriceToman) : 'سقف ندارد', 'big')
+      }
+      ${
+        offer
+          ? field('سال ساخت', c.year ? faDigits(c.year) : '—')
+          : field(
+              'سال ساخت',
               c.yearFrom || c.yearTo
                 ? `${c.yearFrom ? faDigits(c.yearFrom) : '…'} تا ${c.yearTo ? faDigits(c.yearTo) : '…'}`
-                : null
+                : 'فرقی نمی‌کند'
             )
       }
       ${
         offer
-          ? fact(mileageShort(c.mileageKm))
-          : fact(c.maxMileageKm === null ? null : `تا ${mileageShort(c.maxMileageKm)}`)
+          ? field('کارکرد', mileageShort(c.mileageKm) || '—')
+          : field(
+              'کارکرد',
+              c.maxMileageKm === null ? 'فرقی نمی‌کند' : `تا ${mileageShort(c.maxMileageKm)}`
+            )
       }
-      ${offer ? fact(c.carColor) : ''}
-      ${fact(BODY_TYPE_FA[c.bodyType])}
-      ${offer && c.warranty === true ? fact('گارانتی فعال', 'ok') : ''}
-      ${offer && c.warranty === false ? fact('بدون گارانتی') : ''}
+      ${offer ? field('رنگ', c.carColor || '—') : ''}
+      ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
+      ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
       ${
-        // Only when there is something behind the lock — a photo count of
-        // nothing on every photo-less card would be a chip of noise.
+        // Only when there is something behind the lock — «عکس: —» on every
+        // photo-less card would be a row of noise.
         offer && !c.contactRevealed && c.photoCount
-          ? fact(`${faDigits(c.photoCount)} عکس`, 'locked')
+          ? field('عکس', `${faDigits(c.photoCount)} عکس 🔒`)
           : ''
       }
-    </ul>
+      ${metaRows(c)}
+    </dl>
 
     ${c.description ? html`<p class="desc">${c.description}</p>` : ''}
 
     <footer>
-      <div class="meta">
-        ${
-          c.agency
-            ? html`<span>${c.agency.name || '—'}</span>
-                ${c.agency.code ? html`<span class="num">${c.agency.code}</span>` : ''}
-                ${c.agency.city ? html`<span>${c.agency.city}</span>` : ''}`
-            : html`<span class="masked-id">
-                ${icon('lock', 12)}
-                ${c.hasDescription || c.photoCount ? 'نمایندگی، عکس‌ها و توضیحات' : 'نمایندگی'}
-                محرمانه است
-              </span>`
-        }
-        <span class="tag">${until(c.closesAt)}</span>
-      </div>
+      ${
+        c.agency || c.isOwn
+          ? ''
+          : lockNote(c.hasDescription || c.photoCount ? 'نمایندگی، عکس‌ها و توضیحات' : 'نمایندگی')
+      }
       <!-- The strip only when there is something on it. Before the reveal it
            said «اطلاعات تماس مخفی است» under a line that had just said the
            same thing, and cost the card a whole row to do it. -->
@@ -356,14 +351,8 @@ function card(c) {
   </article>`;
 }
 
-/** One chip on the facts line. Nothing to say means no chip, not «—». */
-function fact(value, tone = '') {
-  if (!value) return '';
-  return html`<li class="${tone}">${tone === 'locked' ? icon('lock', 11) : ''}${value}</li>`;
-}
-
-function field(label, value) {
-  return html`<div><dt>${label}</dt><dd class="num">${value}</dd></div>`;
+function field(label, value, tone = '') {
+  return html`<div><dt>${label}</dt><dd class="num ${tone}">${value}</dd></div>`;
 }
 
 function mileage(km) {

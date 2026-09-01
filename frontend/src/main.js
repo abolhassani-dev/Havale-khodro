@@ -628,6 +628,40 @@ function onKeydown(event) {
   closeSidebar();
 }
 
+/**
+ * A market left open on a screen goes stale.
+ *
+ * An advertisement its agency withdraws, or a moderator takes down, is gone
+ * from the very next fetch — but a tab nobody has touched since this morning
+ * keeps showing it, and every button on that card then answers «این آگهی
+ * دیگر در دسترس نیست». Clicking one already reloads the list; this is so it
+ * does not have to be clicked.
+ *
+ * Guarded rather than eager: never over a modal, never while a field is
+ * focused (somebody came back to a filter they were half-way through typing),
+ * and only after a real absence, so switching windows for a second does not
+ * make the page jump.
+ */
+const REFRESHES_ON_RETURN = new Set([
+  'search', 'reg-search', 'car-search', 'mine', 'reg-mine', 'car-mine',
+]);
+let hiddenSince = 0;
+
+function refreshStaleList() {
+  if (document.hidden) {
+    hiddenSince = Date.now();
+    return;
+  }
+  const away = hiddenSince ? Date.now() - hiddenSince : 0;
+  hiddenSince = 0;
+  if (away < 30000) return;
+
+  const { page, modal } = getState();
+  if (modal || !REFRESHES_ON_RETURN.has(page)) return;
+  if (document.activeElement?.matches?.('input, textarea, select')) return;
+  resolve();
+}
+
 async function start() {
   watchSession();
   registerRoutes();
@@ -643,6 +677,7 @@ async function start() {
   // .main, not on the window, and a scroll event does not bubble.
   document.addEventListener('scroll', repositionPickSelects, true);
   window.addEventListener('resize', repositionPickSelects);
+  document.addEventListener('visibilitychange', refreshStaleList);
 
   startRouter();
   await boot();

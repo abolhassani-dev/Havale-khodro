@@ -170,9 +170,8 @@
 .sort.on { background: var(--primary-08); border-color: var(--primary-15); color: var(--primary-2); }
 
 /* ---- جعبه‌ی فیلترها ----
-   روی گوشی بسته است تا اولین چیزی که دیده می‌شود خودِ آگهی‌ها باشند؛ اگر
-   فیلتری فعال باشد خودش باز می‌ماند. روی صفحه‌ی بزرگ جا هست، پس همیشه باز
-   است و دستگیره‌اش هم دیده نمی‌شود. */
+   روی هر اندازه‌ای بسته است تا اولین چیزی که دیده می‌شود خودِ آگهی‌ها باشند؛
+   اگر فیلتری فعال باشد خودش باز می‌ماند. */
 
 .filters-box > summary {
   display: flex;
@@ -193,10 +192,6 @@
   transition: transform .15s;
 }
 .filters-box[open] > summary::after { transform: rotate(180deg); }
-
-@media (min-width: 721px) {
-  .filters-box > summary { display: none; }
-}
 
 .readonly {
   padding: 9px 12px;
@@ -240,50 +235,26 @@ textarea.in { resize: vertical; min-height: 60px; }
 .hcard dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5px 12px;
-  padding: 0 14px 10px;
+  gap: 2px 18px;
+  padding: 2px 14px 10px;
   font-size: 13.5px;
 }
-.hcard dt { color: var(--ink-3); display: inline; }
-.hcard dd { font-weight: 600; }
-
-/* ---- کارت خودرو ----
-   قیمت اول، بعد یک سطر واقعیت‌های کوتاه. نسخه‌ی قبلی هر واقعیت را روی دو
-   سطر می‌نوشت (عنوان بالا، مقدار پایین) و روی گوشی هر کارت یک صفحه‌ی کامل
-   می‌شد؛ نماینده‌ای که دنبال ماشین می‌گردد باید چند آگهی را در یک نگاه
-   مقایسه کند، نه یکی‌یکی اسکرول کند. */
-
-.car-price {
-  padding: 0 14px 8px;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -.02em;
-  color: var(--primary-2);
-}
-.car-price small { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
-.car-price .none { font-size: 14px; font-weight: 600; color: var(--ink-3); }
-
-.car-facts {
+.hcard dl > div {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 14px 10px;
-  list-style: none;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--line-2);
 }
-.car-facts li {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  background: var(--paper-2);
-  font-size: 12.5px;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-.car-facts li.ok { border-color: #2c6b4133; background: var(--ok-08); color: #1d4a2d; }
-.car-facts li.locked { color: var(--ink-3); }
+.hcard dt { color: var(--ink-3); flex: none; }
+.hcard dd { font-weight: 700; margin-inline-start: auto; text-align: end; }
+.hcard dd.big { font-size: 15.5px; font-weight: 800; color: var(--primary-2); letter-spacing: -.01em; }
+
+/* ---- سطرهای «عنوان: پاسخ» روی کارت ----
+   قبلاً عنوان یک سطر بود و مقدار سطر بعد، و کارت روی گوشی یک صفحه‌ی کامل
+   می‌شد. حالا هر واقعیت یک سطر است: عنوان کم‌رنگ سمت راست، جواب پررنگ سمت
+   چپ. (نسخه‌ی میانی این‌ها را چیپِ بی‌عنوان کرده بود — کوتاه‌تر بود ولی
+   «تا ۸۰ هزار کیلومتر» بی‌عنوان معلوم نمی‌کرد کدام عدد است.) */
 
 .hcard .desc {
   padding: 0 14px 10px;
@@ -2055,7 +2026,9 @@ button.af-parent:hover { text-decoration: underline; }
 /* ---- خطی که می‌گوید چه چیزی پشت «نمایش مشخصات» است ---- */
 /* یک خط، نه دو تا: قبلاً هم فوتر می‌گفت و هم یک جعبه‌ی جدا، و کارت دو بار یک
    جمله را تکرار می‌کرد. */
-.masked-id { display: inline-flex; align-items: center; gap: 5px; }
+.masked-id { display: flex; align-items: center; gap: 5px; }
+/* جمله‌ی «محرمانه است» زیر مشخصات، نه وسط سطرهای خاکستریِ بی‌عنوان. */
+.hcard footer > .masked-id { padding: 8px 14px 0; margin: 0; }
 .masked-id svg { flex: none; opacity: .7; }
 
 /* ---- کارتابل ---- */

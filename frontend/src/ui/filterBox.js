@@ -10,27 +10,20 @@ import { faDigits } from './format.js';
  * had to scroll past everything it could ask before reaching a single
  * advertisement.
  *
- * So it folds. Native `<details>`: no click key, no store entry, no state to
- * keep in sync with a re-render — and the panel opens itself whenever a
- * filter is on, so nobody hunts for why a list came back short. On a wide
- * screen there is room for both and the handle is hidden in CSS, with the
- * page deciding openness from the viewport (see `wideScreen`) because a
- * closed <details> hides its contents with `content-visibility`, which no
- * override on the child can reach.
+ * So it folds — on every screen, not only the small ones. A desk is not a
+ * reason to give a form the top of the page either; the answer is what the
+ * page is for. Native `<details>`: no click key, no store entry, no state to
+ * keep in sync with a re-render. It opens itself only when a filter is
+ * actually on, so a short list is never blamed on an empty market.
  */
 export function filterBox(active, body) {
-  return html`<details class="filters-box" ${raw(wideScreen() || active ? 'open' : '')}>
+  return html`<details class="filters-box" ${raw(active ? 'open' : '')}>
     <summary>
       فیلترها
       ${active ? html`<span class="tag">${faDigits(active)} فعال</span>` : ''}
     </summary>
     ${body}
   </details>`;
-}
-
-/** The same 721px the stylesheet calls «not a phone». */
-export function wideScreen() {
-  return typeof window !== 'undefined' && window.innerWidth >= 721;
 }
 
 /**

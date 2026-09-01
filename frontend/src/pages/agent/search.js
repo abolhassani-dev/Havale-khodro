@@ -7,6 +7,7 @@ import {
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager } from '../../ui/feedback.js';
 import { brandFilter } from '../../ui/brandFilter.js';
+import { metaRows, lockNote } from '../../ui/cardMeta.js';
 import { brandPickValue } from '../../ui/brandPicker.js';
 import { filterBox, countFilters } from '../../ui/filterBox.js';
 import { checkChips } from '../../ui/checkChips.js';
@@ -201,6 +202,7 @@ function card(h) {
       ${field('تحویل', h.deliveryDays ? `${faDigits(h.deliveryDays)} روز` : '—')}
       ${field('مدت واریز', h.depositDays ? `${faDigits(h.depositDays)} روز` : '—')}
       ${field('شرکت', h.supplierCompany || '—')}
+      ${metaRows(h)}
     </dl>
 
     ${
@@ -211,19 +213,7 @@ function card(h) {
     }
 
     <footer>
-      <div class="meta">
-        ${
-          h.agency
-            ? html`<span>${h.agency.name || '—'}</span>
-                ${h.agency.code ? html`<span class="num">${h.agency.code}</span>` : ''}
-                ${h.agency.city ? html`<span>${h.agency.city}</span>` : ''}`
-            : html`<span class="masked-id">
-                ${icon('lock', 12)}
-                ${h.hasDescription ? 'نمایندگی و توضیحات' : 'نمایندگی'} محرمانه — با «نمایش مشخصات» باز می‌شود
-              </span>`
-        }
-        <span class="tag">${until(h.closesAt)}</span>
-      </div>
+      ${h.agency || h.isOwn ? '' : lockNote(h.hasDescription ? 'نمایندگی و توضیحات' : 'نمایندگی')}
       ${contactArea(h)}
     </footer>
   </article>`;

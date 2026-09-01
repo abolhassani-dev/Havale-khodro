@@ -515,15 +515,20 @@ await step('a reveal opens the panel it paid for', async () => {
  * a market. And several at a time, because an agency that deals two models
  * used to search twice and compare the pages by memory.
  */
-await step('every market keeps its catalogue folded until it is asked for', async () => {
+await step('every market opens on the market, not on its filters', async () => {
   for (const market of ['search', 'reg-search', 'car-search']) {
     await navigate(market);
     await page.waitForSelector('.filters-box', { timeout: 8000 });
-    // A hundred and eighty brands is a catalogue, not a filter: the picker is
-    // one line until it is opened, on every screen. (Whether the panel around
-    // it is folded depends on the width — that is checked on the phone.)
-    const fold = page.locator('.pick-fold');
-    if (!(await fold.count())) throw new Error(`${market} has no برند و مدل picker`);
+    // Folded on every screen — a desk is not a reason to give a form the top
+    // of the page.
+    if (await page.locator('.filters-box[open]').count()) {
+      throw new Error(`${market} still opens with its filter panel unfolded`);
+    }
+    // And a hundred and eighty brands is a catalogue, not a filter: the
+    // picker inside stays one line until it is opened.
+    if (!(await page.locator('.pick-fold').count())) {
+      throw new Error(`${market} has no برند و مدل picker`);
+    }
     if (await page.locator('.pick-fold[open]').count()) {
       throw new Error(`${market} opens with the whole brand catalogue unfolded`);
     }
@@ -532,11 +537,7 @@ await step('every market keeps its catalogue folded until it is asked for', asyn
 
 await step('a search can name two models at once, and remembers them', async () => {
   await navigate('car-search');
-  // The panel itself is open on a wide screen and folded on a phone; open it
-  // only when it is actually folded.
-  if (!(await page.locator('.filters-box[open]').count())) {
-    await page.click('.filters-box > summary');
-  }
+  await page.click('.filters-box > summary');
   await page.click('.pick-fold > summary');
   await page.waitForSelector('[data-cell] input[data-brand]', { timeout: 8000 });
 

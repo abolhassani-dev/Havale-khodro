@@ -8,6 +8,7 @@ import {
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { brandFilter } from '../../ui/brandFilter.js';
+import { metaRows, lockNote } from '../../ui/cardMeta.js';
 import { brandPickValue } from '../../ui/brandPicker.js';
 import { filterBox, countFilters } from '../../ui/filterBox.js';
 import { jalaliDate } from '../../ui/dateInput.js';
@@ -222,6 +223,7 @@ function regCard(r) {
         // field agencies signed their own name into.
         r.planName ? field('طرح', r.planName) : ''
       }
+      ${metaRows(r)}
     </dl>
 
     ${r.conditions ? html`<p class="desc"><b>شرایط:</b> ${r.conditions}</p>` : ''}
@@ -229,19 +231,7 @@ function regCard(r) {
 
 
     <footer>
-      <div class="meta">
-        ${
-          r.agency
-            ? html`<span>${r.agency.name || '—'}</span>
-                ${r.agency.code ? html`<span class="num">${r.agency.code}</span>` : ''}
-                ${r.agency.city ? html`<span>${r.agency.city}</span>` : ''}`
-            : html`<span class="masked-id">
-                ${icon('lock', 12)}
-                ${r.hasNotes ? 'نمایندگی، طرح و شرایط' : 'نمایندگی'} محرمانه — با «نمایش مشخصات» باز می‌شود
-              </span>`
-        }
-        <span class="tag">${until(r.closesAt)}</span>
-      </div>
+      ${r.agency || r.isOwn ? '' : lockNote(r.hasNotes ? 'نمایندگی، طرح و شرایط' : 'نمایندگی')}
       ${regContact(r)}
     </footer>
   </article>`;
