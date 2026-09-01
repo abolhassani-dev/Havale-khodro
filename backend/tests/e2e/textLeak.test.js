@@ -84,7 +84,8 @@ maybe('no free text carries a contact out', () => {
       if (typeof value !== 'string') continue;
       if (key === 'id' || key.endsWith('Id') || key === 'status' || key === 'market') continue;
       if (key === 'kind' || key === 'solh' || key === 'paymentType' || key === 'method') continue;
-      if (key === 'saleType') continue;
+      if (key === 'saleType' || key === 'bodyType' || key === 'bodyGrade') continue;
+      if (key === 'paintTolerance') continue;
       data[key] = PHONE;
     }
 
@@ -148,6 +149,41 @@ maybe('no free text carries a contact out', () => {
 
     const one = await request(app)
       .get(api(`/registrations/${posted.body.data.id}`))
+      .set('Cookie', viewer.cookie)
+      .expect(200);
+
+    expect(leaks(one.body.data)).toEqual([]);
+  });
+
+  it('a خودرو shows nothing phone-shaped — and its detail table holds no prose at all', async () => {
+    const owner = await agent();
+    const viewer = await agent();
+
+    const posted = await request(app)
+      .post(api('/cars'))
+      .set('Cookie', owner.cookie)
+      .send({
+        kind: 'OFFER',
+        carModelId: models[0].id,
+        year: 1404,
+        mileageKm: 12000,
+        carColor: 'سفید',
+        carPriceToman: 985_000_000,
+        bodyStatus: { hood: 'PAINT' },
+      })
+      .expect(201);
+
+    const onListing = await poison('listing', { id: posted.body.data.id });
+    expect(onListing.length).toBeGreaterThan(0);
+
+    // This market's own table is all numbers, enums and a JSON of chips — no
+    // prose columns by design, which this asserts so a future free-text column
+    // announces itself here instead of shipping unguarded.
+    const onDetail = await poison('carDetail', { listingId: posted.body.data.id });
+    expect(onDetail).toEqual([]);
+
+    const one = await request(app)
+      .get(api(`/cars/${posted.body.data.id}`))
       .set('Cookie', viewer.cookie)
       .expect(200);
 

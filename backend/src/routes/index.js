@@ -4,6 +4,7 @@ const healthRoutes = require('./health.routes');
 const authRoutes = require('../modules/auth/auth.routes');
 const havaleRoutes = require('../modules/havale/havale.routes');
 const registrationRoutes = require('../modules/registration/registration.routes');
+const carRoutes = require('../modules/car/car.routes');
 const catalogRoutes = require('../modules/catalog/catalog.routes');
 const smsRoutes = require('../modules/sms/sms.routes');
 const subscriptionRoutes = require('../modules/subscription/subscription.routes');
@@ -23,6 +24,7 @@ router.use('/auth', authRoutes);
 router.use('/havales', havaleRoutes);
 // Each market is mounted as its own module — see modules/registration.
 router.use('/registrations', registrationRoutes);
+router.use('/cars', carRoutes);
 router.use('/catalog', catalogRoutes);
 router.use('/sms', smsRoutes);
 router.use('/subscriptions', subscriptionRoutes);
