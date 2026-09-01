@@ -33,6 +33,9 @@ function baseFields(row) {
     yearTo: d.yearTo ?? null,
     mileageKm: d.mileageKm ?? null,
     maxMileageKm: d.maxMileageKm ?? null,
+    // null on a request, and on sale advertisements posted before the field
+    // existed — «نامشخص» on screen until the seller edits.
+    warranty: d.warranty ?? null,
     carColor: row.carColor || null,
     carPriceToman: toNumber(row.carPriceToman),
     priceFromToman: toNumber(d.priceFromToman),

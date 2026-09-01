@@ -71,6 +71,15 @@ registerMarket('CAR', {
             icon: 'ticket',
           },
       { label: 'قیمت خودرو', value: toNumber(row.carPriceToman), money: true, icon: 'ticket' },
+      ...(isOffer
+        ? [
+            {
+              label: 'گارانتی',
+              value: d.warranty === null || d.warranty === undefined ? 'نامشخص' : d.warranty ? 'فعال' : 'غیرفعال',
+              icon: 'shield',
+            },
+          ]
+        : []),
       // The body rows belong to a car that exists; a request gets the one
       // line it actually said — what it will accept.
       ...(isOffer

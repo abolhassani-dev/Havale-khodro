@@ -9,7 +9,7 @@ import {
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import {
-  bodyMatrix, bodyMapView, bodyStatusOf, bodyMatrixIncomplete,
+  bodyMatrix, bodyMapView, bodyStatusOf, bodyMatrixIncomplete, setBodyPreviewType,
   GRADE_FA, GRADE_TONE, BODY_TYPE_FA,
 } from '../../ui/bodyMap.js';
 import { editedTag } from './listings.js';
@@ -36,12 +36,28 @@ const TOLERANCE_FA = {
   ANY: 'فرقی نمی‌کند',
 };
 
-const BODY_FILTERS = [
-  ['', 'فرقی نمی‌کند'],
-  ['NO_PAINT', 'فقط بدون رنگ'],
-  ['NO_REPLACE', 'تعویض نداشته باشد'],
-  ['CHASSIS_OK', 'شاسی سالم'],
-];
+const WARRANTY_FA = { true: 'فعال', false: 'غیرفعال' };
+
+function warrantyLabel(value) {
+  if (value === true || value === false) return WARRANTY_FA[value];
+  return 'نامشخص';
+}
+
+/**
+ * A row of toggles standing in for a multi-select — «رنگ‌شده + تعویض‌دار»
+ * is one search. The chips carry their own on/off state (rule 3.4) and a
+ * hidden input carries the comma-joined list the filter form submits.
+ */
+function multiChips(name, options, selected) {
+  const on = new Set(String(selected || '').split(',').filter(Boolean));
+  return html`<div class="fchips" data-multi="${name}">
+    <input type="hidden" name="${name}" value="${[...on].join(',')}">
+    ${options.map(
+      ([value, label]) => html`<button type="button" class="fchip ${on.has(value) ? 'on' : ''}"
+        data-fchip="${value}">${label}</button>`
+    )}
+  </div>`;
+}
 
 // ── loaders ─────────────────────────────────────────────────────────────────
 
@@ -57,7 +73,8 @@ export async function loadCarSearch(params) {
       priceFrom: params.priceFrom,
       priceTo: params.priceTo,
       maxMileage: params.maxMileage,
-      body: params.body,
+      grades: params.grades,
+      warranty: params.warranty,
       page: params.page || 1,
       limit: 12,
     }),
@@ -125,16 +142,6 @@ export function carSearchPage() {
         })}
       </div>
       <div class="field">
-        <label for="bodyType">نوع بدنه</label>
-        <select class="in" id="bodyType" name="bodyType">
-          <option value="">همه</option>
-          ${Object.entries(BODY_TYPE_FA).map(
-            ([value, label]) =>
-              html`<option value="${value}" ${raw(params.bodyType === value ? 'selected' : '')}>${label}</option>`
-          )}
-        </select>
-      </div>
-      <div class="field">
         <label for="yearFrom">سال ساخت از</label>
         <input class="in num" id="yearFrom" name="yearFrom" inputmode="numeric" maxlength="4"
                placeholder="۱۴۰۰" value="${params.yearFrom || ''}">
@@ -168,14 +175,19 @@ export function carSearchPage() {
           )}
         </select>
       </div>
+      <div class="field wide">
+        <label>نوع بدنه <span class="opt">(چندتایی)</span></label>
+        ${multiChips('bodyType', Object.entries(BODY_TYPE_FA), params.bodyType)}
+      </div>
+      <div class="field wide">
+        <label>وضعیت بدنه <span class="opt">(چندتایی — مثلاً رنگ‌شده + تعویض‌دار)</span></label>
+        ${multiChips('grades', Object.entries(GRADE_FA), params.grades)}
+      </div>
       <div class="field">
-        <label for="body">وضعیت بدنه</label>
-        <select class="in" id="body" name="body">
-          ${BODY_FILTERS.map(
-            ([value, label]) =>
-              html`<option value="${value}" ${raw((params.body || '') === value ? 'selected' : '')}>${label}</option>`
-          )}
-        </select>
+        <label class="fcheck">
+          <input type="checkbox" name="warranty" value="1" ${raw(params.warranty === '1' ? 'checked' : '')}>
+          فقط گارانتی فعال
+        </label>
       </div>
       <div class="actions">
         <button class="btn primary" type="submit">اعمال</button>
@@ -249,6 +261,7 @@ function card(c) {
           : field('حداکثر کارکرد', c.maxMileageKm === null ? 'فرقی نمی‌کند' : mileage(c.maxMileageKm))
       }
       ${offer ? field('رنگ', c.carColor || '—') : ''}
+      ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
       ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
       ${
         // Only when there is something behind the lock — «عکس: —» on every
@@ -370,6 +383,7 @@ export async function openCarModal(id) {
         ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
         ${offer ? field('کارکرد', mileage(c.mileageKm)) : ''}
         ${offer ? field('رنگ', c.carColor || '—') : ''}
+        ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
         ${field(offer ? 'قیمت خودرو' : 'تا قیمت', c.carPriceToman ? money(c.carPriceToman) : '—')}
         ${offer ? field('وضعیت بدنه', GRADE_FA[c.bodyGrade] || '—') : field('بدنه‌ی قابل قبول', TOLERANCE_FA[c.paintTolerance] || '—')}
       </dl>
@@ -473,6 +487,14 @@ export function carFormPage(kind) {
               </select>
             </div>
             <div class="field">
+              <label for="warranty">گارانتی</label>
+              <select class="in" id="warranty" name="warranty" required>
+                <option value="">انتخاب کنید</option>
+                <option value="true">فعال</option>
+                <option value="false">غیرفعال</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="${moneyFieldId('carPriceToman')}">قیمت خودرو (تومان)</label>
               ${moneyInput('carPriceToman', { required: true })}
             </div>`
@@ -515,7 +537,7 @@ export function carFormPage(kind) {
       offer
         ? html`
           <div class="card-h" style="border-top:1px solid var(--line-2)">
-            <h2>وضعیت بدنه ${qtip('قطعه‌هایی که رنگ، تعویض یا آسیب دارند را علامت بزنید — روی آگهی به شکل نقشه با نقطه‌های رنگی دیده می‌شود. قطعه‌ی سالم را کاری نداشته باشید.')}</h2>
+            <h2>وضعیت بدنه ${qtip('قطعه‌هایی که رنگ، تعویض یا آسیب دارند را علامت بزنید — همین‌جا روی نقشه با نقطه‌های رنگی می‌نشیند، همان‌طور که خریدار می‌بیند. قطعه‌ی سالم را کاری نداشته باشید.')}</h2>
           </div>
           <div style="padding:0 14px 8px">${bodyMatrix()}</div>
 
@@ -612,9 +634,12 @@ function showBodyType(form, bodyType) {
   if (!box) return;
   if (bodyType === null || form.carModelId?.value === '') {
     box.value = 'از روی مدل تعیین می‌شود';
+    setBodyPreviewType(form, null);
   } else {
     // Unclassified reads as سدان, the same fallback the server applies.
-    box.value = BODY_TYPE_FA[bodyType || 'SEDAN'] || BODY_TYPE_FA.SEDAN;
+    const shape = bodyType || 'SEDAN';
+    box.value = BODY_TYPE_FA[shape] || BODY_TYPE_FA.SEDAN;
+    setBodyPreviewType(form, shape);
   }
 }
 
@@ -646,6 +671,7 @@ export async function submitCar(form) {
 
   if (offer) {
     payload.carColor = entered('carColor');
+    payload.warranty = entered('warranty') === 'true';
     payload.bodyStatus = bodyStatusOf(form);
   } else {
     payload.paintTolerance = entered('paintTolerance') || 'ANY';
@@ -687,10 +713,11 @@ export async function submitCar(form) {
 /** The filter form: names go straight into the route parameters. */
 export function applyCarFilters(form) {
   const params = {};
-  for (const name of ['brandId', 'carModelId', 'bodyType', 'yearFrom', 'yearTo', 'maxMileage', 'body']) {
+  for (const name of ['brandId', 'carModelId', 'bodyType', 'yearFrom', 'yearTo', 'maxMileage', 'grades']) {
     const value = form.elements[name]?.value;
     if (value) params[name] = enDigits(value);
   }
+  if (form.elements.warranty?.checked) params.warranty = '1';
   for (const name of ['priceFrom', 'priceTo']) {
     const value = form.elements[name]?.value;
     if (value) params[name] = enDigits(value);
@@ -881,12 +908,20 @@ export function carEditModal(id) {
               </select>
             </div>
             <div class="field">
+              <label for="e-warranty">گارانتی</label>
+              <select class="in" id="e-warranty" name="warranty" required>
+                ${c.warranty === null || c.warranty === undefined ? html`<option value="">انتخاب کنید</option>` : ''}
+                <option value="true" ${raw(c.warranty === true ? 'selected' : '')}>فعال</option>
+                <option value="false" ${raw(c.warranty === false ? 'selected' : '')}>غیرفعال</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="${moneyFieldId('carPriceToman')}">قیمت خودرو (تومان)</label>
               ${moneyInput('carPriceToman', { required: true, value: c.carPriceToman || '' })}
             </div>
             <div class="field wide">
               <label>وضعیت بدنه</label>
-              ${bodyMatrix(c.bodyStatus || {})}
+              ${bodyMatrix(c.bodyStatus || {}, c.bodyType)}
             </div>`
           : html`
             <div class="field">
@@ -966,6 +1001,7 @@ export function carEditModal(id) {
       }
       if (offer) {
         payload.carColor = entered('carColor');
+        if (entered('warranty')) payload.warranty = entered('warranty') === 'true';
         payload.bodyStatus = bodyStatusOf(form);
       } else {
         payload.paintTolerance = entered('paintTolerance');

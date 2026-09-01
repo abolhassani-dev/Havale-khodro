@@ -47,6 +47,7 @@ maybe('car market', () => {
     year: YEAR - 1,
     mileageKm: 38000,
     carColor: 'سفید',
+    warranty: true,
     carPriceToman: 1_140_000_000,
     bodyStatus: { 'fnd-f-d': 'PARTIAL', hood: 'PAINT' },
     ...over,
@@ -371,7 +372,7 @@ maybe('car market', () => {
       const viewer = await agent();
 
       const noPaint = await request(app)
-        .get(api('/cars?body=NO_PAINT'))
+        .get(api('/cars?grades=NO_PAINT'))
         .set('Cookie', viewer.cookie)
         .expect(200);
       const ids = noPaint.body.data.items.map((r) => r.id);
@@ -379,10 +380,21 @@ maybe('car market', () => {
       expect(ids).not.toContain(damaged.body.data.id);
 
       const chassisOk = await request(app)
-        .get(api('/cars?body=CHASSIS_OK'))
+        .get(api('/cars?grades=NO_PAINT,MINOR_PAINT,PAINTED,REPLACED'))
         .set('Cookie', viewer.cookie)
         .expect(200);
       expect(chassisOk.body.data.items.map((r) => r.id)).not.toContain(damaged.body.data.id);
+
+      // «رنگ‌شده + شاسی‌خورده» in one search — the combination is the point.
+      const combo = await request(app)
+        .get(api('/cars?grades=PAINTED,CHASSIS_DAMAGED'))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      const comboIds = combo.body.data.items.map((r) => r.id);
+      expect(comboIds).toContain(damaged.body.data.id);
+      expect(comboIds).not.toContain(clean.body.data.id);
+
+      await request(app).get(api('/cars?grades=SHINY')).set('Cookie', viewer.cookie).expect(422);
 
       const recent = await request(app)
         .get(api(`/cars?yearFrom=${YEAR - 2}`))
@@ -413,14 +425,44 @@ maybe('car market', () => {
       const all = await request(app).get(api('/cars')).set('Cookie', viewer.cookie).expect(200);
       expect(all.body.data.items.map((r) => r.id)).toContain(req.body.data.id);
 
-      for (const body of ['NO_PAINT', 'NO_REPLACE', 'CHASSIS_OK']) {
+      for (const body of ['NO_PAINT', 'NO_PAINT,MINOR_PAINT,PAINTED', 'PAINTED,CHASSIS_DAMAGED']) {
         const res = await request(app)
-          .get(api(`/cars?body=${body}`))
+          .get(api(`/cars?grades=${body}`))
           .set('Cookie', viewer.cookie)
           .expect(200);
         expect(res.body.data.items.map((r) => r.id)).not.toContain(req.body.data.id);
         expect(res.body.data.items.every((r) => r.kind === 'OFFER')).toBe(true);
       }
+    });
+
+    it('a sale says whether the warranty is live, and the filter finds it', async () => {
+      const owner = await agent();
+      await post(owner.cookie, sale({ warranty: undefined })).expect(422);
+      await post(owner.cookie, wanted({ warranty: true })).expect(422);
+      const live = await post(owner.cookie, sale({ warranty: true })).expect(201);
+      const dead = await post(owner.cookie, sale({ warranty: false })).expect(201);
+      expect(live.body.data.warranty).toBe(true);
+      expect(dead.body.data.warranty).toBe(false);
+
+      const viewer = await agent();
+      const res = await request(app)
+        .get(api('/cars?warranty=1'))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      const ids = res.body.data.items.map((r) => r.id);
+      expect(ids).toContain(live.body.data.id);
+      expect(ids).not.toContain(dead.body.data.id);
+      expect(res.body.data.items.every((r) => r.kind === 'OFFER')).toBe(true);
+    });
+
+    it('body type takes several shapes at once', async () => {
+      const viewer = await agent();
+      const res = await request(app)
+        .get(api('/cars?bodyType=SEDAN,HATCHBACK'))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      expect(res.body.data.items.every((r) => ['SEDAN', 'HATCHBACK'].includes(r.bodyType))).toBe(true);
+      await request(app).get(api('/cars?bodyType=SEDAN,BOAT')).set('Cookie', viewer.cookie).expect(422);
     });
   });
 

@@ -50,6 +50,7 @@ function split(payload, bodyType) {
     yearTo,
     mileageKm,
     maxMileageKm,
+    warranty,
     carColor,
     carPriceToman,
     priceFromToman,
@@ -73,6 +74,7 @@ function split(payload, bodyType) {
       yearTo: yearTo ?? null,
       mileageKm: mileageKm ?? null,
       maxMileageKm: maxMileageKm ?? null,
+      warranty: warranty ?? null,
       priceFromToman:
         priceFromToman === undefined || priceFromToman === null ? null : BigInt(priceFromToman),
       ...(bodyStatus !== undefined
@@ -98,6 +100,7 @@ const DETAIL_FIELDS = {
   yearTo: ['سال ساخت تا', 'number'],
   mileageKm: ['کارکرد', 'number'],
   maxMileageKm: ['حداکثر کارکرد', 'number'],
+  warranty: ['گارانتی'],
   priceFromToman: ['قیمت از', 'money'],
   paintTolerance: ['بدنه‌ی قابل قبول'],
 };
@@ -123,6 +126,12 @@ function detailPatch(payload) {
  */
 function freeText(payload) {
   return { توضیحات: payload.description };
+}
+
+function warrantyFa(value) {
+  if (value === true) return 'فعال';
+  if (value === false) return 'غیرفعال';
+  return undefined;
 }
 
 function identity(user) {
@@ -194,20 +203,22 @@ const carService = {
     // This market's own columns reach the query through the relation — no
     // other market's query has to know these exist.
     const detail = {};
-    if (filters.bodyType) detail.bodyType = filters.bodyType;
+    if (filters.bodyType) detail.bodyType = { in: filters.bodyType };
     if (filters.yearFrom) detail.year = { gte: filters.yearFrom };
     if (filters.yearTo) detail.year = { ...(detail.year || {}), lte: filters.yearTo };
     if (filters.maxMileage !== undefined) detail.mileageKm = { lte: filters.maxMileage };
-    // Three cuts in the buyer's language rather than five grades to memorise.
-    // A body filter is a question about cars for sale, so it narrows the
-    // list to them: a request has no body, and its column default of
-    // NO_PAINT would otherwise answer «فقط بدون رنگ» with every request.
-    if (filters.body) where.kind = 'OFFER';
-    if (filters.body === 'NO_PAINT') detail.bodyGrade = 'NO_PAINT';
-    if (filters.body === 'NO_REPLACE') {
-      detail.bodyGrade = { in: ['NO_PAINT', 'MINOR_PAINT', 'PAINTED'] };
+    // Any set of grades, any combination. A body filter is a question about
+    // cars for sale, so it narrows the list to them: a request has no body,
+    // and its column default of NO_PAINT would otherwise answer «بدون رنگ»
+    // with every request. The warranty filter is the same kind of question.
+    if (filters.grades) {
+      where.kind = 'OFFER';
+      detail.bodyGrade = { in: filters.grades };
     }
-    if (filters.body === 'CHASSIS_OK') detail.bodyGrade = { not: 'CHASSIS_DAMAGED' };
+    if (filters.warranty === true) {
+      where.kind = 'OFFER';
+      detail.warranty = true;
+    }
     if (Object.keys(detail).length) where.car = detail;
 
     const serialise = (rows, revealed) =>
@@ -301,7 +312,12 @@ const carService = {
       targetId: id,
       changes: [
         ...diffOf(row, payload, LISTING_FIELDS),
-        ...diffOf(row.car || {}, payload, DETAIL_FIELDS),
+        // The warranty is a yes/no; the log says it in words, not true/false.
+        ...diffOf(
+          { ...(row.car || {}), warranty: warrantyFa(row.car?.warranty) },
+          payload.warranty === undefined ? payload : { ...payload, warranty: warrantyFa(payload.warranty) },
+          DETAIL_FIELDS
+        ),
       ],
     });
 

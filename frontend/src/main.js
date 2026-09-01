@@ -338,7 +338,7 @@ const CLICK_KEYS = new Set([
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone', 'brandExpand',
-  'bodyChip', 'bodyClean', 'bodyMarked',
+  'bodyChip', 'bodyClean', 'bodyMarked', 'fchip',
   'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete', 'carPhotoDel',
 ]);
 
@@ -380,6 +380,7 @@ function onClick(event) {
   // The body matrix keeps its state in the DOM (rule 3.4) — these never
   // touch the store, so nothing typed elsewhere in the form is lost.
   if (d.bodyChip) return handleBodyChip(el);
+  if (d.fchip !== undefined) return toggleFilterChip(el);
   if (d.bodyClean !== undefined) return handleBodyToggle(el, false);
   if (d.bodyMarked !== undefined) return handleBodyToggle(el, true);
 
@@ -642,3 +643,18 @@ async function start() {
 }
 
 start();
+
+/**
+ * One chip of a multi-select filter («سدان + هاچبک», «رنگ‌شده + تعویض‌دار»).
+ * The chip is its own state; the hidden input beside it is re-joined from
+ * whatever is lit, and the form submits that like any other field.
+ */
+function toggleFilterChip(el) {
+  el.classList.toggle('on');
+  const box = el.closest('[data-multi]');
+  if (!box) return;
+  const input = box.querySelector('input[type="hidden"]');
+  if (input) {
+    input.value = [...box.querySelectorAll('.fchip.on')].map((chip) => chip.dataset.fchip).join(',');
+  }
+}

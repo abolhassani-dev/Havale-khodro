@@ -421,6 +421,7 @@ await step('a car is posted with its body marked', async () => {
   await page.fill('#year', '1402');
   await page.fill('#mileageKm', '38000');
   await page.selectOption('#carColor', { index: 1 });
+  await page.selectOption('#warranty', 'true');
   await page.fill('#carPriceToman-in', '1140000000');
 
   // «دارد» with nothing marked must be refused before the server is asked.
@@ -434,6 +435,10 @@ await step('a car is posted with its body marked', async () => {
   await page.click('.bm-chip[data-body-chip="hood"][data-st="PAINT"]');
   const grade = (await page.textContent('[data-body-grade]')).trim();
   if (grade !== 'رنگ‌شده') throw new Error('the live grade is wrong: ' + grade);
+  // The map redraws under the seller's hand: two chips, two dots, on the
+  // shape the chosen model has.
+  const liveDots = await page.locator('[data-body-live] .bm-dot').count();
+  if (liveDots !== 2) throw new Error(`the live map shows ${liveDots} dots for two marked parts`);
 
   await page.fill('#description', 'آگهی اسموک خودرو — در پایان اجرا برداشته می‌شود');
   await page.click('form[data-form="car"] button[type=submit]');

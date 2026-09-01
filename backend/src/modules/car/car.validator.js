@@ -1,6 +1,8 @@
 const Joi = require('joi');
 
-const { CAR_KIND, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS } = require('./car.constants');
+const {
+  CAR_KIND, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS, GRADE_FA,
+} = require('./car.constants');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 
 /**
@@ -59,6 +61,10 @@ const createBody = Joi.object({
   year: requiredForOffer(year),
   mileageKm: requiredForOffer(Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX)),
   carColor: requiredForOffer(Joi.string().trim().max(40)),
+  // A yes or no, and the seller has to say which: an advertisement that is
+  // silent about the warranty reads as «no» to one buyer and «probably» to
+  // the next.
+  warranty: requiredForOffer(Joi.boolean()),
   carPriceToman: Joi.when('kind', {
     is: CAR_KIND.OFFER,
     then: toman.required(),
@@ -101,6 +107,7 @@ const updateBody = Joi.object({
   year: year,
   mileageKm: Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX),
   carColor: Joi.string().trim().max(40),
+  warranty: Joi.boolean(),
   carPriceToman: toman,
   bodyStatus: Joi.object().max(BODY_PARTS.length),
   yearFrom: year.allow(null),
@@ -111,19 +118,36 @@ const updateBody = Joi.object({
   description: Joi.string().trim().max(LIMITS.DESCRIPTION_MAX).allow('', null),
 }).min(1);
 
+// A comma-separated pick from a fixed vocabulary — «سدان,هاچبک» in the
+// address bar — validated word by word and handed on as an array.
+const pickOf = (allowed) =>
+  Joi.string()
+    .trim()
+    .max(120)
+    .custom((value, helpers) => {
+      const words = [...new Set(value.split(',').map((w) => w.trim()).filter(Boolean))];
+      if (!words.length || words.some((w) => !allowed.includes(w))) {
+        return helpers.error('any.invalid');
+      }
+      return words;
+    });
+
 const listQuery = Joi.object({
   kind: Joi.string().valid(...Object.values(CAR_KIND)),
   brandId: Joi.string().trim().max(40),
   carModelId: Joi.string().trim().max(40),
-  bodyType: Joi.string().valid('SEDAN', 'HATCHBACK', 'SUV', 'PICKUP'),
+  // Several at once: a buyer who will take a sedan or a hatchback should not
+  // have to search twice.
+  bodyType: pickOf(['SEDAN', 'HATCHBACK', 'SUV', 'PICKUP']),
   yearFrom: year,
   yearTo: year,
   priceFrom: toman,
   priceTo: toman,
   maxMileage: Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX),
-  // The body filter speaks the buyer's language — three useful cuts rather
-  // than five grades to memorise.
-  body: Joi.string().valid('NO_PAINT', 'NO_REPLACE', 'CHASSIS_OK'),
+  // The five grades, any combination — «رنگ‌شده + تعویض‌دار» is one search.
+  grades: pickOf(Object.keys(GRADE_FA)),
+  // Only cars with a live warranty.
+  warranty: Joi.boolean().truthy('1').falsy('0'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
   page: Joi.number().integer().min(1).max(MAX_PAGE),
 });

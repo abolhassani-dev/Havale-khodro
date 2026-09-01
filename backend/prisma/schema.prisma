@@ -518,6 +518,9 @@ model CarDetail {
   /// در درخواست: حداکثر کارکرد قابل قبول
   maxMileageKm Int?
 
+  /// گارانتی فعال دارد؟ در فروش الزامی است؛ در درخواست null.
+  warranty Boolean?
+
   /// کف قیمت در درخواست («قیمت از»)؛ سقفش در Listing.carPriceToman می‌نشیند
   priceFromToman BigInt?
 

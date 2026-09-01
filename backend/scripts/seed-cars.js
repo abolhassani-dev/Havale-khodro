@@ -47,6 +47,7 @@ const SAMPLES = [
     yearsAgo: 2,
     mileageKm: 38_000,
     carColor: 'سفید',
+    warranty: true,
     carPriceToman: 1_180_000_000,
     bodyStatus: {},
     description: 'یک دست، بیمه تا آخر سال، معاینه فنی دارد.',
@@ -59,6 +60,7 @@ const SAMPLES = [
     yearsAgo: 0,
     mileageKm: 0,
     carColor: 'مشکی',
+    warranty: true,
     carPriceToman: 1_350_000_000,
     bodyStatus: {},
     description: 'صفرکیلومتر، تحویل فوری از نمایندگی.',
@@ -71,6 +73,7 @@ const SAMPLES = [
     yearsAgo: 9,
     mileageKm: 176_000,
     carColor: 'نقره‌ای',
+    warranty: false,
     carPriceToman: 520_000_000,
     bodyStatus: { 'dr-f-p': 'PAINT', 'fnd-f-p': 'PARTIAL' },
     description: 'دو لکه رنگ سمت شاگرد، فنی سالم.',
@@ -83,6 +86,7 @@ const SAMPLES = [
     yearsAgo: 5,
     mileageKm: 92_000,
     carColor: 'خاکستری',
+    warranty: false,
     carPriceToman: 430_000_000,
     bodyStatus: { hood: 'REPLACE', 'chs-f-d': 'SPRAY' },
     description: null,
@@ -95,6 +99,7 @@ const SAMPLES = [
     yearsAgo: 1,
     mileageKm: 21_500,
     carColor: 'سفید',
+    warranty: true,
     carPriceToman: 3_900_000_000,
     bodyStatus: {},
     description: 'کم‌کار، سرویس‌های دوره‌ای در نمایندگی.',
@@ -107,6 +112,7 @@ const SAMPLES = [
     yearsAgo: 4,
     mileageKm: 68_000,
     carColor: 'مشکی',
+    warranty: false,
     carPriceToman: 1_950_000_000,
     bodyStatus: { 'chs-f-p': 'DAMAGE', 'fnd-f-p': 'REPLACE', hood: 'PAINT' },
     description: 'تصادف جلو، شاسی جلو شاگرد آسیب دیده — قیمت متناسب.',
@@ -119,6 +125,7 @@ const SAMPLES = [
     yearsAgo: 3,
     mileageKm: 54_000,
     carColor: 'سفید',
+    warranty: false,
     carPriceToman: 2_100_000_000,
     bodyStatus: { trunk: 'PARTIAL' },
     description: 'مناسب کار، لاستیک نو.',
@@ -244,6 +251,7 @@ function payloadFor(sample, model, year) {
       year: year - sample.yearsAgo,
       mileageKm: sample.mileageKm,
       carColor: sample.carColor,
+      warranty: sample.warranty,
       carPriceToman: sample.carPriceToman,
       bodyStatus: sample.bodyStatus,
       description: sample.description,
@@ -262,6 +270,43 @@ function payloadFor(sample, model, year) {
   };
 }
 
+/**
+ * Clears duplicates an earlier version of this script left behind.
+ *
+ * That version dealt the samples out in whatever order the database
+ * returned the demo agencies, then asked «does THIS agency already have
+ * this car?» — so a second run handed the same car to a different agency
+ * and the market showed the same نیسان پیکاپ twice. The check is now
+ * owner-agnostic, but the rows are already out there.
+ *
+ * Withdrawn rather than erased (`deletedAt`, exactly what «برداشتن» in the
+ * admin panel does), and only ever among the demo agencies' own cars: the
+ * oldest of each duplicate group stays, its reveals and reports intact.
+ */
+async function dedupe(owners, keys) {
+  const rows = await prisma.listing.findMany({
+    where: { market: 'CAR', deletedAt: null, ownerId: { in: owners.map((o) => o.id) } },
+    select: { id: true, kind: true, carModelId: true, createdAt: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const seen = new Set();
+  const extra = [];
+  for (const row of rows) {
+    const key = `${row.kind}:${row.carModelId}`;
+    // Only the cars this script posts. A demo agency that really did post
+    // two of the same model by hand keeps both.
+    if (!keys.has(key)) continue;
+    if (seen.has(key)) extra.push(row.id);
+    else seen.add(key);
+  }
+  if (!extra.length) return 0;
+
+  await prisma.listing.updateMany({ where: { id: { in: extra } }, data: { deletedAt: new Date() } });
+  logger.warn('Withdrew duplicate sample advertisements from an earlier run', { count: extra.length });
+  return extra.length;
+}
+
 async function seedCars() {
   if (config.isProduction && process.env.ALLOW_DEMO_SEED !== 'true') {
     throw new Error(
@@ -272,10 +317,15 @@ async function seedCars() {
 
   await connectDatabase();
 
-  const owners = await prisma.user.findMany({ where: { username: { in: DEMO_USERS } } });
+  const found = await prisma.user.findMany({ where: { username: { in: DEMO_USERS } } });
+  // In the order written above, not the database's: sample N belongs to
+  // owner N % 4, and the «already there» check looks for that owner — a
+  // different order on the next run would post every sample a second time.
+  const owners = DEMO_USERS.map((name) => found.find((u) => u.username === name)).filter(Boolean);
   if (!owners.length) throw new Error('Run `npm run seed:demo` first — there are no demo agencies to post as.');
 
   const year = currentJalaliYear();
+  const keys = new Set();
   let posted = 0;
   let skipped = 0;
   let photos = 0;
@@ -287,10 +337,24 @@ async function seedCars() {
     }
     const user = owners[index % owners.length];
 
+    // «Already there» is judged across all four demo owners, not the one
+    // this run would pick: an earlier run may have dealt the samples out in
+    // a different order, and a check tied to the owner would post them all
+    // a second time.
+    const demoOwners = { in: owners.map((o) => o.id) };
+    keys.add(`${sample.kind}:${model.id}`);
     const already = await prisma.listing.count({
-      where: { market: 'CAR', deletedAt: null, ownerId: user.id, kind: sample.kind, carModelId: model.id },
+      where: { market: 'CAR', deletedAt: null, ownerId: demoOwners, kind: sample.kind, carModelId: model.id },
     });
     if (already) {
+      // A sample posted before the warranty field existed says «نامشخص»
+      // on screen; the seed knows the answer, so it fills it in once.
+      if (sample.kind === 'OFFER' && sample.warranty !== undefined) {
+        await prisma.carDetail.updateMany({
+          where: { warranty: null, listing: { ownerId: demoOwners, kind: 'OFFER', carModelId: model.id, deletedAt: null } },
+          data: { warranty: sample.warranty },
+        });
+      }
       skipped += 1;
       continue;
     }
@@ -303,11 +367,16 @@ async function seedCars() {
     }
   }
 
-  logger.info('Sample خودرو advertisements ready', { posted, skipped, photos });
+  // After the loop, so it knows exactly which cars are this script's own.
+  const removed = await dedupe(owners, keys);
+
+  logger.info('Sample خودرو advertisements ready', { posted, skipped, removed, photos });
   // eslint-disable-next-line no-console
   console.log(
     `\n  posted ${posted} خودرو advertisements (${photos} placeholder photos)` +
-      (skipped ? `, ${skipped} already there\n` : '\n')
+      (skipped ? `, ${skipped} already there` : '') +
+      (removed ? `, ${removed} duplicates from earlier runs withdrawn` : '') +
+      '\n'
   );
 
   await disconnectDatabase();

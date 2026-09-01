@@ -200,7 +200,7 @@ function dotIn(crop, [x, y], status, title, mirror = false) {
  * part, a legend, and the marked parts spelled out — because a coloured dot
  * answers «where», and the sentence under it answers «what».
  */
-export function bodyMapView(bodyType, bodyStatus = {}) {
+export function bodyMapView(bodyType, bodyStatus = {}, { marked: showMarked = true } = {}) {
   const sheet = SHEETS[bodyType] || SHEETS.SEDAN;
   const marked = Object.entries(bodyStatus).filter(([key]) => PART_BY_KEY[key]);
 
@@ -228,7 +228,9 @@ export function bodyMapView(bodyType, bodyStatus = {}) {
       )}
     </div>
     ${
-      marked.length
+      !showMarked
+        ? ''
+        : marked.length
         ? html`<ul class="bm-marked">
             ${marked.map(
               ([key, status]) => html`<li>
@@ -255,9 +257,9 @@ export function bodyMapView(bodyType, bodyStatus = {}) {
  * one part before the submit handler accepts it (checked there, where the
  * refusal can point at this section).
  */
-export function bodyMatrix(bodyStatus = {}) {
+export function bodyMatrix(bodyStatus = {}, bodyType = null) {
   const has = Object.keys(bodyStatus).length > 0;
-  return html`<div class="bm-form" data-body-form>
+  return html`<div class="bm-form" data-body-form data-body-type="${bodyType || ''}">
     <input type="hidden" name="bodyStatus" value="${JSON.stringify(bodyStatus)}">
     <div class="bm-q">
       <button type="button" class="bm-pq ${has ? '' : 'on'}" data-body-clean>بدون رنگ و تعویض</button>
@@ -285,6 +287,10 @@ export function bodyMatrix(bodyStatus = {}) {
       )}
       <p class="bm-hint">هر قطعه فقط یک وضعیت می‌گیرد؛ کلیک دوباره یعنی «سالم». حداقل یک قطعه را علامت بزنید.</p>
     </div>
+    <!-- After the table on purpose: pinned to the bottom of the screen while
+         the table scrolls past above it, so the dot appears the moment the
+         chip is pressed, on any screen, without knowing the header's height. -->
+    <div class="bm-live" data-body-live>${livePreview(bodyType, bodyStatus)}</div>
   </div>`;
 }
 
@@ -305,12 +311,36 @@ export function bodyMatrixIncomplete(form) {
   return Boolean(saysMarked) && Object.keys(bodyStatusOf(form)).length === 0;
 }
 
+/**
+ * The map as the seller will see it on the card, redrawn on every chip: a
+ * dot landing where they just clicked is the check that they marked the
+ * right door. Before a model is chosen there is no shape to draw, so the
+ * box says so instead of guessing a sedan.
+ */
+function livePreview(bodyType, table) {
+  if (!bodyType) {
+    return html`<p class="bm-nomodel">نقشه‌ی بدنه بعد از انتخاب مدل خودرو همین‌جا نمایش داده می‌شود.</p>`;
+  }
+  return bodyMapView(bodyType, table, { marked: false });
+}
+
 function refresh(wrap, table) {
   wrap.querySelector('input[name="bodyStatus"]').value = JSON.stringify(table);
   const grade = gradeOf(table);
   const badge = wrap.querySelector('[data-body-grade]');
   badge.textContent = GRADE_FA[grade];
   badge.className = `bm-grade tag ${GRADE_TONE[grade]}`;
+  const live = wrap.querySelector('[data-body-live]');
+  if (live) live.innerHTML = String(livePreview(wrap.dataset.bodyType || null, table));
+}
+
+/** The form learned (or lost) the model's shape: redraw the preview on it. */
+export function setBodyPreviewType(form, bodyType) {
+  const wrap = form.querySelector('[data-body-form]');
+  if (!wrap) return;
+  wrap.dataset.bodyType = bodyType || '';
+  const live = wrap.querySelector('[data-body-live]');
+  if (live) live.innerHTML = String(livePreview(bodyType || null, bodyStatusOf(form)));
 }
 
 /** The chip click — one status per part, second click clears it. */

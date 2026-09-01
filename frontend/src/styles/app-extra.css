@@ -2089,6 +2089,46 @@ button.af-parent:hover { text-decoration: underline; }
 .bm-st { color: var(--ink-3); font-size: 12px; }
 .bm-clean { color: var(--ink-3); font-size: 12.5px; margin: 6px 0 0; }
 
+/* پیش‌نمایش زنده‌ی نقشه داخل فرم — بعد از جدول می‌آید و به پایین صفحه
+   می‌چسبد تا وقتی قطعه‌ای را می‌زنی، نقطه‌اش را همان لحظه ببینی. روی گوشی
+   فشرده: سه نما در یک ردیف کوتاه و بی‌راهنما، تا نصف صفحه را نگیرد. */
+.bm-live {
+  position: sticky; bottom: 0; z-index: 3;
+  padding: 6px 0 8px; background: var(--card);
+  border-top: 1px solid var(--line-2); margin-top: 6px;
+}
+.bm-live .bm-map { max-width: 620px; margin: 0; }
+/* .card uses overflow: hidden for its rounded corners, and a scroll
+   container ancestor is the end of the road for position: sticky — the
+   preview would stay put inside the card instead of following the screen.
+   overflow: clip clips the same corners without becoming a scroll container,
+   so the preview can follow; browsers that never heard of it keep hidden
+   and simply show the preview in place. */
+form.card[data-form="car"] { overflow: clip; }
+@media (max-width: 640px) {
+  .bm-live .bm-views { grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+  .bm-live .bm-views .bm-view:first-child { grid-column: auto; }
+  .bm-live .bm-legend { display: none; }
+  .bm-live .bm-tag { font-size: 10px; }
+}
+.bm-nomodel {
+  margin: 0; padding: 14px; text-align: center; font-size: 12.5px; color: var(--ink-3);
+  border: 1px dashed var(--line); border-radius: 10px; background: var(--primary-04, #f6f4ee);
+}
+
+/* چیپ‌های چندانتخابی فیلتر جستجو */
+.filters .field.wide { flex-basis: 100%; }
+.fchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fchip {
+  font: inherit; font-size: 12.5px; font-weight: 700; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink-2); border-radius: 999px; padding: 5px 12px;
+  cursor: pointer; line-height: 1.4;
+}
+.fchip:hover { border-color: #b3a88e; }
+.fchip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.fcheck { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; padding-top: 26px; }
+.fcheck input { width: 16px; height: 16px; accent-color: var(--primary); }
+
 /* ---- فرم ماتریس (ثبت آگهی) ---- */
 .bm-q { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 2px 0 10px; }
 .bm-pq {

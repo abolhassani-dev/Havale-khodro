@@ -168,6 +168,7 @@ maybe('no free text carries a contact out', () => {
         year: 1404,
         mileageKm: 12000,
         carColor: 'سفید',
+        warranty: false,
         carPriceToman: 985_000_000,
         bodyStatus: { hood: 'PAINT' },
       })
