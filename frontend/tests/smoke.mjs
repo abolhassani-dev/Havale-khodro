@@ -391,6 +391,88 @@ await step('the ثبت‌نامی deadline is picked in the Iranian calendar', a
   }
 });
 
+/**
+ * The خودرو market, end to end.
+ *
+ * The body map is the one component in the product where the form's chips and
+ * the display's dots must agree part for part — so the same run marks two
+ * parts, posts the advertisement, and then checks the dots came out on the
+ * map with the derived grade beside them.
+ */
+let smokeCarId = null;
+
+await step('a car is posted with its body marked', async () => {
+  await navigate('car-sell');
+  await page.waitForSelector('form[data-form="car"]', { timeout: 8000 });
+
+  await page.selectOption('form[data-form="car"] select[name="brand"]', { index: 1 });
+  await page.waitForFunction(() => {
+    const f = document.querySelector('form[data-form="car"]');
+    return f && !f.carModelId.disabled && f.carModelId.options.length > 1;
+  }, null, { timeout: 8000 });
+  await page.selectOption('form[data-form="car"] select[name="carModelId"]', { index: 1 });
+
+  // The body shape came off the catalogue, not off a seller choice.
+  const shown = await page.inputValue('[data-body-type-show]');
+  if (!shown || shown.includes('تعیین می‌شود')) {
+    throw new Error('choosing a model did not show its body type: ' + shown);
+  }
+
+  await page.fill('#year', '1402');
+  await page.fill('#mileageKm', '38000');
+  await page.selectOption('#carColor', { index: 1 });
+  await page.fill('#carPriceToman-in', '1140000000');
+
+  // «دارد» with nothing marked must be refused before the server is asked.
+  await page.click('[data-body-marked]');
+  await page.click('form[data-form="car"] button[type=submit]');
+  await page.waitForTimeout(400);
+  const refusal = await page.locator('form[data-form="car"] .banner.danger').count();
+  if (!refusal) throw new Error('an empty «دارد» table was not refused');
+
+  await page.click('.bm-chip[data-body-chip="fnd-f-d"][data-st="PARTIAL"]');
+  await page.click('.bm-chip[data-body-chip="hood"][data-st="PAINT"]');
+  const grade = (await page.textContent('[data-body-grade]')).trim();
+  if (grade !== 'رنگ‌شده') throw new Error('the live grade is wrong: ' + grade);
+
+  await page.fill('#description', 'آگهی اسموک خودرو — در پایان اجرا برداشته می‌شود');
+  await page.click('form[data-form="car"] button[type=submit]');
+  await page.waitForSelector('table', { timeout: 8000 });
+
+  smokeCarId = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/cars/mine?status=ACTIVE', { credentials: 'include' })
+      .then((r) => r.json());
+    return (res.data?.items || []).find((c) => c.isOwn && c.bodyGrade === 'PAINTED')?.id || null;
+  });
+  if (!smokeCarId) throw new Error('the posted car is not in «خودروهای من»');
+});
+
+await step('the map shows the marked parts as dots, grade and all', async () => {
+  await navigate('car-search');
+  await page.waitForSelector('.hcard, .empty', { timeout: 8000 });
+
+  await page.click(`[data-open-car="${smokeCarId}"]`);
+  await page.waitForSelector('.modal .bm-map', { timeout: 8000 });
+  const dots = await page.locator('.modal .bm-dot').count();
+  if (dots !== 2) throw new Error(`2 parts were marked, the map shows ${dots} dots`);
+  const modalText = await page.textContent('.modal');
+  if (!modalText.includes('رنگ‌شده')) throw new Error('the derived grade is not on the dialogue');
+  if (!modalText.includes('گلگیر جلو راننده')) {
+    throw new Error('the marked part is not spelled out under the map');
+  }
+  await page.click('[data-close-modal]');
+});
+
+await step('the run removes the car it posted', async () => {
+  if (!smokeCarId) throw new Error('nothing was captured to clean up');
+  const status = await page.evaluate(
+    (id) => fetch(`/api/v1/cars/${id}`, { method: 'DELETE', credentials: 'include' })
+      .then((r) => r.status),
+    smokeCarId
+  );
+  if (status !== 200) throw new Error('delete answered ' + status);
+});
+
 await step('subscription page loads with a real invoice', async () => {
   await navigate('subscription');
   // Waits for the data, not just the frame: the previous version read the DOM
