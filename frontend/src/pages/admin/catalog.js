@@ -191,16 +191,26 @@ function brandDetail(brandId) {
     ${
       models.length
         ? html`<table>
-            <thead><tr><th>مدل</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead>
+            <thead><tr><th>مدل</th><th>نوع بدنه</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead>
             <tbody>
               ${models.map(
                 (model) => html`<tr class="${model.isActive ? '' : 'dim'}">
                   <td>${model.name}</td>
+                  <td>
+                    ${
+                      // Null means nobody — rule or person — has decided, and
+                      // the market falls back to سدان. Shown faded so an
+                      // operator can tell a decision from a default.
+                      model.bodyType
+                        ? BODY_LABEL[model.bodyType] || model.bodyType
+                        : html`<span class="sub">سدان (پیش‌فرض)</span>`
+                    }
+                  </td>
                   <td class="num">${faDigits(model.sortOrder)}</td>
                   <td>${activeTag(model.isActive)}</td>
                   <td class="row-actions">
                     <button class="btn sm" data-edit-model="${model.id}" data-name="${model.name}"
-                            data-order="${model.sortOrder}">ویرایش</button>
+                            data-order="${model.sortOrder}" data-body="${model.bodyType || ''}">ویرایش</button>
                     <button class="btn sm" data-toggle-model="${model.id}"
                             data-active="${model.isActive}" data-name="${model.name}">
                       ${model.isActive ? 'غیرفعال' : 'فعال'}
@@ -253,7 +263,7 @@ export function handleCatalogClick(d) {
 
   if (d.editCompany) return editModal('company', d.editCompany, d.name, d.order);
   if (d.editBrand) return editModal('brand', d.editBrand, d.name, d.order, d.company || '');
-  if (d.editModel) return editModal('model', d.editModel, d.name, d.order);
+  if (d.editModel) return editModal('model', d.editModel, d.name, d.order, '', d.body || '');
   if (d.editColor) return editModal('color', d.editColor, d.name, d.order);
 
   if (d.toggleCompany) return toggle('company', d.toggleCompany, d.active !== 'true');
@@ -277,7 +287,14 @@ const UPDATERS = {
 
 const LABELS = { company: 'شرکت', brand: 'برند', model: 'مدل', color: 'رنگ' };
 
-function editModal(kind, id, name, order, companyId = '') {
+export const BODY_LABEL = {
+  SEDAN: 'سدان',
+  HATCHBACK: 'هاچبک',
+  SUV: 'شاسی‌بلند',
+  PICKUP: 'وانت / دوکابین',
+};
+
+function editModal(kind, id, name, order, companyId = '', body = '') {
   const companies = getState().data.catalog?.companies || [];
 
   openModal({
@@ -293,6 +310,30 @@ function editModal(kind, id, name, order, companyId = '') {
         <label for="c-order">ترتیب نمایش</label>
         <input class="in num" id="c-order" name="sortOrder" inputmode="numeric" value="${order}">
       </div>
+
+      ${
+        // Only models have a body shape. The seller never picks it — this
+        // dropdown is where a person overrules the boot-time classifier, so a
+        // never-touched model says so instead of masquerading as a decision.
+        kind === 'model'
+          ? html`<div class="field">
+              <label for="c-body">نوع بدنه</label>
+              <select class="in" id="c-body" name="bodyType">
+                ${Object.entries(BODY_LABEL).map(
+                  ([value, fa]) =>
+                    html`<option value="${value}" ${raw(body === value ? 'selected' : '')}>${fa}</option>`
+                )}
+              </select>
+              ${
+                body
+                  ? ''
+                  : html`<p style="color:var(--ink-3);font-size:12px;margin:2px 0 0">
+                      هنوز کسی تعیینش نکرده — در بازار خودرو «سدان» فرض می‌شود. با ثبت، انتخاب شما قطعی می‌شود.
+                    </p>`
+              }
+            </div>`
+          : ''
+      }
       <p style="color:var(--ink-3);font-size:12px">
         تغییر نام روی آگهی‌های قبلی اثر ندارد — هر آگهی نام لحظه‌ی ثبتش را نگه داشته است.
       </p>`,
@@ -301,6 +342,7 @@ function editModal(kind, id, name, order, companyId = '') {
       const payload = {
         name: form.name.value.trim(),
         sortOrder: Number(form.sortOrder.value || 0),
+        ...(kind === 'model' ? { bodyType: form.bodyType.value } : {}),
       };
 
       await UPDATERS[kind](id, payload);

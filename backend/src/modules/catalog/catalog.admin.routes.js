@@ -34,6 +34,9 @@ const slug = Joi.string()
   .max(60);
 const sortOrder = Joi.number().integer().min(0).max(9999);
 const isActive = Joi.boolean();
+// The body shape the خودرو market draws and filters by. Settable only here:
+// the classifier fills blanks at boot, this is where a person overrules it.
+const bodyType = Joi.string().valid('SEDAN', 'HATCHBACK', 'SUV', 'PICKUP');
 
 /** Records who changed the catalogue, so an unexpected change can be traced. */
 async function log(actor, summary) {
@@ -232,7 +235,7 @@ router.post(
  */
 router.patch(
   '/models/:id',
-  validate({ params: idParam, body: Joi.object({ name, sortOrder, isActive }).min(1) }),
+  validate({ params: idParam, body: Joi.object({ name, sortOrder, isActive, bodyType }).min(1) }),
   asyncHandler(async (req, res) => {
     const model = await catalogRepository.updateModel(req.params.id, req.body);
     await log(req.user, `model:${model.name}`);

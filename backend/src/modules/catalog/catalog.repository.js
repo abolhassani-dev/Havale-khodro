@@ -38,7 +38,9 @@ const catalogRepository = {
     return prisma.carModel.findMany({
       where: { brandId, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true },
+      // bodyType rides along for the خودرو form, which shows it read-only the
+      // moment a model is picked. Null means «not classified yet» — سدان.
+      select: { id: true, name: true, bodyType: true },
     });
   },
 
@@ -61,6 +63,7 @@ const catalogRepository = {
       select: {
         id: true,
         name: true,
+        bodyType: true,
         brand: { select: { id: true, name: true, company: { select: { name: true } } } },
       },
     });
@@ -113,7 +116,7 @@ const catalogRepository = {
     return prisma.carModel.findMany({
       where: { brandId },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true, isActive: true, sortOrder: true },
+      select: { id: true, name: true, isActive: true, sortOrder: true, bodyType: true },
     });
   },
 

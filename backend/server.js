@@ -8,6 +8,7 @@ const logger = require('./src/utils/logger');
 const { connectDatabase, disconnectDatabase } = require('./src/config/database');
 const registerShutdown = require('./src/hooks/shutdown');
 const { startBlockList } = require('./src/middlewares/blockedIp');
+const { classifyUnsetBodyTypes } = require('./src/modules/catalog/bodyClassifier');
 
 /**
  * How many processes serve the API. One, on the machine this runs on today.
@@ -54,6 +55,16 @@ async function start() {
   // process on purpose: every worker turns requests away on its own, so each
   // one needs its own copy. Nothing here must happen exactly once.
   startBlockList();
+
+  // Body shapes for catalogue models that have none yet. One worker is
+  // enough — after the first run this is a single indexless count of zero
+  // rows — and a failure must not stop the server: the panel falls back to
+  // «سدان» until the next boot classifies whatever is still null.
+  if (!cluster.isWorker || cluster.worker.id === 1) {
+    classifyUnsetBodyTypes().catch((err) =>
+      logger.error('body-type classification failed', { error: err.message })
+    );
+  }
 
   const server = app.listen(config.port, () => {
     const who = cluster.isWorker ? ` worker ${cluster.worker.id}` : '';

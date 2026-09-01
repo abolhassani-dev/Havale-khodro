@@ -58,6 +58,14 @@ enum ListingMarket {
   REGISTRATION // ثبت‌نامی
 }
 
+// The body shape of a catalogue model — decided by the platform, not the seller.
+enum BodyType {
+  SEDAN // سدان
+  HATCHBACK // هاچبک
+  SUV // شاسی‌بلند و کراس‌اوور
+  PICKUP // وانت و دوکابین
+}
+
 enum HavaleKind {
   OFFER
   REQUEST
@@ -874,6 +882,18 @@ model CarModel {
   name      String
   isActive  Boolean @default(true)
   sortOrder Int     @default(0)
+
+  // The body shape, for the خودرو market: it decides which cut-out the body
+  // map draws and it is a search filter. It lives on the catalogue — never on
+  // the advertisement — because it is a fact about the model, not about the
+  // seller's car: a دنا پلاس is a sedan whoever is selling it, and a seller
+  // must not be able to say otherwise.
+  //
+  // Nullable on purpose: null means «nobody has decided yet» and the panel
+  // falls back to sedan. The boot-time classifier fills ONLY nulls, so a value
+  // an admin set by hand — including an explicit SEDAN — is never overwritten
+  // by a rule. A non-null default could not tell those two apart.
+  bodyType BodyType?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
