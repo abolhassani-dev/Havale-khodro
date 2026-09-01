@@ -532,6 +532,34 @@ maybe('car market', () => {
     });
   });
 
+  /**
+   * Walking the API by hand.
+   *
+   * `/cars/photos` is a path, not an advertisement — it used to match the
+   * `/:id` route and be answered «آگهی خودرو پیدا نشد», as though somebody
+   * had withdrawn a listing called «photos». Nothing was ever disclosed
+   * either way; what changes is that a path which is not an id is told it is
+   * not a path, by the same 404 every unknown route gets.
+   */
+  describe('paths that are not advertisements', () => {
+    it('answers a route 404 for a segment that is not an id', async () => {
+      const viewer = await agent();
+      for (const path of ['/cars/photos', '/cars/photos/', '/cars/x', '/cars/..']) {
+        const res = await request(app).get(api(path)).set('Cookie', viewer.cookie).expect(404);
+        expect(res.body.error.message).toMatch(/^مسیر /);
+        expect(res.body.error.message).not.toMatch(/آگهی خودرو/);
+      }
+
+      // And a real id still reaches the market.
+      const owner = await agent();
+      const posted = await post(owner.cookie, sale()).expect(201);
+      await request(app)
+        .get(api(`/cars/${posted.body.data.id}`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+    });
+  });
+
   describe('the owner’s side', () => {
     it('edits move the grade with the table, and are marked', async () => {
       const owner = await agent();

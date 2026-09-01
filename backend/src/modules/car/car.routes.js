@@ -20,6 +20,20 @@ require('./car.market');
 const router = Router();
 
 /**
+ * What an identifier looks like, written into the route itself.
+ *
+ * Without it, `/cars/photos` — a path that is a typo, or somebody walking the
+ * API by hand — matched `/:id` and was answered «آگهی خودرو پیدا نشد», as
+ * though «photos» were an advertisement that had been withdrawn. Nothing was
+ * disclosed either way, but a path that is not an id should be told it is not
+ * a path, not given a market's answer about a thing that never existed.
+ *
+ * Ids here are cuid (25 characters); the range is wide enough that a uuid
+ * would pass too, if the schema ever changes under this.
+ */
+const ID = ':id([A-Za-z0-9_-]{10,40})';
+
+/**
  * @openapi
  * /cars/photos/{fileName}:
  *   get:
@@ -121,7 +135,7 @@ router.post(
  *     summary: Attach photos to a sale advertisement (owner only, six total)
  */
 router.post(
-  '/:id/photos',
+  `/${ID}/photos`,
   requireActiveSubscription,
   upload.array('photos', MAX_FILES),
   discardOnFailure,
@@ -158,7 +172,7 @@ router.delete(
  *     summary: One advertisement, masked unless its contact was revealed
  */
 router.get(
-  '/:id',
+  `/${ID}`,
   validate(schema.byId),
   asyncHandler(async (req, res) =>
     success(res, await carService.getById({ user: req.user, access: req.access, id: req.params.id }))
@@ -173,7 +187,7 @@ router.get(
  *     summary: Edit an advertisement that is still live
  */
 router.patch(
-  '/:id',
+  `/${ID}`,
   requireActiveSubscription,
   validate(schema.update),
   asyncHandler(async (req, res) =>
@@ -193,7 +207,7 @@ router.patch(
  *     summary: Give it a fresh week
  */
 router.post(
-  '/:id/renew',
+  `/${ID}/renew`,
   requireActiveSubscription,
   validate(schema.byId),
   asyncHandler(async (req, res) =>
@@ -209,7 +223,7 @@ router.post(
  *     summary: Mark it sold, which closes the advertisement
  */
 router.post(
-  '/:id/fulfill',
+  `/${ID}/fulfill`,
   validate(schema.byId),
   asyncHandler(async (req, res) =>
     success(
@@ -228,7 +242,7 @@ router.post(
  *     summary: Take it out of the market — the row and its history stay
  */
 router.delete(
-  '/:id',
+  `/${ID}`,
   validate(schema.byId),
   asyncHandler(async (req, res) =>
     success(res, await carService.remove({ user: req.user, id: req.params.id }), MESSAGES.LISTING.DELETED)
@@ -247,7 +261,7 @@ router.delete(
  *       photos and the description on this advertisement.
  */
 router.post(
-  '/:id/reveal',
+  `/${ID}/reveal`,
   requireActiveSubscription,
   validate(schema.byId),
   asyncHandler(async (req, res) =>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>صفحه پیدا نشد — فرانوکار</title>
+<link rel="icon" href="/assets/favicon.svg?v=2">
+
+<!--
+  Served by nginx for the errors nginx itself produces: a missing file, a
+  directory nobody may list, a dotfile. Standalone on purpose — those are the
+  moments when depending on the application's stylesheet and its JavaScript
+  bundle means depending on the thing that may be the reason for the error.
+  The reasoning, and the nginx side of it, are in deploy/nginx/app.conf.
+-->
+
+<style>
+  @font-face {
+    font-family: Vazirmatn;
+    src: url('/assets/vazirmatn.woff2') format('woff2');
+    font-weight: 100 900;
+    font-display: swap;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #ebe6d9;
+    color: #1b2422;
+    font-family: Vazirmatn, system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+    line-height: 1.9;
+  }
+
+  .box {
+    width: 100%;
+    max-width: 460px;
+    background: #fff;
+    border: 1px solid #d5cdba;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px #1b242218, 0 2px 6px #1b24220d;
+    padding: 34px 28px 28px;
+    text-align: center;
+  }
+
+  .mark {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 16px;
+    border-radius: 15px;
+    background: linear-gradient(140deg, #178a7b, #0a423c);
+    color: #fff;
+    font-size: 26px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  h1 { margin: 0 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  p  { margin: 0 0 6px; font-size: 14px; color: #46524e; }
+  .quiet { font-size: 12.5px; color: #6f7b76; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 22px;
+    padding: 11px 26px;
+    border-radius: 11px;
+    background: linear-gradient(180deg, #11685e, #0e5a51);
+    border: 1px solid #0a423c;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .btn:hover { background: #0a423c; }
+
+  .rule { height: 1px; background: #e9e4d6; margin: 22px 0 14px; }
+</style>
+</head>
+<body>
+
+<main class="box">
+  <div class="mark" aria-hidden="true">؟</div>
+
+  <h1>چنین صفحه‌ای وجود ندارد</h1>
+  <p>آدرسی که باز کرده‌اید روی این سایت نیست، یا دسترسی به آن باز نیست.</p>
+
+  <a class="btn" href="/">بازگشت به صفحه‌ی اصلی</a>
+
+  <div class="rule"></div>
+  <p class="quiet">اگر از داخل پنل به این صفحه رسیده‌اید، لطفاً از بخش «پشتیبانی» یک تیکت بزنید.</p>
+</main>
+
+</body>
+</html>

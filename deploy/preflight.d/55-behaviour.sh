@@ -107,6 +107,42 @@ else
       "فوری: در app.conf مسدود کنید و بعد همه‌ی رازهای داخلشان را عوض کنید"
 fi
 
+# ---- پوشه‌ها فهرست نمی‌شوند، و خطا صفحه‌ی خودمان است ----
+#
+# فهرست شدن یک پوشه، نقشه‌ی سرور است که برای هر کسی که پرسیده کشیده می‌شود؛
+# و صفحه‌ی خطای پیش‌فرض nginx برای نماینده‌ای که آدرس را اشتباه زده، «سایت
+# خراب است» خوانده می‌شود نه «این آدرس نیست».
+listed=""
+for dir in /assets/ /src/ /src/ui/; do
+  body="$(curl -s --max-time 10 "${CURL_OPTS[@]}" "$BASE$dir" 2>/dev/null | head -c 2000)"
+  echo "$body" | grep -qiE '<title>Index of|autoindex' && listed="$listed $dir"
+done
+if [ -z "$listed" ]; then
+  ok "هیچ پوشه‌ای فهرست نمی‌شود"
+else
+  bad "محتویات این پوشه‌ها از وب فهرست می‌شود:$listed" "autoindex off; در app.conf"
+fi
+
+miss="$(curl -s --max-time 10 "${CURL_OPTS[@]}" "$BASE/assets/" 2>/dev/null | head -c 4000)"
+if echo "$miss" | grep -q 'بازگشت به صفحه‌ی اصلی'; then
+  ok "خطاها صفحه‌ی خطای خود سایت را نشان می‌دهند"
+elif echo "$miss" | grep -qi '<center>nginx</center>\|<title>40'; then
+  warn "صفحه‌ی خطای پیش‌فرض nginx نمایش داده می‌شود" \
+       "error_page 403 404 /error.html; در app.conf و وجود frontend/error.html"
+else
+  skip "صفحه‌ی خطا شناسایی نشد"
+fi
+
+# سربرگ‌های امنیتی روی خود کد برنامه — nginx آن‌ها را به بلاکی که سربرگ
+# خودش را دارد به ارث نمی‌دهد، و /src/ و /assets/ هر دو Cache-Control دارند.
+hdrs="$(curl -s -I --max-time 10 "${CURL_OPTS[@]}" "$BASE/src/main.js" 2>/dev/null)"
+if echo "$hdrs" | grep -qi 'x-content-type-options' && echo "$hdrs" | grep -qi 'content-security-policy'; then
+  ok "سربرگ‌های امنیتی روی فایل‌های /src/ هم هست"
+else
+  bad "فایل‌های /src/ بدون سربرگ امنیتی سرو می‌شوند" \
+      "include /etc/nginx/conf.d/security-headers.inc; داخل location /src/ و /assets/"
+fi
+
 # Compression: not correctness, but the difference between a panel that feels
 # fast on a phone connection and one that does not.
 #
