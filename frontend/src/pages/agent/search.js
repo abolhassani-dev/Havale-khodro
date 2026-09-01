@@ -6,6 +6,10 @@ import {
   num, money, faDigits, until, KIND_LABEL, SOLH_LABEL, PAYMENT_TYPE_LABEL,
 } from '../../ui/format.js';
 import { emptyBox, toast, openModal, qtip, pager } from '../../ui/feedback.js';
+import { brandFilter } from '../../ui/brandFilter.js';
+import { brandPickValue } from '../../ui/brandPicker.js';
+import { filterBox, countFilters } from '../../ui/filterBox.js';
+import { checkChips } from '../../ui/checkChips.js';
 import { usageChip } from '../../ui/shell.js';
 import { moneyInput } from '../../ui/moneyInput.js';
 import { editedTag } from './listings.js';
@@ -20,14 +24,20 @@ import { resolve } from '../../router.js';
  * tell the truth afterwards.
  */
 
+/** Everything in the address that is a filter — not the tab or the page. */
+export const HAVALE_FILTER_KEYS = [
+  'brandIds', 'carModelIds', 'carColors', 'solh',
+  'maxDeliveryDays', 'minAmount', 'maxAmount', 'network',
+];
+
 export async function loadSearch(params) {
-  const [tree, list, usage, brandModels] = await Promise.all([
+  const [tree, list, usage, pickedModels] = await Promise.all([
     catalog.get(),
     havale.list({
       kind: params.kind,
-      carModelId: params.carModelId,
-      brandId: params.brandId,
-      carColor: params.carColor,
+      carModelIds: params.carModelIds,
+      brandIds: params.brandIds,
+      carColors: params.carColors,
       solh: params.solh,
       maxDeliveryDays: params.maxDeliveryDays,
       minAmount: params.minAmount,
@@ -39,11 +49,19 @@ export async function loadSearch(params) {
       limit: 12,
     }),
     havale.usage().catch(() => null),
-    // The model filter's options, when the URL already names a brand.
-    params.brandId ? catalog.brandModels(params.brandId).catch(() => ({ models: [] })) : { models: [] },
+    // The ticked models, with the brand each sits under — a shared address
+    // carries only their ids, and the picker groups them by brand.
+    pickedModelsOf(params.carModelIds),
   ]);
 
-  return { tree, list, usage, searchModels: brandModels.models };
+  return { tree, list, usage, pickedModels };
+}
+
+/** @returns {Promise<Array<{id: string, brandId: string}>>} */
+export async function pickedModelsOf(ids) {
+  if (!ids) return [];
+  const res = await catalog.models(ids).catch(() => null);
+  return res?.models || [];
 }
 
 export function searchPage() {
@@ -52,11 +70,6 @@ export function searchPage() {
   const items = list?.items || [];
 
   const brands = tree?.brands || [];
-  // Only the chosen brand's models — a flat list of all 2044 was unusable as a
-  // dropdown and heavy as a payload. Loaded by the route when the URL already
-  // names a brand, and swapped in place by `onSearchBrandChange` when one is
-  // picked in the form.
-  const models = data.searchModels || [];
 
   return html`
   <div class="card">
@@ -72,11 +85,16 @@ export function searchPage() {
       ${usageChip(usage)}
     </div>
 
+    ${filterBox(countFilters(params, HAVALE_FILTER_KEYS), html`
     <form class="filters" data-form="search-filters">
       <input type="hidden" name="kind" value="${params.kind || ''}">
-      ${select('brandId', 'برند', [['', 'همه'], ...brands.map((b) => [b.id, b.name])], params.brandId)}
-      ${select('carModelId', 'مدل', [['', 'همه'], ...models.map((m) => [m.id, m.name])], params.carModelId)}
-      ${select('carColor', 'رنگ', [['', 'همه'], ...(tree?.colors || []).map((c) => [c.name, c.name])], params.carColor)}
+      <div class="field wide">
+        ${brandFilter(brands, { brandIds: params.brandIds, pickedModels: data.pickedModels })}
+      </div>
+      <div class="field wide">
+        <label>رنگ <span class="opt">(چندتایی)</span></label>
+        ${checkChips('carColors', (tree?.colors || []).map((c) => [c.name, c.name]), params.carColors)}
+      </div>
       ${select('solh', 'واگذاری', [['', 'همه'], ['SOLH', 'صلح'], ['VEKALATI', 'وکالتی']], params.solh)}
       <div class="field">
         <label for="maxDeliveryDays">تحویل حداکثر (روز)</label>
@@ -96,11 +114,11 @@ export function searchPage() {
             </label>`
           : ''
       }
-      <div class="field" style="align-self:end;display:flex;gap:8px">
+      <div class="actions">
         <button class="btn primary" type="submit">اعمال</button>
         <button class="btn" type="button" data-go="search">پاک کردن</button>
       </div>
-    </form>
+    </form>`)}
   </div>
 
   ${
@@ -142,38 +160,6 @@ function kindParams(params, kind) {
   if (kind) rest.kind = kind;
   else delete rest.kind;
   return new URLSearchParams(rest).toString();
-}
-
-/**
- * Picking a brand in the filter form swaps the model options in place.
- *
- * DOM only — the filters are a form the reader is half-way through, and a
- * store update would re-render the page and empty every other filter box.
- */
-export async function onSearchBrandChange(form) {
-  const select = form.carModelId;
-  const brandId = form.brandId.value;
-
-  select.innerHTML = '';
-  const all = document.createElement('option');
-  all.value = '';
-  all.textContent = brandId ? 'در حال بارگذاری…' : 'همه';
-  select.appendChild(all);
-  if (!brandId) return;
-
-  try {
-    const { models } = await catalog.brandModels(brandId);
-    if (form.brandId.value !== brandId) return;
-    all.textContent = 'همه';
-    models.forEach((m) => {
-      const option = document.createElement('option');
-      option.value = m.id;
-      option.textContent = m.name;
-      select.appendChild(option);
-    });
-  } catch {
-    all.textContent = 'همه';
-  }
 }
 
 function select(name, label, options, current) {

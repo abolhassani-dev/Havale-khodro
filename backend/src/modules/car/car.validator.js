@@ -3,6 +3,7 @@ const Joi = require('joi');
 const {
   CAR_KIND, CAR_SORT, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS, GRADE_FA,
 } = require('./car.constants');
+const { idList, nameList } = require('../../utils/queryList');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 
 /**
@@ -134,8 +135,11 @@ const pickOf = (allowed) =>
 
 const listQuery = Joi.object({
   kind: Joi.string().valid(...Object.values(CAR_KIND)),
-  brandId: Joi.string().trim().max(40),
-  carModelId: Joi.string().trim().max(40),
+  // Brands, models and colours all take several at a time — see
+  // utils/queryList; the same reader wants «دنا یا سمند», not two searches.
+  brandIds: idList(),
+  carModelIds: idList(),
+  carColors: nameList(),
   // Several at once: a buyer who will take a sedan or a hatchback should not
   // have to search twice.
   bodyType: pickOf(['SEDAN', 'HATCHBACK', 'SUV', 'PICKUP']),

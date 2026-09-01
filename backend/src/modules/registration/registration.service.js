@@ -205,8 +205,8 @@ const registrationService = {
     };
 
     if (filters.kind) where.kind = filters.kind;
-    if (filters.carModelId) where.carModelId = filters.carModelId;
-    if (filters.brandId) where.carModel = { brandId: filters.brandId };
+    if (filters.carModelIds) where.carModelId = { in: filters.carModelIds };
+    if (filters.brandIds) where.carModel = { brandId: { in: filters.brandIds } };
     if (filters.city) where.owner = { ...where.owner, city: filters.city };
 
     // Filters that live on this market's own table reach it through the

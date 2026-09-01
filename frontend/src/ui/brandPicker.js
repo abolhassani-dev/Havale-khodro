@@ -41,10 +41,21 @@ import { catalog } from '../api/index.js';
  * @param {Array}  [options.selectedModels] [{id, brandId}] single-model grants
  * @param {object} [options.modelCeiling]   {brandId: [modelIds]} — a parent's
  *                          partial brands: only these models may be offered
+ * @param {string} [options.title]      the heading; the market filters use the
+ *                          same picker to ask a different question
+ * @param {string} [options.emptyLabel] what «nothing ticked» means here — for
+ *                          a grant it is a warning, for a filter it is «همه»
  */
 export function brandPicker(
   brands,
-  { note = '', selected = [], selectedModels = [], modelCeiling = null } = {}
+  {
+    note = '',
+    selected = [],
+    selectedModels = [],
+    modelCeiling = null,
+    title = 'برندها و مدل‌های مجاز برای ثبت آگهی',
+    emptyLabel = 'چیزی انتخاب نشده — این حساب نمی‌تواند آگهی ثبت کند.',
+  } = {}
 ) {
   const on = new Set(selected);
 
@@ -55,11 +66,12 @@ export function brandPicker(
 
   return html`
   <div class="bpick" data-bpick
+       data-empty-label="${emptyLabel}"
        data-ceiling="${modelCeiling ? JSON.stringify(modelCeiling) : ''}">
     <div class="bpick-h">
       <div>
-        <b>برندها و مدل‌های مجاز برای ثبت آگهی</b>
-        <div class="hint" data-brand-count>${countLabel(on.size, selectedModels.length)}</div>
+        <b>${title}</b>
+        <div class="hint" data-brand-count>${countLabel(on.size, selectedModels.length, emptyLabel)}</div>
       </div>
       <div class="row-actions">
         <button type="button" class="btn sm" data-brand-all>همه</button>
@@ -107,8 +119,8 @@ export function brandPicker(
   </div>`;
 }
 
-function countLabel(nBrands, nModels) {
-  if (!nBrands && !nModels) return 'چیزی انتخاب نشده — این حساب نمی‌تواند آگهی ثبت کند.';
+function countLabel(nBrands, nModels, empty = 'چیزی انتخاب نشده — این حساب نمی‌تواند آگهی ثبت کند.') {
+  if (!nBrands && !nModels) return empty;
   const parts = [];
   if (nBrands) parts.push(`${faDigits(nBrands)} برند کامل`);
   if (nModels) parts.push(`${faDigits(nModels)} مدل تکی`);
@@ -219,7 +231,7 @@ function sync(el) {
   });
 
   const count = el.querySelector('[data-brand-count]');
-  if (count) count.textContent = countLabel(fullBrands, singleModels);
+  if (count) count.textContent = countLabel(fullBrands, singleModels, el.dataset.emptyLabel);
 }
 
 /** The buttons: «همه», «هیچ‌کدام», and opening a brand's models. */

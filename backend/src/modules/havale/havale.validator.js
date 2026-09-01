@@ -10,6 +10,7 @@ const {
   MAX_PAGE,
 } = require('../../constants/havale');
 const { normalise } = require('../../utils/textGuard');
+const { idList, nameList } = require('../../utils/queryList');
 
 /**
  * Input rules.
@@ -139,12 +140,14 @@ const renewBody = Joi.object({
 
 const listQuery = Joi.object({
   kind: Joi.string().valid(...Object.values(HAVALE_KIND)),
-  // Exact when the agent picks from the list, free text when they type in the
-  // search box — both are useful and they are not the same query.
-  carModelId: Joi.string().trim().max(40),
-  brandId: Joi.string().trim().max(40),
+  // Several at a time: an agency deals two or three models, and «one brand,
+  // one model» meant running the same search three times. Exact ids when the
+  // agent ticks them off the catalogue; carType stays free text, which is a
+  // different question and not the same query.
+  carModelIds: idList(),
+  brandIds: idList(),
   carType: Joi.string().trim().max(120),
-  carColor: Joi.string().trim().max(60),
+  carColors: nameList(),
   model: Joi.string().trim().max(20),
   solh: Joi.string().valid(...Object.values(SOLH_STATUS)),
   supplierCompany: Joi.string().trim().max(120),

@@ -218,8 +218,8 @@ const carService = {
     };
 
     if (filters.kind) where.kind = filters.kind;
-    if (filters.carModelId) where.carModelId = filters.carModelId;
-    if (filters.brandId) where.carModel = { brandId: filters.brandId };
+    if (filters.carModelIds) where.carModelId = { in: filters.carModelIds };
+    if (filters.brandIds) where.carModel = { brandId: { in: filters.brandIds } };
     if (filters.priceFrom) where.carPriceToman = { gte: BigInt(filters.priceFrom) };
     if (filters.priceTo) {
       where.carPriceToman = { ...(where.carPriceToman || {}), lte: BigInt(filters.priceTo) };
@@ -227,6 +227,8 @@ const carService = {
 
     // This market's own columns reach the query through the relation — no
     // other market's query has to know these exist.
+    if (filters.carColors) where.carColor = { in: filters.carColors };
+
     const detail = {};
     if (filters.bodyType) detail.bodyType = { in: filters.bodyType };
     if (filters.yearFrom) detail.year = { gte: filters.yearFrom };

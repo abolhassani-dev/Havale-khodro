@@ -9,7 +9,7 @@ import { renderModal, runModalAction } from './ui/modal.js';
 
 import { loginPage, submitLogin, changePasswordPage, submitChangePassword } from './pages/auth.js';
 import { loadDashboard, dashboardPage } from './pages/agent/dashboard.js';
-import { loadSearch, searchPage, confirmReveal, onSearchBrandChange } from './pages/agent/search.js';
+import { loadSearch, searchPage, confirmReveal } from './pages/agent/search.js';
 import {
   loadCatalogForm, loadMine, havaleFormPage, minePage, submitHavale, onBrandChange,
   renewModal, confirmFulfill, confirmDelete, havaleDetailModal, editHavaleModal,
@@ -34,11 +34,12 @@ import {
   setCatalogQuery,
 } from './pages/admin/index.js';
 import {
-  handleBrandPickClick, handleBrandPickChange, handleBrandPickSearch,
+  handleBrandPickClick, handleBrandPickChange, handleBrandPickSearch, brandPickValue,
 } from './ui/brandPicker.js';
 import {
   handlePickSelectClick, handlePickSelectSearch, handlePickSelectKey, repositionPickSelects,
 } from './ui/pickSelect.js';
+import { handleCheckChip } from './ui/checkChips.js';
 import { handleJalaliDateChange } from './ui/dateInput.js';
 import { handleMoneyInput } from './ui/moneyInput.js';
 import { handleBodyChip, handleBodyToggle } from './ui/bodyMap.js';
@@ -338,7 +339,7 @@ const CLICK_KEYS = new Set([
   'editCompany', 'editBrand', 'editModel', 'editColor',
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone', 'brandExpand',
-  'bodyChip', 'bodyClean', 'bodyMarked', 'fchip',
+  'bodyChip', 'bodyClean', 'bodyMarked',
   'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete', 'carPhotoDel',
 ]);
 
@@ -380,7 +381,6 @@ function onClick(event) {
   // The body matrix keeps its state in the DOM (rule 3.4) — these never
   // touch the store, so nothing typed elsewhere in the form is lost.
   if (d.bodyChip) return handleBodyChip(el);
-  if (d.fchip !== undefined) return toggleFilterChip(el);
   if (d.bodyClean !== undefined) return handleBodyToggle(el, false);
   if (d.bodyMarked !== undefined) return handleBodyToggle(el, true);
 
@@ -503,6 +503,11 @@ function applyRegFilters(form) {
   new FormData(form).forEach((value, key) => {
     if (value !== '') params[key] = value;
   });
+  // The brand-and-model picker is not a form field — read it the same way
+  // the other two markets do.
+  const picked = brandPickValue(form);
+  if (picked.brandIds.length) params.brandIds = picked.brandIds.join(',');
+  if (picked.modelIds.length) params.carModelIds = picked.modelIds.join(',');
   go('reg-search', params);
 }
 
@@ -511,6 +516,11 @@ function applyFilters(form) {
   new FormData(form).forEach((value, key) => {
     if (value !== '') params[key] = value;
   });
+  // Whole brands and single models — several of either — live in the picker,
+  // which is not a form field and so is not in the FormData above.
+  const picked = brandPickValue(form);
+  if (picked.brandIds.length) params.brandIds = picked.brandIds.join(',');
+  if (picked.modelIds.length) params.carModelIds = picked.modelIds.join(',');
   go('search', params);
 }
 
@@ -553,6 +563,11 @@ function onCatalogSearch(event) {
 }
 
 function onChange(event) {
+  // A filter checkbox — «رنگ‌شده + تعویض‌دار» and its kind. Rewrites its own
+  // hidden list in the DOM; nothing here may re-render, or the rest of the
+  // filter form the reader is half-way through goes with it.
+  if (handleCheckChip(event.target)) return;
+
   // Ticking a brand, or a whole company at once. Handled entirely in the DOM —
   // the picker sits inside a form, and anything that re-rendered the page here
   // would wipe every field the reader had typed.
@@ -584,9 +599,6 @@ function onChange(event) {
   if (event.target.name === 'carModelId' && event.target.form?.dataset.form === 'car') {
     onCarModelChange(event.target.form);
   }
-  if (event.target.name === 'brandId' && event.target.form?.dataset.form === 'car-filters') {
-    onCarBrandChange(event.target.form);
-  }
   // The ticket composer's paperclip: echo the chosen filenames next to it, so
   // «پیوست شد» is visible before anything is sent.
   if (event.target.matches?.('[data-attach-input]')) {
@@ -594,10 +606,6 @@ function onChange(event) {
     if (names) {
       names.textContent = [...event.target.files].map((f) => f.name).join('، ');
     }
-  }
-  // The search filters' brand box: swap the model options in place.
-  if (event.target.name === 'brandId' && event.target.form?.dataset.form === 'search-filters') {
-    onSearchBrandChange(event.target.form);
   }
   // Choosing a role re-ticks its default permissions. Delegated like every
   // other handler, because the modal is rebuilt on each render and anything
@@ -644,17 +652,3 @@ async function start() {
 
 start();
 
-/**
- * One chip of a multi-select filter («سدان + هاچبک», «رنگ‌شده + تعویض‌دار»).
- * The chip is its own state; the hidden input beside it is re-joined from
- * whatever is lit, and the form submits that like any other field.
- */
-function toggleFilterChip(el) {
-  el.classList.toggle('on');
-  const box = el.closest('[data-multi]');
-  if (!box) return;
-  const input = box.querySelector('input[type="hidden"]');
-  if (input) {
-    input.value = [...box.querySelectorAll('.fchip.on')].map((chip) => chip.dataset.fchip).join(',');
-  }
-}

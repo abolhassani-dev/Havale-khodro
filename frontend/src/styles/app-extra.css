@@ -994,6 +994,9 @@ a[data-go],
    باز می‌شدند. الگوی دیوار و باما همین فهرست تک‌ستونه است: هر برند یک ردیف
    تمام-عرض، مدل‌هایش زیر همان ردیف. */
 .bpick-body { max-height: min(50vh, 460px); overflow-y: auto; }
+/* داخل جعبه‌ی فیلترها این فهرست یکی از ده فیلد است، نه کل فرم — پس کوتاه‌تر
+   می‌شود تا بقیه‌ی فیلترها زیرش دیده شوند. */
+.filters .bpick-body { max-height: min(34vh, 260px); }
 
 .bpick-cell { border-top: 1px solid var(--line-2); }
 .bpick-cell:first-child { border-top: 0; }
@@ -2226,14 +2229,36 @@ form.card[data-form="car"] { overflow: clip; }
 
 /* چیپ‌های چندانتخابی فیلتر جستجو */
 .filters .field.wide { flex-basis: 100%; }
+/* چیپ‌های فیلتر: خودشان چک‌باکس‌اند، نه دکمه‌ای که تیک‌خورده به نظر برسد —
+   نسخه‌ی قبلی ردیفی از دکمه بود و مثل یک انتخاب تک‌گزینه‌ای خوانده می‌شد. */
 .fchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .fchip {
+  display: inline-flex; align-items: center; gap: 7px;
   font: inherit; font-size: 12.5px; font-weight: 700; border: 1px solid var(--line);
   background: var(--card); color: var(--ink-2); border-radius: 999px; padding: 5px 12px;
   cursor: pointer; line-height: 1.4;
 }
 .fchip:hover { border-color: #b3a88e; }
-.fchip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.fchip input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+.fchip.on { background: var(--primary-08); border-color: var(--primary-15); color: var(--primary-2); }
+
+/* «برند و مدل» تا باز نشده یک سطر است: فهرست برندها جای فیلتر نیست، جای
+   انتخاب است — و باز بودنش کل پنل فیلتر را به یک کاتالوگ تبدیل می‌کرد. */
+.pick-fold { width: 100%; }
+.pick-fold > summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--card);
+  font-size: 13px; font-weight: 700; cursor: pointer; list-style: none;
+}
+.pick-fold > summary::-webkit-details-marker { display: none; }
+.pick-fold > summary::after {
+  content: '⌄'; margin-inline-start: auto; color: var(--ink-3); transition: transform .15s;
+}
+.pick-fold[open] > summary::after { transform: rotate(180deg); }
+.pick-fold[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.pick-fold > .bpick { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .fcheck { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; padding-top: 26px; }
 .fcheck input { width: 16px; height: 16px; accent-color: var(--primary); }
 

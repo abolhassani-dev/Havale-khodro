@@ -69,6 +69,23 @@ const catalogRepository = {
     });
   },
 
+  /**
+   * A handful of models by id, with the brand each belongs to.
+   *
+   * A search that ticked two models travels in the address bar as two ids.
+   * Opening that address again has to put the ticks back — and the picker
+   * groups models under their brand, which an id alone does not say. So the
+   * page asks for exactly the ones it has to restore, rather than shipping
+   * all two thousand models to answer a question about two of them.
+   */
+  listModelsByIds(ids) {
+    return prisma.carModel.findMany({
+      where: { id: { in: ids } },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, brandId: true },
+    });
+  },
+
   findColorByName(name) {
     return prisma.carColor.findFirst({ where: { name, isActive: true } });
   },

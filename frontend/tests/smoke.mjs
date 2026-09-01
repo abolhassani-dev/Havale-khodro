@@ -507,6 +507,81 @@ await step('a reveal opens the panel it paid for', async () => {
   await page.click('[data-close-modal]');
 });
 
+/**
+ * The filters, on all three markets: folded, and able to take two answers.
+ *
+ * Both halves matter. Folded, because the panel used to be the whole first
+ * screen of a phone and an agency arriving at a market saw a form instead of
+ * a market. And several at a time, because an agency that deals two models
+ * used to search twice and compare the pages by memory.
+ */
+await step('every market keeps its catalogue folded until it is asked for', async () => {
+  for (const market of ['search', 'reg-search', 'car-search']) {
+    await navigate(market);
+    await page.waitForSelector('.filters-box', { timeout: 8000 });
+    // A hundred and eighty brands is a catalogue, not a filter: the picker is
+    // one line until it is opened, on every screen. (Whether the panel around
+    // it is folded depends on the width — that is checked on the phone.)
+    const fold = page.locator('.pick-fold');
+    if (!(await fold.count())) throw new Error(`${market} has no برند و مدل picker`);
+    if (await page.locator('.pick-fold[open]').count()) {
+      throw new Error(`${market} opens with the whole brand catalogue unfolded`);
+    }
+  }
+});
+
+await step('a search can name two models at once, and remembers them', async () => {
+  await navigate('car-search');
+  // The panel itself is open on a wide screen and folded on a phone; open it
+  // only when it is actually folded.
+  if (!(await page.locator('.filters-box[open]').count())) {
+    await page.click('.filters-box > summary');
+  }
+  await page.click('.pick-fold > summary');
+  await page.waitForSelector('[data-cell] input[data-brand]', { timeout: 8000 });
+
+  // One whole brand, then two single models inside another — the two grains
+  // the picker has, both of which have to survive the round trip.
+  const brand = page.locator('[data-cell] input[data-brand]').first();
+  await brand.check();
+
+  let ticked = 0;
+  const cells = page.locator('[data-cell]');
+  for (let i = 1; i < 10 && !ticked; i += 1) {
+    await cells.nth(i).locator('[data-brand-expand]').click();
+    await page.waitForTimeout(600);
+    const boxes = cells.nth(i).locator('input[data-model]');
+    if ((await boxes.count()) >= 2) {
+      await boxes.nth(0).check();
+      await boxes.nth(1).check();
+      ticked = 2;
+    } else {
+      await cells.nth(i).locator('[data-brand-expand]').click();
+    }
+  }
+  if (!ticked) throw new Error('no brand on this database has two models to tick');
+
+  await page.click('form[data-form="car-filters"] button[type=submit]');
+  await page.waitForTimeout(1200);
+
+  const url = decodeURIComponent(page.url());
+  if (!/brandIds=/.test(url) || !/carModelIds=[^&]+,/.test(url)) {
+    throw new Error('the address does not carry the ticked brand and both models: ' + url);
+  }
+  // Reopened from the address: one brand whole, one part-ticked.
+  if (!(await page.locator('[data-cell] input[data-brand]:checked').count())) {
+    throw new Error('the ticked brand did not come back');
+  }
+  if (!(await page.locator('[data-cell].part').count())) {
+    throw new Error('the two single models did not come back');
+  }
+  const summary = await page.locator('.filters-box > summary').innerText();
+  if (!/فعال/.test(summary)) throw new Error('the folded panel does not say a filter is on');
+
+  await page.click('[data-go="car-search"]:has-text("پاک کردن")');
+  await page.waitForTimeout(800);
+});
+
 await step('the run removes the car it posted', async () => {
   if (!smokeCarId) throw new Error('nothing was captured to clean up');
   const status = await page.evaluate(
@@ -1093,6 +1168,26 @@ await step('phone: the drawer survives expanding a section', async () => {
   // The خودرو market is live now — the search screen, not a placeholder.
   await phone.waitForSelector('.kind-tabs, .grid, .empty', { timeout: 8000 });
   if (await scrollsSideways()) throw new Error('the page scrolls sideways');
+});
+
+/**
+ * On a phone the market opens on the market.
+ *
+ * The filter panel used to be the entire first screen: an agency tapped
+ * «استعلام» and got a form, and had to scroll past everything it could ask
+ * before it saw one advertisement. Folded, the first card is above the fold.
+ */
+await step('phone: a market shows advertisements before it shows a form', async () => {
+  for (const market of ['search', 'reg-search', 'car-search']) {
+    await phone.evaluate((h) => { window.location.hash = `#${h}`; }, market);
+    await phone.waitForSelector('.filters-box', { timeout: 8000 });
+    if (await phone.locator('.filters-box[open]').count()) {
+      throw new Error(`${market} still opens with its filter panel unfolded on a phone`);
+    }
+    const first = phone.locator('.hcard, .empty').first();
+    const box = await first.boundingBox();
+    if (box && box.y > 844) throw new Error(`${market} shows nothing on the first screen`);
+  }
 });
 
 await step('phone: menu items take a pointer, not a text caret', async () => {

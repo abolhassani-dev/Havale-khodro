@@ -494,6 +494,42 @@ maybe('car market', () => {
 
       await request(app).get(api('/cars?sort=cheapest')).set('Cookie', viewer.cookie).expect(422);
     });
+
+    /**
+     * Two models in one search.
+     *
+     * An agency deals دنا and سمند, not one of them; «one brand, one model»
+     * meant running the same search twice and comparing the pages by memory.
+     * A word that is not an id is refused rather than dropped — a filter that
+     * silently ignores half of what it was given shows the wrong market and
+     * says nothing about it.
+     */
+    it('takes several models at once, and refuses a malformed id', async () => {
+      const seller = await agent();
+      await post(seller.cookie, sale()).expect(201);
+      await post(seller.cookie, sale({ carModelId: models[1].id })).expect(201);
+
+      const viewer = await agent();
+      const one = await request(app)
+        .get(api(`/cars?carModelIds=${models[0].id}`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      expect(one.body.data.items.every((r) => r.carModelId === models[0].id)).toBe(true);
+
+      // The point of the plural: the second model widens the same search
+      // rather than replacing it.
+      const both = await request(app)
+        .get(api(`/cars?carModelIds=${models[0].id},${models[1].id}`))
+        .set('Cookie', viewer.cookie)
+        .expect(200);
+      const seen = new Set(both.body.data.items.map((r) => r.carModelId));
+      expect(seen.has(models[0].id) && seen.has(models[1].id)).toBe(true);
+
+      await request(app)
+        .get(api(`/cars?carModelIds=${models[0].id},not an id`))
+        .set('Cookie', viewer.cookie)
+        .expect(422);
+    });
   });
 
   describe('the owner’s side', () => {

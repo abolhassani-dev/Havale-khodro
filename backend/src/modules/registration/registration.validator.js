@@ -6,6 +6,7 @@ const {
   REGISTRATION_SALE_TYPE,
   LIMITS,
 } = require('./registration.constants');
+const { idList } = require('../../utils/queryList');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 
 /**
@@ -75,8 +76,9 @@ const updateBody = Joi.object({
 
 const listQuery = Joi.object({
   kind: Joi.string().valid(...Object.values(REGISTRATION_KIND)),
-  brandId: Joi.string().trim().max(40),
-  carModelId: Joi.string().trim().max(40),
+  // Several brands or models in one search — see utils/queryList.
+  brandIds: idList(),
+  carModelIds: idList(),
   method: Joi.string().valid(...Object.values(REGISTRATION_METHOD)),
   saleType: Joi.string().valid(...Object.values(REGISTRATION_SALE_TYPE)),
   maxPremium: toman,

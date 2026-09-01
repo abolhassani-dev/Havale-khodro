@@ -1,8 +1,11 @@
 const { Router } = require('express');
+const Joi = require('joi');
 
 const catalogRepository = require('./catalog.repository');
 const brandAccess = require('./brandAccess.service');
 const asyncHandler = require('../../utils/asyncHandler');
+const validate = require('../../middlewares/validate');
+const { idList } = require('../../utils/queryList');
 const { success } = require('../../responses/apiResponse');
 const { authenticate, requirePasswordChanged } = require('../../middlewares/auth');
 
@@ -86,6 +89,25 @@ router.get(
  *       2044 models in one response was the heaviest payload in the product,
  *       paid on every visit to the search page and both listing forms.
  */
+/**
+ * @openapi
+ * /catalog/models:
+ *   get:
+ *     tags: [Catalog]
+ *     summary: A handful of models by id, each with its brand
+ *     description: >
+ *       For restoring a search that was shared or bookmarked: the address bar
+ *       carries the ticked model ids, and the picker needs to know which brand
+ *       each one sits under before it can put the ticks back.
+ */
+router.get(
+  '/models',
+  cacheBriefly,
+  validate({ query: Joi.object({ ids: idList().required() }) }),
+  asyncHandler(async (req, res) =>
+    success(res, { models: await catalogRepository.listModelsByIds(req.query.ids) }))
+);
+
 router.get(
   '/brands/:id/models',
   cacheBriefly,

@@ -8,6 +8,10 @@ import {
   clearFormError, pager,
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
+import { brandPickValue } from '../../ui/brandPicker.js';
+import { brandFilter } from '../../ui/brandFilter.js';
+import { filterBox, countFilters } from '../../ui/filterBox.js';
+import { checkChips } from '../../ui/checkChips.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import {
   bodyMatrix, bodyMapView, bodyStatusOf, bodyMatrixIncomplete, setBodyPreviewType,
@@ -44,30 +48,14 @@ function warrantyLabel(value) {
   return 'نامشخص';
 }
 
-/**
- * A row of toggles standing in for a multi-select — «رنگ‌شده + تعویض‌دار»
- * is one search. The chips carry their own on/off state (rule 3.4) and a
- * hidden input carries the comma-joined list the filter form submits.
- */
-function multiChips(name, options, selected) {
-  const on = new Set(String(selected || '').split(',').filter(Boolean));
-  return html`<div class="fchips" data-multi="${name}">
-    <input type="hidden" name="${name}" value="${[...on].join(',')}">
-    ${options.map(
-      ([value, label]) => html`<button type="button" class="fchip ${on.has(value) ? 'on' : ''}"
-        data-fchip="${value}">${label}</button>`
-    )}
-  </div>`;
-}
-
 // ── loaders ─────────────────────────────────────────────────────────────────
 
 export async function loadCarSearch(params) {
-  const [list, tree, usage] = await Promise.all([
+  const [list, tree, usage, pickedModels] = await Promise.all([
     car.list({
       kind: params.kind,
-      brandId: params.brandId,
-      carModelId: params.carModelId,
+      brandIds: params.brandIds,
+      carModelIds: params.carModelIds,
       bodyType: params.bodyType,
       yearFrom: params.yearFrom,
       yearTo: params.yearTo,
@@ -82,8 +70,19 @@ export async function loadCarSearch(params) {
     }),
     catalog.get(),
     havale.usage().catch(() => null),
+    // The ticked models, with the brand each sits under: an address that was
+    // shared or bookmarked carries only their ids, and the picker groups them
+    // by brand before it can put the ticks back.
+    pickedModelsOf(params.carModelIds),
   ]);
-  return { list, tree, usage };
+  return { list, tree, usage, pickedModels };
+}
+
+/** @returns {Promise<Array<{id: string, brandId: string}>>} */
+export async function pickedModelsOf(ids) {
+  if (!ids) return [];
+  const res = await catalog.models(ids).catch(() => null);
+  return res?.models || [];
 }
 
 export async function loadCarForm() {
@@ -118,24 +117,9 @@ const SORTS = [
 
 /** Everything in the address that is a filter — not the kind, order or page. */
 const FILTER_KEYS = [
-  'brandId', 'carModelId', 'bodyType', 'yearFrom', 'yearTo',
+  'brandIds', 'carModelIds', 'bodyType', 'yearFrom', 'yearTo',
   'priceFrom', 'priceTo', 'maxMileage', 'grades', 'warranty',
 ];
-
-function activeFilters(params) {
-  return FILTER_KEYS.filter((key) => params[key]).length;
-}
-
-/**
- * The same 721px the stylesheet uses for «this is not a phone».
- *
- * Read here rather than forced open in CSS because a closed <details> is not
- * hidden with `display` any more — the browser hides its contents with
- * `content-visibility`, which an override on the child cannot reach.
- */
-function wideScreen() {
-  return typeof window !== 'undefined' && window.innerWidth >= 721;
-}
 
 /**
  * The current search with one thing changed.
@@ -193,36 +177,10 @@ export function carSearchPage() {
       </div>
     </div>
 
-    <!-- Native <details>: the panel that used to fill the whole first screen
-         of a phone closes with no JavaScript, no click key and no state to
-         keep in sync. It opens itself whenever a filter is on, so nobody
-         hunts for why the list is short — and on a wide screen, where the
-         room is there anyway, it is open with its handle hidden in CSS. -->
-    <details class="filters-box" ${raw(wideScreen() || activeFilters(params) ? 'open' : '')}>
-      <summary>
-        فیلترها
-        ${
-          activeFilters(params)
-            ? html`<span class="tag">${faDigits(activeFilters(params))} فعال</span>`
-            : ''
-        }
-      </summary>
+    ${filterBox(countFilters(params, FILTER_KEYS), html`
     <form class="filters" data-form="car-filters">
-      <div class="field">
-        <label for="brandId">برند</label>
-        ${pickSelect(
-          'brandId',
-          brands.map((b) => ({ value: b.id, label: b.name, search: b.slug || '' })),
-          { placeholder: 'همه', searchLabel: 'نام برند…', value: params.brandId || '' }
-        )}
-      </div>
-      <div class="field">
-        <label for="carModelId">مدل</label>
-        ${pickSelect('carModelId', [], {
-          disabled: !params.brandId,
-          placeholder: params.brandId ? 'همه' : 'ابتدا برند',
-          searchLabel: 'نام مدل…',
-        })}
+      <div class="field wide">
+        ${brandFilter(brands, { brandIds: params.brandIds, pickedModels: data.pickedModels })}
       </div>
       <div class="field">
         <label for="yearFrom">سال ساخت از</label>
@@ -260,11 +218,11 @@ export function carSearchPage() {
       </div>
       <div class="field wide">
         <label>نوع بدنه <span class="opt">(چندتایی)</span></label>
-        ${multiChips('bodyType', Object.entries(BODY_TYPE_FA), params.bodyType)}
+        ${checkChips('bodyType', Object.entries(BODY_TYPE_FA), params.bodyType)}
       </div>
       <div class="field wide">
         <label>وضعیت بدنه <span class="opt">(چندتایی — مثلاً رنگ‌شده + تعویض‌دار)</span></label>
-        ${multiChips('grades', Object.entries(GRADE_FA), params.grades)}
+        ${checkChips('grades', Object.entries(GRADE_FA), params.grades)}
       </div>
       <div class="field">
         <label class="fcheck">
@@ -276,8 +234,7 @@ export function carSearchPage() {
         <button class="btn primary" type="submit">اعمال</button>
         <button class="btn" type="button" data-go="car-search">پاک کردن</button>
       </div>
-    </form>
-    </details>
+    </form>`)}
   </div>
 
   ${
@@ -742,7 +699,7 @@ export async function onCarBrandChange(form) {
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = brandId ? 'در حال بارگذاری…' : form.dataset.form === 'car-filters' ? 'همه' : 'ابتدا برند را انتخاب کنید';
+  placeholder.textContent = brandId ? 'در حال بارگذاری…' : 'ابتدا برند را انتخاب کنید';
   select.appendChild(placeholder);
   syncPickSelect(select);
   showBodyType(form, null);
@@ -760,7 +717,7 @@ export async function onCarBrandChange(form) {
   const current = form.brand?.value ?? form.brandId?.value;
   if (current !== brandId) return;
 
-  placeholder.textContent = form.dataset.form === 'car-filters' ? 'همه' : 'انتخاب کنید';
+  placeholder.textContent = 'انتخاب کنید';
   select.disabled = false;
   models.forEach((model) => {
     const option = document.createElement('option');
@@ -865,7 +822,12 @@ export async function submitCar(form) {
 /** The filter form: names go straight into the route parameters. */
 export function applyCarFilters(form) {
   const params = {};
-  for (const name of ['brandId', 'carModelId', 'bodyType', 'yearFrom', 'yearTo', 'maxMileage', 'grades']) {
+  // Whole brands and single models, both possibly several — read out of the
+  // picker the way the admin form reads it.
+  const picked = brandPickValue(form);
+  if (picked.brandIds.length) params.brandIds = picked.brandIds.join(',');
+  if (picked.modelIds.length) params.carModelIds = picked.modelIds.join(',');
+  for (const name of ['bodyType', 'yearFrom', 'yearTo', 'maxMileage', 'grades']) {
     const value = form.elements[name]?.value;
     if (value) params[name] = enDigits(value);
   }

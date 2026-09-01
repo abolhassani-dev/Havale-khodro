@@ -7,6 +7,9 @@ import {
   emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError, pager,
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
+import { brandFilter } from '../../ui/brandFilter.js';
+import { brandPickValue } from '../../ui/brandPicker.js';
+import { filterBox, countFilters } from '../../ui/filterBox.js';
 import { jalaliDate } from '../../ui/dateInput.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import { editedTag } from './listings.js';
@@ -47,15 +50,18 @@ const SALE_LABEL = Object.fromEntries(REG_SALE_TYPES);
 
 // ── loaders ─────────────────────────────────────────────────────────────────
 
+/** Everything in the address that is a filter — not the tab or the page. */
+export const REG_FILTER_KEYS = ['brandIds', 'carModelIds', 'method', 'saleType', 'maxPremium'];
+
 export async function loadRegSearch(params) {
   // The catalogue and the allowance ride along with the results: the filters
   // need the first and the reveal button needs the second, and three sequential
   // requests would be three round trips for one page.
-  const [list, tree, usage] = await Promise.all([
+  const [list, tree, usage, pickedModels] = await Promise.all([
     registration.list({
       kind: params.kind,
-      brandId: params.brandId,
-      carModelId: params.carModelId,
+      brandIds: params.brandIds,
+      carModelIds: params.carModelIds,
       method: params.method,
       saleType: params.saleType,
       maxPremium: params.maxPremium,
@@ -64,8 +70,17 @@ export async function loadRegSearch(params) {
     }),
     catalog.get(),
     havale.usage().catch(() => null),
+    // The ticked models, with the brand each sits under — see brandFilter.
+    pickedModelsOf(params.carModelIds),
   ]);
-  return { list, tree, usage };
+  return { list, tree, usage, pickedModels };
+}
+
+/** @returns {Promise<Array<{id: string, brandId: string}>>} */
+async function pickedModelsOf(ids) {
+  if (!ids) return [];
+  const res = await catalog.models(ids).catch(() => null);
+  return res?.models || [];
 }
 
 export async function loadRegForm() {
@@ -106,21 +121,10 @@ export function regSearchPage() {
       <span class="tag">${faDigits(items.length)} آگهی</span>
     </div>
 
+    ${filterBox(countFilters(params, REG_FILTER_KEYS), html`
     <form class="filters" data-form="reg-filters">
-      <div class="field">
-        <label for="brandId">برند</label>
-        ${pickSelect(
-          'brandId',
-          [
-            { value: '', label: 'همه‌ی برندها' },
-            ...brands.map((b) => ({
-              value: b.id,
-              label: `${b.name}${b.company ? ` — ${b.company.name}` : ''}`,
-              search: b.slug || '',
-            })),
-          ],
-          { value: params.brandId || '', searchLabel: 'نام برند — مثلاً پژو یا peugeot' }
-        )}
+      <div class="field wide">
+        ${brandFilter(brands, { brandIds: params.brandIds, pickedModels: data.pickedModels })}
       </div>
 
       ${filterSelect('method', 'روش ثبت‌نام', REG_METHODS, params.method)}
@@ -131,11 +135,11 @@ export function regSearchPage() {
         ${moneyInput('maxPremium', { value: params.maxPremium || '', placeholder: 'تومان' })}
       </div>
 
-      <div class="field" style="align-self:end;display:flex;gap:8px">
+      <div class="actions">
         <button class="btn primary" type="submit">اعمال</button>
         <button class="btn" type="button" data-go="reg-search">پاک کردن</button>
       </div>
-    </form>
+    </form>`)}
 
     ${items.length ? html`<div class="grid">${items.map(regCard)}</div>` : emptyBox('آگهی‌ای با این فیلترها پیدا نشد.')}
 

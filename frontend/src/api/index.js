@@ -22,6 +22,9 @@ export const catalog = {
   // catalogue used to embed all 2044 and was the heaviest response in the
   // product, paid on every visit to the search page and both listing forms.
   brandModels: (id) => api.get(`/catalog/brands/${id}/models`),
+  // A handful by id, each with its brand — for putting the ticks back on a
+  // search that arrived as a shared or bookmarked address.
+  models: (ids) => api.get('/catalog/models', { ids }),
 };
 
 export const havale = {

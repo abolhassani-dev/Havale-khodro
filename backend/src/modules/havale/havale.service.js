@@ -54,8 +54,8 @@ function publicWhere(filters) {
 
   if (filters.kind) where.kind = filters.kind;
   if (filters.solh) where.solh = filters.solh;
-  if (filters.carModelId) where.carModelId = filters.carModelId;
-  if (filters.brandId) where.carModel = { brandId: filters.brandId };
+  if (filters.carModelIds) where.carModelId = { in: filters.carModelIds };
+  if (filters.brandIds) where.carModel = { brandId: { in: filters.brandIds } };
   if (filters.supplierCompany) where.supplierCompany = filters.supplierCompany;
   if (filters.model) where.model = filters.model;
 
@@ -66,8 +66,8 @@ function publicWhere(filters) {
   // A purchase request with no colour means "any colour will do", so filtering
   // by red must return it. Dropping it would invert its meaning — it was the
   // most willing match in the list (review round 1, fix 7).
-  if (filters.carColor) {
-    where.OR = [{ carColor: filters.carColor }, { carColor: null }];
+  if (filters.carColors) {
+    where.OR = [{ carColor: { in: filters.carColors } }, { carColor: null }];
   }
 
   if (filters.minAmount || filters.maxAmount) {
