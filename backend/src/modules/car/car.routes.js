@@ -1,7 +1,10 @@
 const { Router } = require('express');
+const Joi = require('joi');
 
 const carService = require('./car.service');
 const schema = require('./car.validator');
+const { upload, MAX_FILES } = require('./car.upload');
+const { discardOnFailure } = require('../../utils/uploads');
 const validate = require('../../middlewares/validate');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success, created } = require('../../responses/apiResponse');
@@ -15,6 +18,41 @@ const { MESSAGES } = require('../../constants/messages');
 require('./car.market');
 
 const router = Router();
+
+/**
+ * @openapi
+ * /cars/photos/{fileName}:
+ *   get:
+ *     tags: [Car]
+ *     summary: One photo — owner, admin, or a viewer with a recorded reveal
+ *     description: >
+ *       Registered above the agent-only gate on purpose: a moderator looking
+ *       at a reported advertisement must see its photos. Everybody else meets
+ *       exactly the reveal boundary the description has — a photo can carry a
+ *       phone number on a windshield, so it is never served publicly.
+ */
+router.get(
+  '/photos/:fileName',
+  authenticate,
+  requirePasswordChanged,
+  validate({
+    params: Joi.object({
+      // The generated name: a UUID plus a verified-type extension. Anything
+      // else is not a name this system ever wrote, so it is refused before
+      // touching the disk — the filename is the whole address, and this shape
+      // check is what keeps traversal characters out of the path join.
+      fileName: Joi.string()
+        .pattern(/^[0-9a-f-]{36}\.(jpg|png|webp)$/)
+        .required(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const file = await carService.photoFile({ user: req.user, fileName: req.params.fileName });
+    res.setHeader('Content-Type', file.mime);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.sendFile(file.path);
+  })
+);
 
 /**
  * The خودرو market.
@@ -73,6 +111,43 @@ router.post(
     const row = await carService.create({ user: req.user, payload: req.body });
     return created(res, row, MESSAGES.HAVALE.CREATED);
   })
+);
+
+/**
+ * @openapi
+ * /cars/{id}/photos:
+ *   post:
+ *     tags: [Car]
+ *     summary: Attach photos to a sale advertisement (owner only, six total)
+ */
+router.post(
+  '/:id/photos',
+  requireActiveSubscription,
+  upload.array('photos', MAX_FILES),
+  discardOnFailure,
+  validate(schema.byId),
+  asyncHandler(async (req, res) =>
+    success(
+      res,
+      await carService.addPhotos({ user: req.user, id: req.params.id, files: req.files }),
+      MESSAGES.HAVALE.UPDATED
+    )
+  )
+);
+
+/**
+ * @openapi
+ * /cars/photos/{photoId}:
+ *   delete:
+ *     tags: [Car]
+ *     summary: Remove one photo (owner only)
+ */
+router.delete(
+  '/photos/:photoId',
+  validate({ params: Joi.object({ photoId: Joi.string().trim().max(40).required() }) }),
+  asyncHandler(async (req, res) =>
+    success(res, await carService.removePhoto({ user: req.user, photoId: req.params.photoId }))
+  )
 );
 
 /**

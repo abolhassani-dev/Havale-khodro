@@ -1,14 +1,20 @@
+const fs = require('fs');
+const path = require('path');
+const bcrypt = require('bcryptjs');
 const request = require('supertest');
 
 const app = require('../../src/app');
 const { prisma, connectDatabase, disconnectDatabase } = require('../../src/config/database');
 const {
   api,
+  PASSWORD,
   catalog,
   offer,
   signedInAgent,
+  signIn,
   cleanup,
 } = require('../helpers/factory');
+const { UPLOADS_DIR } = require('../../src/modules/car/car.upload');
 const { currentJalaliYear } = require('../../src/modules/car/car.constants');
 
 /**
@@ -220,6 +226,120 @@ maybe('car market', () => {
     it('refuses a phone number typed into the description', async () => {
       const { cookie } = await agent();
       await post(cookie, sale({ description: 'تماس: ۰۹۱۲۳۴۵۶۷۸۹' })).expect(422);
+    });
+  });
+
+  describe('photos', () => {
+    // The smallest real PNG there is — enough for multer's type check, which
+    // reads the multipart Content-Type, and for sendFile to have bytes.
+    const PNG = Buffer.from(
+      '89504e470d0a1a0a0000000d4948445200000001000000010806000000' +
+        '1f15c4890000000d49444154789c626001000000ffff03000006000557' +
+        'bfabd40000000049454e44ae426082',
+      'hex'
+    );
+
+    const attach = (req, count) => {
+      for (let i = 0; i < count; i += 1) req.attach('photos', PNG, `car-${i}.png`);
+      return req;
+    };
+
+    it('serves a photo to the owner, an admin, and a paid viewer — nobody else', async () => {
+      const owner = await agent();
+      const posted = await post(owner.cookie, sale()).expect(201);
+      const id = posted.body.data.id;
+
+      const uploaded = await attach(
+        request(app).post(api(`/cars/${id}/photos`)).set('Cookie', owner.cookie),
+        2
+      ).expect(200);
+      expect(uploaded.body.data.photoCount).toBe(2);
+      // Adding photos changes what past revealers paid to evaluate.
+      expect(uploaded.body.data.editCount).toBe(1);
+
+      const url = uploaded.body.data.photos[0].url.replace('/api/v1', '');
+
+      // The owner reads its own file.
+      await request(app).get(api(url)).set('Cookie', owner.cookie).expect(200);
+
+      // A stranger gets nothing — and the card shows a count, not the files.
+      const viewer = await agent();
+      const card = await request(app).get(api(`/cars/${id}`)).set('Cookie', viewer.cookie);
+      expect(card.body.data.photos).toEqual([]);
+      expect(card.body.data.photoCount).toBe(2);
+      await request(app).get(api(url)).set('Cookie', viewer.cookie).expect(404);
+
+      // After the reveal, the same request answers.
+      await request(app).post(api(`/cars/${id}/reveal`)).set('Cookie', viewer.cookie).expect(200);
+      const opened = await request(app).get(api(url)).set('Cookie', viewer.cookie).expect(200);
+      expect(opened.headers['content-type']).toContain('image/png');
+
+      // Moderation sees what was reported.
+      const tag = `${Date.now()}${Math.floor(Math.random() * 999)}`;
+      const adminUser = await prisma.user.create({
+        data: {
+          username: `test_admin_${tag}`,
+          passwordHash: await bcrypt.hash(PASSWORD, 4),
+          phone: `0919${tag.slice(-7)}`,
+          fullName: 'کارمند تست',
+          role: 'SUPER_ADMIN',
+          mustChangePassword: false,
+        },
+      });
+      created.push(adminUser.id);
+      await request(app).get(api(url)).set('Cookie', await signIn(adminUser)).expect(200);
+    });
+
+    it('refuses the seventh photo, a photo on a request, and a stranger uploading', async () => {
+      const owner = await agent();
+      const posted = await post(owner.cookie, sale()).expect(201);
+      const id = posted.body.data.id;
+
+      await attach(request(app).post(api(`/cars/${id}/photos`)).set('Cookie', owner.cookie), 6)
+        .expect(200);
+      await attach(request(app).post(api(`/cars/${id}/photos`)).set('Cookie', owner.cookie), 1)
+        .expect(400);
+
+      const req = await post(owner.cookie, wanted()).expect(201);
+      await attach(
+        request(app).post(api(`/cars/${req.body.data.id}/photos`)).set('Cookie', owner.cookie),
+        1
+      ).expect(400);
+
+      const stranger = await agent();
+      await attach(request(app).post(api(`/cars/${id}/photos`)).set('Cookie', stranger.cookie), 1)
+        .expect(404);
+    });
+
+    it('removing a photo deletes the row and the file', async () => {
+      const owner = await agent();
+      const posted = await post(owner.cookie, sale()).expect(201);
+      const id = posted.body.data.id;
+
+      const uploaded = await attach(
+        request(app).post(api(`/cars/${id}/photos`)).set('Cookie', owner.cookie),
+        1
+      ).expect(200);
+      const photo = uploaded.body.data.photos[0];
+      const fileName = photo.url.split('/').pop();
+      expect(fs.existsSync(path.join(UPLOADS_DIR, fileName))).toBe(true);
+
+      const after = await request(app)
+        .delete(api(`/cars/photos/${photo.id}`))
+        .set('Cookie', owner.cookie)
+        .expect(200);
+      expect(after.body.data.photoCount).toBe(0);
+      // The unlink is fire-and-forget; give it a beat.
+      await new Promise((r) => setTimeout(r, 100));
+      expect(fs.existsSync(path.join(UPLOADS_DIR, fileName))).toBe(false);
+    });
+
+    it('refuses a name this system never wrote — traversal has no address', async () => {
+      const { cookie } = await agent();
+      await request(app)
+        .get(api('/cars/photos/..%2F..%2F.env'))
+        .set('Cookie', cookie)
+        .expect(422);
     });
   });
 

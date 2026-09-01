@@ -1,6 +1,12 @@
+const fs = require('fs');
+const path = require('path');
+
 const { carRepository } = require('./car.repository');
 const { toCard, toOwn } = require('./car.dto');
-const { LIFETIME_DAYS, deriveGrade, bodyStatusError } = require('./car.constants');
+const { LIFETIME_DAYS, LIMITS, deriveGrade, bodyStatusError } = require('./car.constants');
+const { UPLOADS_DIR } = require('./car.upload');
+const { isAdmin } = require('../../constants/roles');
+const logger = require('../../utils/logger');
 const revealService = require('../listing/reveal.service');
 const catalogRepository = require('../catalog/catalog.repository');
 const authRepository = require('../auth/auth.repository');
@@ -364,6 +370,96 @@ const carService = {
     const row = await carRepository.findById(id);
     if (!row || row.ownerId !== user.id) throw new NotFoundError(NOT_FOUND);
     return row;
+  },
+
+  // ── photos ──────────────────────────────────────────────────────────────
+  //
+  // A photograph is free text with pixels — a windshield carries a telephone
+  // number in tape perfectly well. So photos are stored under random names,
+  // never served statically, and the serving route answers with exactly the
+  // reveal rules the description follows.
+
+  /** Attach up to the cap, owner only, sale advertisements only. */
+  async addPhotos({ user, id, files }) {
+    const row = await this.requireOwn(user, id);
+    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
+    if (row.kind !== 'OFFER') {
+      throw new BadRequestError('درخواست خرید عکس ندارد — عکس مال خودرویی است که وجود دارد');
+    }
+    if (!files || !files.length) throw new BadRequestError('عکسی همراه درخواست نیست');
+
+    const existing = await carRepository.countPhotos(id);
+    if (existing + files.length > LIMITS.PHOTO_MAX) {
+      throw new BadRequestError(`حداکثر ${LIMITS.PHOTO_MAX} عکس برای هر آگهی — الان ${existing} عکس دارد`);
+    }
+
+    await carRepository.addPhotos(
+      files.map((file, index) => ({
+        listingId: id,
+        fileName: file.filename,
+        mime: file.mimetype,
+        size: file.size,
+        sortOrder: existing + index,
+      }))
+    );
+
+    // Adding photos changes what a buyer already paid to evaluate, so it is
+    // an edit like any other: marked on the card, surfaced to past revealers.
+    const updated = await carRepository.update(id, {
+      editedAt: new Date(),
+      editCount: { increment: 1 },
+    });
+
+    await authRepository.recordActivity({
+      userId: user.id,
+      action: 'CAR_UPDATED',
+      targetType: 'CAR',
+      targetId: id,
+      summary: `${files.length} عکس افزود`,
+    });
+
+    return toOwn(updated, { viewerId: user.id });
+  },
+
+  async removePhoto({ user, photoId }) {
+    const photo = await carRepository.findPhotoById(photoId);
+    if (!photo || photo.listing.deletedAt) throw new NotFoundError('عکس');
+    if (photo.listing.ownerId !== user.id) throw new NotFoundError('عکس');
+
+    await carRepository.deletePhoto(photoId);
+    fs.unlink(path.join(UPLOADS_DIR, photo.fileName), (err) => {
+      if (err) logger.warn('Could not remove a car photo from disk', { error: err.message });
+    });
+
+    const updated = await carRepository.update(photo.listingId, {
+      editedAt: new Date(),
+      editCount: { increment: 1 },
+    });
+    return toOwn(updated, { viewerId: user.id });
+  },
+
+  /**
+   * The file itself, after proving the asker may see it.
+   *
+   * May: the owner's family is implicit in ownership (a parent browsing a
+   * child's advertisement goes through toOwn pages, but the file route checks
+   * strictly); an admin, because moderation has to look at what was reported;
+   * anybody else only with a recorded reveal — the same boundary as the
+   * description, enforced where the bytes leave the machine.
+   */
+  async photoFile({ user, fileName }) {
+    const photo = await carRepository.findPhoto(fileName);
+    if (!photo || photo.listing.deletedAt || photo.listing.market !== 'CAR') {
+      throw new NotFoundError('عکس');
+    }
+
+    const allowed =
+      photo.listing.ownerId === user.id ||
+      isAdmin(user.role) ||
+      Boolean(await revealService.revealRepository.findReveal(photo.listingId, user.id));
+    if (!allowed) throw new NotFoundError('عکس');
+
+    return { path: path.join(UPLOADS_DIR, photo.fileName), mime: photo.mime };
   },
 };
 

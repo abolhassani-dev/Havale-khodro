@@ -90,8 +90,15 @@ const carRepository = {
 
   // ── photos ──────────────────────────────────────────────────────────────
 
-  addPhoto({ listingId, fileName, mime, size, sortOrder }) {
-    return prisma.carPhoto.create({ data: { listingId, fileName, mime, size, sortOrder } });
+  addPhotos(rows) {
+    return prisma.carPhoto.createMany({ data: rows });
+  },
+
+  findPhotoById(id) {
+    return prisma.carPhoto.findUnique({
+      where: { id },
+      include: { listing: { select: { id: true, ownerId: true, deletedAt: true } } },
+    });
   },
 
   findPhoto(fileName) {

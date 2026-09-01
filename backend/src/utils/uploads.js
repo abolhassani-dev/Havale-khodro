@@ -36,7 +36,13 @@ const EXT_BY_MIME = {
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
-function makeUploader({ subdir, maxFiles = 3, typeMessage }) {
+function makeUploader({ subdir, maxFiles = 3, typeMessage, mimes }) {
+  // `mimes` narrows the accepted types below the shared map — car photos take
+  // images only, where a ticket may also attach a PDF. Additive: leaving it
+  // out keeps every existing uploader exactly as it was.
+  const accepted = mimes
+    ? Object.fromEntries(Object.entries(EXT_BY_MIME).filter(([m]) => mimes.includes(m)))
+    : EXT_BY_MIME;
   const dir = path.join(ROOT, subdir);
 
   let ready = false;
@@ -54,7 +60,7 @@ function makeUploader({ subdir, maxFiles = 3, typeMessage }) {
   const upload = multer({
     storage: multer.diskStorage({
       destination: (req, file, cb) => cb(null, dir),
-      filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}.${EXT_BY_MIME[file.mimetype]}`),
+      filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}.${accepted[file.mimetype]}`),
     }),
     limits: { fileSize: MAX_FILE_BYTES, files: maxFiles },
     fileFilter: (req, file, cb) => {
@@ -63,7 +69,7 @@ function makeUploader({ subdir, maxFiles = 3, typeMessage }) {
         err.message = 'بارگذاری فایل موقتاً در دسترس نیست.';
         return cb(err);
       }
-      if (EXT_BY_MIME[file.mimetype]) return cb(null, true);
+      if (accepted[file.mimetype]) return cb(null, true);
       // Multer surfaces this through the error handler as a 400.
       const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE');
       err.message = typeMessage || 'فقط عکس (JPG، PNG، WebP) یا فایل PDF قابل پیوست است';
