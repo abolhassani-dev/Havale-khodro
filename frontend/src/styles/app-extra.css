@@ -140,6 +140,64 @@
 }
 .filters .field { min-width: 150px; flex: 1; }
 
+/* ---- نوار نتیجه و ترتیب ----
+   «چند آگهی پیدا شد» و «به چه ترتیبی» بالای فیلترها می‌نشیند: جوابِ صفحه
+   مهم‌تر از ابزارِ صفحه است. */
+
+.list-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.list-bar .found b { color: var(--ink); font-size: 15px; font-weight: 800; }
+.sorts { display: flex; flex-wrap: wrap; gap: 5px; }
+.sort {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.sort:hover { border-color: #bfb6a0; }
+.sort.on { background: var(--primary-08); border-color: var(--primary-15); color: var(--primary-2); }
+
+/* ---- جعبه‌ی فیلترها ----
+   روی گوشی بسته است تا اولین چیزی که دیده می‌شود خودِ آگهی‌ها باشند؛ اگر
+   فیلتری فعال باشد خودش باز می‌ماند. روی صفحه‌ی بزرگ جا هست، پس همیشه باز
+   است و دستگیره‌اش هم دیده نمی‌شود. */
+
+.filters-box > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.filters-box > summary::-webkit-details-marker { display: none; }
+.filters-box > summary::after {
+  content: '⌄';
+  margin-inline-start: auto;
+  color: var(--ink-3);
+  transition: transform .15s;
+}
+.filters-box[open] > summary::after { transform: rotate(180deg); }
+
+@media (min-width: 721px) {
+  .filters-box > summary { display: none; }
+}
+
 .readonly {
   padding: 9px 12px;
   background: var(--paper-2);
@@ -189,6 +247,44 @@ textarea.in { resize: vertical; min-height: 60px; }
 .hcard dt { color: var(--ink-3); display: inline; }
 .hcard dd { font-weight: 600; }
 
+/* ---- کارت خودرو ----
+   قیمت اول، بعد یک سطر واقعیت‌های کوتاه. نسخه‌ی قبلی هر واقعیت را روی دو
+   سطر می‌نوشت (عنوان بالا، مقدار پایین) و روی گوشی هر کارت یک صفحه‌ی کامل
+   می‌شد؛ نماینده‌ای که دنبال ماشین می‌گردد باید چند آگهی را در یک نگاه
+   مقایسه کند، نه یکی‌یکی اسکرول کند. */
+
+.car-price {
+  padding: 0 14px 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--primary-2);
+}
+.car-price small { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.car-price .none { font-size: 14px; font-weight: 600; color: var(--ink-3); }
+
+.car-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+  list-style: none;
+}
+.car-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--paper-2);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.car-facts li.ok { border-color: #2c6b4133; background: var(--ok-08); color: #1d4a2d; }
+.car-facts li.locked { color: var(--ink-3); }
+
 .hcard .desc {
   padding: 0 14px 10px;
   font-size: 13.5px;
@@ -223,6 +319,15 @@ textarea.in { resize: vertical; min-height: 60px; }
 .contact.shown { background: #e7f1e6; border-top: 1px solid #2c6b4142; color: #1d4a2d; }
 .contact.own { background: var(--primary-08); border-top: 1px solid var(--primary-15); }
 .contact .phone { font-weight: 700; display: block; direction: ltr; text-align: right; }
+
+/* سطر دکمه‌های کارت — «جزئیات» همیشه، «نمایش مشخصات» تا وقتی باز نشده. */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-2);
+}
+.card-actions .btn { flex: 1; justify-content: center; }
 /* همان نوار داخل پنل جزئیات: آنجا آخرین سطر کارت نیست، پس تا لبه‌های
    پنل کشیده می‌شود تا مثل یک تکه‌ی جدا وسط متن نیفتد. */
 .modal-b .contact { margin: 14px -16px -14px; }
@@ -2141,11 +2246,37 @@ form.card[data-form="car"] { overflow: clip; }
 .bm-pq.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .bm-grade { margin-right: auto; }
 
-.bm-parts { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line-2); }
-@media (max-width: 640px) { .bm-parts { grid-template-columns: 1fr; } }
-.bm-part { padding: 8px 12px 10px; border-bottom: 1px solid var(--line-2); }
+.bm-parts { border-top: 1px solid var(--line-2); }
+
+/* ---- گروه‌های قطعات ----
+   بیست‌ودو قطعه پشت سر هم روی گوشی یک اسکرول دوهزارپیکسلی بود؛ حالا پنج
+   گروه بسته است و هر کدام تعداد علامت‌خورده‌های داخلش را روی سربرگ می‌گوید،
+   تا چیزی که تا شده پنهان نشده باشد. */
+
+.bm-group { border-bottom: 1px solid var(--line-2); }
+.bm-group > summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 12px;
+  font-size: 13.5px; font-weight: 800;
+  cursor: pointer; list-style: none;
+}
+.bm-group > summary::-webkit-details-marker { display: none; }
+.bm-group > summary::after {
+  content: '⌄'; margin-inline-start: auto; color: var(--ink-3); transition: transform .15s;
+}
+.bm-group[open] > summary::after { transform: rotate(180deg); }
+.bm-gc { font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.bm-gc.on { color: var(--copper); }
+
+.bm-glist { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line-2); }
+@media (max-width: 640px) { .bm-glist { grid-template-columns: 1fr; } }
+.bm-part { padding: 8px 12px 10px; border-top: 1px solid var(--line-2); }
+.bm-part:nth-child(-n+2) { border-top: none; }
 .bm-part:nth-child(odd) { border-left: 1px solid var(--line-2); }
-@media (max-width: 640px) { .bm-part:nth-child(odd) { border-left: none; } }
+@media (max-width: 640px) {
+  .bm-part:nth-child(odd) { border-left: none; }
+  .bm-part:nth-child(2) { border-top: 1px solid var(--line-2); }
+}
 .bm-nm { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 7px; }
 .bm-mini { width: 9px; height: 9px; border-radius: 50%; background: transparent; flex: none; }
 .bm-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
@@ -2161,8 +2292,7 @@ form.card[data-form="car"] { overflow: clip; }
 .bm-chip.st-SPRAY.on { background: var(--st-SPRAY); }
 .bm-chip.st-DAMAGE.on { background: var(--st-DAMAGE); }
 .bm-chip.st-REPLACE.on { background: var(--st-REPLACE); }
-.bm-hint { grid-column: 1 / -1; font-size: 12px; color: var(--ink-3); margin: 0; padding: 8px 12px; }
-/* display:grid beats the UA's [hidden] rule, so the rule is restated here. */
+.bm-hint { font-size: 12px; color: var(--ink-3); margin: 0; padding: 8px 12px; }
 .bm-parts[hidden] { display: none; }
 
 /* مشخصات بالای مودال جزئیات خودرو */

@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const {
-  CAR_KIND, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS, GRADE_FA,
+  CAR_KIND, CAR_SORT, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS, GRADE_FA,
 } = require('./car.constants');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 
@@ -148,6 +148,10 @@ const listQuery = Joi.object({
   grades: pickOf(Object.keys(GRADE_FA)),
   // Only cars with a live warranty.
   warranty: Joi.boolean().truthy('1').falsy('0'),
+  // How the results are ordered. The default — newest first — is the one
+  // every market here uses; the other three are what a car is actually
+  // shopped for.
+  sort: Joi.string().valid(...Object.values(CAR_SORT)),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
   page: Joi.number().integer().min(1).max(MAX_PAGE),
 });

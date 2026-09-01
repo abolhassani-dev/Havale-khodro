@@ -464,6 +464,36 @@ maybe('car market', () => {
       expect(res.body.data.items.every((r) => ['SEDAN', 'HATCHBACK'].includes(r.bodyType))).toBe(true);
       await request(app).get(api('/cars?bodyType=SEDAN,BOAT')).set('Cookie', viewer.cookie).expect(422);
     });
+
+    /**
+     * The order is a product decision, so it is asserted as one.
+     *
+     * Cheapest-first is the sort a car market lives on, and the thing that
+     * quietly breaks it is a NULL: a purchase request carries no price, and
+     * without «nulls last» every one of them would sit above the cheapest
+     * car on the page.
+     */
+    it('orders by price and by mileage, and refuses a word it does not know', async () => {
+      const seller = await agent();
+      await post(seller.cookie, sale({ carPriceToman: 990_000_000, mileageKm: 120000 })).expect(201);
+      await post(seller.cookie, sale({ carPriceToman: 2_400_000_000, mileageKm: 5000 })).expect(201);
+      await post(seller.cookie, wanted({ carPriceToman: null })).expect(201);
+
+      const viewer = await agent();
+      const cheap = await request(app).get(api('/cars?sort=cheap')).set('Cookie', viewer.cookie).expect(200);
+      const prices = cheap.body.data.items.map((r) => r.carPriceToman).filter((p) => p !== null);
+      expect([...prices].sort((a, b) => a - b)).toEqual(prices);
+      const firstNull = cheap.body.data.items.findIndex((r) => r.carPriceToman === null);
+      if (firstNull !== -1) {
+        expect(cheap.body.data.items.slice(firstNull).every((r) => r.carPriceToman === null)).toBe(true);
+      }
+
+      const km = await request(app).get(api('/cars?sort=km&kind=OFFER')).set('Cookie', viewer.cookie).expect(200);
+      const driven = km.body.data.items.map((r) => r.mileageKm);
+      expect([...driven].sort((a, b) => a - b)).toEqual(driven);
+
+      await request(app).get(api('/cars?sort=cheapest')).set('Cookie', viewer.cookie).expect(422);
+    });
   });
 
   describe('the owner’s side', () => {

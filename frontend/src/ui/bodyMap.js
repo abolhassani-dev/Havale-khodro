@@ -1,4 +1,5 @@
 import { html, raw } from './html.js';
+import { faDigits } from './format.js';
 
 /**
  * The body of a car: the twenty-two-part table an agency fills in, and the
@@ -123,7 +124,7 @@ const SHEETS = {
       'rl-f-d': [24, 57.5], 'rl-f-p': [24, 42.5], 'rl-r-d': [75, 57.5], 'rl-r-p': [75, 42.5],
       'sill-f': [20.5, 50], 'sill-r': [79.5, 50], tray: [26.5, 50],
     },
-    side: { 'fnd-f-d': [29.9, 84], 'dr-f-d': [43, 84.5], 'dr-r-d': [55.5, 84.5], 'fnd-r-d': [66.1, 84] },
+    side: { 'fnd-f-d': [29.9, 83], 'dr-f-d': [43, 84.5], 'dr-r-d': [55.5, 84.5], 'fnd-r-d': [66.1, 83] },
   },
   HATCHBACK: {
     file: 'hatchback',
@@ -137,7 +138,7 @@ const SHEETS = {
       'rl-f-d': [24.5, 57.5], 'rl-f-p': [24.5, 42.5], 'rl-r-d': [72.5, 57.5], 'rl-r-p': [72.5, 42.5],
       'sill-f': [21.5, 50], 'sill-r': [77, 50], tray: [27, 50],
     },
-    side: { 'fnd-f-d': [31.3, 82.7], 'dr-f-d': [44, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [64.7, 82.7] },
+    side: { 'fnd-f-d': [31.3, 81.5], 'dr-f-d': [44, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [64.7, 81.5] },
   },
   SUV: {
     file: 'suv',
@@ -247,6 +248,68 @@ export function bodyMapView(bodyType, bodyStatus = {}, { marked: showMarked = tr
 // ── the form matrix ─────────────────────────────────────────────────────────
 
 /**
+ * The twenty-two parts, in the five groups a dealer already says out loud.
+ *
+ * Flat, the table is twenty-two names and eighty-odd chips — a two-thousand
+ * pixel scroll on a phone that a seller marking one fender had to walk all
+ * the way down. Grouped, the section is five lines until something is opened.
+ */
+const PART_GROUPS = [
+  ['گلگیرها', ['fnd-f-d', 'fnd-f-p', 'fnd-r-d', 'fnd-r-p']],
+  ['درب‌ها', ['dr-f-d', 'dr-f-p', 'dr-r-d', 'dr-r-p']],
+  ['کاپوت، صندوق و سقف', ['hood', 'trunk', 'roof']],
+  ['شاسی و سرشاسی', ['chs-f-d', 'chs-f-p', 'chs-r-d', 'chs-r-p', 'rl-f-d', 'rl-f-p', 'rl-r-d', 'rl-r-p']],
+  ['پالونی و سینی', ['sill-f', 'sill-r', 'tray']],
+];
+
+/**
+ * The groups, plus a home for anything the list above forgot.
+ *
+ * A part that belongs to no group would simply not be on the form, and a
+ * missing قطعه is invisible in a way a wrong one is not — the seller cannot
+ * declare it, and nobody would notice for months. So the leftovers get their
+ * own section rather than disappearing.
+ */
+function partGroups() {
+  const placed = new Set(PART_GROUPS.flatMap(([, keys]) => keys));
+  const rest = BODY_PARTS.filter((part) => !placed.has(part.key)).map((part) => part.key);
+  return rest.length ? [...PART_GROUPS, ['سایر قطعات', rest]] : PART_GROUPS;
+}
+
+/** One group: a header that counts what is marked inside it, and its parts. */
+function groupBox([fa, keys], bodyStatus) {
+  const marked = keys.filter((key) => bodyStatus[key]).length;
+  return html`<details class="bm-group" ${raw(marked ? 'open' : '')}>
+    <summary>
+      ${fa}
+      <span class="bm-gc ${marked ? 'on' : ''}" data-body-count>
+        ${marked ? `${faDigits(marked)} مورد` : ''}
+      </span>
+    </summary>
+    <div class="bm-glist">
+      ${keys.map((key) => PART_BY_KEY[key] && partRow(PART_BY_KEY[key], bodyStatus))}
+    </div>
+  </details>`;
+}
+
+function partRow(part, bodyStatus) {
+  return html`<div class="bm-part">
+    <div class="bm-nm">
+      <span class="bm-mini ${bodyStatus[part.key] ? `st-${bodyStatus[part.key]}` : ''}"
+            data-body-mini="${part.key}"></span>
+      ${part.fa}
+    </div>
+    <div class="bm-chips">
+      ${part.allowed.map(
+        (status) => html`<button type="button"
+          class="bm-chip st-${status} ${bodyStatus[part.key] === status ? 'on' : ''}"
+          data-body-chip="${part.key}" data-st="${status}">${PART_STATUS_FA[status]}</button>`
+      )}
+    </div>
+  </div>`;
+}
+
+/**
  * The part-by-part form. All state lives in the DOM (rule 3.4): the chips
  * carry their on/off classes, and the single hidden input carries the JSON
  * the submit handler reads. A store write would re-render the form and wipe
@@ -269,23 +332,9 @@ export function bodyMatrix(bodyStatus = {}, bodyType = null) {
       </span>
     </div>
     <div class="bm-parts" data-body-parts ${raw(has ? '' : 'hidden')}>
-      ${BODY_PARTS.map(
-        (part) => html`<div class="bm-part">
-          <div class="bm-nm">
-            <span class="bm-mini ${bodyStatus[part.key] ? `st-${bodyStatus[part.key]}` : ''}"
-                  data-body-mini="${part.key}"></span>
-            ${part.fa}
-          </div>
-          <div class="bm-chips">
-            ${part.allowed.map(
-              (status) => html`<button type="button"
-                class="bm-chip st-${status} ${bodyStatus[part.key] === status ? 'on' : ''}"
-                data-body-chip="${part.key}" data-st="${status}">${PART_STATUS_FA[status]}</button>`
-            )}
-          </div>
-        </div>`
-      )}
-      <p class="bm-hint">هر قطعه فقط یک وضعیت می‌گیرد؛ کلیک دوباره یعنی «سالم». حداقل یک قطعه را علامت بزنید.</p>
+      <p class="bm-hint">گروهِ قطعه را باز کنید و وضعیتش را بزنید. هر قطعه فقط یک وضعیت
+        می‌گیرد؛ کلیک دوباره یعنی «سالم». حداقل یک قطعه را علامت بزنید.</p>
+      ${partGroups().map((group) => groupBox(group, bodyStatus))}
     </div>
     <!-- After the table on purpose: pinned to the bottom of the screen while
          the table scrolls past above it, so the dot appears the moment the
@@ -332,6 +381,16 @@ function refresh(wrap, table) {
   badge.className = `bm-grade tag ${GRADE_TONE[grade]}`;
   const live = wrap.querySelector('[data-body-live]');
   if (live) live.innerHTML = String(livePreview(wrap.dataset.bodyType || null, table));
+
+  // Each closed group says how much is marked inside it, so a table that is
+  // folded away never hides a mark from the person who made it.
+  wrap.querySelectorAll('.bm-group').forEach((group) => {
+    const marked = group.querySelectorAll('.bm-chip.on').length;
+    const badge = group.querySelector('[data-body-count]');
+    if (!badge) return;
+    badge.textContent = marked ? `${faDigits(marked)} مورد` : '';
+    badge.classList.toggle('on', marked > 0);
+  });
 }
 
 /** The form learned (or lost) the model's shape: redraw the preview on it. */

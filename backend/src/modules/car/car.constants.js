@@ -141,6 +141,22 @@ const PAINT_TOLERANCE_FA = {
   ANY: 'فرقی نمی‌کند',
 };
 
+/**
+ * How a list of cars may be ordered.
+ *
+ * Newest first is the default and the other markets' only order. A car is
+ * shopped for differently: the same model at four agencies is one decision
+ * about price, and «کم‌کارکردترین» is the question a used-car buyer asks
+ * second. The vocabulary lives here so the query, the validator and the
+ * screen cannot each invent their own spelling of it.
+ */
+const CAR_SORT = {
+  NEW: 'new',
+  CHEAP: 'cheap',
+  EXPENSIVE: 'expensive',
+  LOW_MILEAGE: 'km',
+};
+
 /** The current Jalali year, from Intl itself — no hand-rolled leap table. */
 function currentJalaliYear() {
   return Number(
@@ -167,6 +183,7 @@ const LIMITS = {
 
 module.exports = {
   CAR_KIND,
+  CAR_SORT,
   PART_STATUS,
   BODY_PARTS,
   PART_BY_KEY,

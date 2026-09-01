@@ -3,7 +3,9 @@ const path = require('path');
 
 const { carRepository } = require('./car.repository');
 const { toCard, toOwn } = require('./car.dto');
-const { LIFETIME_DAYS, LIMITS, deriveGrade, bodyStatusError } = require('./car.constants');
+const {
+  LIFETIME_DAYS, LIMITS, CAR_SORT, deriveGrade, bodyStatusError,
+} = require('./car.constants');
 const { UPLOADS_DIR } = require('./car.upload');
 const { isAdmin } = require('../../constants/roles');
 const logger = require('../../utils/logger');
@@ -38,6 +40,29 @@ const { NotFoundError, BadRequestError, ValidationError } = require('../../error
  */
 
 const NOT_FOUND = 'آگهی خودرو';
+
+/**
+ * The ordering behind each sort word.
+ *
+ * Every one of them ends with the same two tie-breakers as the default, so a
+ * page boundary cannot show a row twice or skip one: rows with equal prices
+ * would otherwise come back in whatever order the planner felt like this
+ * time. A request carries no price and no mileage, and NULLs are put last so
+ * «ارزان‌ترین» does not open with a column of rows that have no price at all.
+ */
+function orderFor(sort) {
+  const newest = [{ createdAt: 'desc' }, { id: 'desc' }];
+  if (sort === CAR_SORT.CHEAP) {
+    return [{ carPriceToman: { sort: 'asc', nulls: 'last' } }, ...newest];
+  }
+  if (sort === CAR_SORT.EXPENSIVE) {
+    return [{ carPriceToman: { sort: 'desc', nulls: 'last' } }, ...newest];
+  }
+  if (sort === CAR_SORT.LOW_MILEAGE) {
+    return [{ car: { mileageKm: 'asc' } }, ...newest];
+  }
+  return newest;
+}
 
 /** Splits a payload into the shared listing columns and this market's own. */
 function split(payload, bodyType) {
@@ -230,7 +255,7 @@ const carService = {
 
     const page = Math.min(filters.page || 1, MAX_PAGE);
     const [rows, total] = await Promise.all([
-      carRepository.listPublic({ where, skip: (page - 1) * take, take }),
+      carRepository.listPublic({ where, skip: (page - 1) * take, take, orderBy: orderFor(filters.sort) }),
       carRepository.count(where),
     ]);
 

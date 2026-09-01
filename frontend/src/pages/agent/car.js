@@ -76,6 +76,7 @@ export async function loadCarSearch(params) {
       maxMileage: params.maxMileage,
       grades: params.grades,
       warranty: params.warranty,
+      sort: params.sort,
       page: params.page || 1,
       limit: 12,
     }),
@@ -102,9 +103,57 @@ export async function loadCarMine(params) {
 
 // ── the market ──────────────────────────────────────────────────────────────
 
+/**
+ * How the results may be ordered — the same four words the API takes.
+ *
+ * «جدیدترین» carries no `sort` in the address, so a plain link to the market
+ * and the default order are the same address.
+ */
+const SORTS = [
+  ['new', 'جدیدترین'],
+  ['cheap', 'ارزان‌ترین'],
+  ['expensive', 'گران‌ترین'],
+  ['km', 'کم‌کارکردترین'],
+];
+
+/** Everything in the address that is a filter — not the kind, order or page. */
+const FILTER_KEYS = [
+  'brandId', 'carModelId', 'bodyType', 'yearFrom', 'yearTo',
+  'priceFrom', 'priceTo', 'maxMileage', 'grades', 'warranty',
+];
+
+function activeFilters(params) {
+  return FILTER_KEYS.filter((key) => params[key]).length;
+}
+
+/**
+ * The same 721px the stylesheet uses for «this is not a phone».
+ *
+ * Read here rather than forced open in CSS because a closed <details> is not
+ * hidden with `display` any more — the browser hides its contents with
+ * `content-visibility`, which an override on the child cannot reach.
+ */
+function wideScreen() {
+  return typeof window !== 'undefined' && window.innerWidth >= 721;
+}
+
+/**
+ * The current search with one thing changed.
+ *
+ * Every tab and sort button is a link to this same page, so each has to carry
+ * the whole search with it — the kind tabs used to carry only the kind, and
+ * choosing «فروش» silently threw away the filters underneath.
+ */
+function searchLink(params, patch) {
+  const next = { ...withoutPage(params), ...patch };
+  for (const key of Object.keys(next)) if (!next[key]) delete next[key];
+  return new URLSearchParams(next).toString();
+}
+
 export function carSearchPage() {
   const { data, params } = getState();
   const items = data.list?.items || [];
+  const total = data.list?.total || 0;
   const brands = data.tree?.brands || [];
 
   const kinds = [
@@ -120,11 +169,44 @@ export function carSearchPage() {
       <div class="kind-tabs">
         ${kinds.map(
           ([value, label]) => html`<button class="tab ${(params.kind || '') === value ? 'on' : ''}"
-            data-go="car-search" data-go-params="${value ? `kind=${value}` : ''}">${label}</button>`
+            data-go="car-search" data-go-params="${searchLink(params, { kind: value })}">${label}</button>`
         )}
       </div>
     </div>
 
+    <!-- What matched, and in what order — above the filters, because the
+         answer is what the page is for. -->
+    <div class="list-bar">
+      <span class="found">
+        ${
+          total
+            ? html`<b class="num">${faDigits(total)}</b> آگهی`
+            : 'آگهی‌ای با این فیلترها نیست'
+        }
+      </span>
+      <div class="sorts">
+        ${SORTS.map(
+          ([value, label]) => html`<button class="sort ${(params.sort || 'new') === value ? 'on' : ''}"
+            data-go="car-search"
+            data-go-params="${searchLink(params, { sort: value === 'new' ? '' : value })}">${label}</button>`
+        )}
+      </div>
+    </div>
+
+    <!-- Native <details>: the panel that used to fill the whole first screen
+         of a phone closes with no JavaScript, no click key and no state to
+         keep in sync. It opens itself whenever a filter is on, so nobody
+         hunts for why the list is short — and on a wide screen, where the
+         room is there anyway, it is open with its handle hidden in CSS. -->
+    <details class="filters-box" ${raw(wideScreen() || activeFilters(params) ? 'open' : '')}>
+      <summary>
+        فیلترها
+        ${
+          activeFilters(params)
+            ? html`<span class="tag">${faDigits(activeFilters(params))} فعال</span>`
+            : ''
+        }
+      </summary>
     <form class="filters" data-form="car-filters">
       <div class="field">
         <label for="brandId">برند</label>
@@ -195,6 +277,7 @@ export function carSearchPage() {
         <button class="btn" type="button" data-go="car-search">پاک کردن</button>
       </div>
     </form>
+    </details>
   </div>
 
   ${
@@ -244,34 +327,44 @@ function card(c) {
       }
     </header>
 
-    <dl>
-      ${field(offer ? 'قیمت خودرو' : 'تا قیمت', c.carPriceToman ? money(c.carPriceToman) : '—')}
+    <p class="car-price">
+      ${
+        c.carPriceToman
+          ? html`${offer ? '' : html`<small>تا</small>`} <b class="num">${money(c.carPriceToman)}</b>`
+          : html`<b class="none">${offer ? 'قیمت اعلام نشده' : 'سقف قیمت ندارد'}</b>`
+      }
+    </p>
+
+    <!-- One wrapping line instead of a two-line row per fact. Each of these
+         is a whole line on a phone in a definition list, and six of them
+         made a card taller than the screen it was read on. -->
+    <ul class="car-facts">
       ${
         offer
-          ? field('سال ساخت', c.year ? faDigits(c.year) : '—')
-          : field(
-              'سال ساخت',
+          ? fact(c.year ? `${faDigits(c.year)}` : null)
+          : fact(
               c.yearFrom || c.yearTo
-                ? `${c.yearFrom ? faDigits(c.yearFrom) : '—'} تا ${c.yearTo ? faDigits(c.yearTo) : '—'}`
-                : 'فرقی نمی‌کند'
+                ? `${c.yearFrom ? faDigits(c.yearFrom) : '…'} تا ${c.yearTo ? faDigits(c.yearTo) : '…'}`
+                : null
             )
       }
       ${
         offer
-          ? field('کارکرد', mileage(c.mileageKm))
-          : field('حداکثر کارکرد', c.maxMileageKm === null ? 'فرقی نمی‌کند' : mileage(c.maxMileageKm))
+          ? fact(mileageShort(c.mileageKm))
+          : fact(c.maxMileageKm === null ? null : `تا ${mileageShort(c.maxMileageKm)}`)
       }
-      ${offer ? field('رنگ', c.carColor || '—') : ''}
-      ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
-      ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
+      ${offer ? fact(c.carColor) : ''}
+      ${fact(BODY_TYPE_FA[c.bodyType])}
+      ${offer && c.warranty === true ? fact('گارانتی فعال', 'ok') : ''}
+      ${offer && c.warranty === false ? fact('بدون گارانتی') : ''}
       ${
-        // Only when there is something behind the lock — «عکس: —» on every
-        // photo-less card would be a row of noise.
+        // Only when there is something behind the lock — a photo count of
+        // nothing on every photo-less card would be a chip of noise.
         offer && !c.contactRevealed && c.photoCount
-          ? field('عکس', `${faDigits(c.photoCount)} عکس 🔒`)
+          ? fact(`${faDigits(c.photoCount)} عکس`, 'locked')
           : ''
       }
-    </dl>
+    </ul>
 
     ${c.description ? html`<p class="desc">${c.description}</p>` : ''}
 
@@ -285,17 +378,31 @@ function card(c) {
             : html`<span class="masked-id">
                 ${icon('lock', 12)}
                 ${c.hasDescription || c.photoCount ? 'نمایندگی، عکس‌ها و توضیحات' : 'نمایندگی'}
-                محرمانه — با «نمایش مشخصات» باز می‌شود
+                محرمانه است
               </span>`
         }
         <span class="tag">${until(c.closesAt)}</span>
       </div>
-      <div class="row-actions" style="padding:0 14px 10px">
+      <!-- The strip only when there is something on it. Before the reveal it
+           said «اطلاعات تماس مخفی است» under a line that had just said the
+           same thing, and cost the card a whole row to do it. -->
+      ${c.isOwn || c.contact ? carContact(c) : ''}
+      <div class="card-actions">
         <button class="btn sm" data-open-car="${c.id}">${offer ? 'جزئیات و نقشه بدنه' : 'جزئیات'}</button>
+        ${
+          c.isOwn || c.contact
+            ? ''
+            : html`<button class="btn primary sm" data-car-reveal="${c.id}">نمایش مشخصات</button>`
+        }
       </div>
-      ${carContact(c)}
     </footer>
   </article>`;
+}
+
+/** One chip on the facts line. Nothing to say means no chip, not «—». */
+function fact(value, tone = '') {
+  if (!value) return '';
+  return html`<li class="${tone}">${tone === 'locked' ? icon('lock', 11) : ''}${value}</li>`;
 }
 
 function field(label, value) {
@@ -306,6 +413,20 @@ function mileage(km) {
   if (km === null || km === undefined) return '—';
   if (km === 0) return 'صفر';
   return `${faDigits(Number(km).toLocaleString('en-US'))} کیلومتر`;
+}
+
+/**
+ * The same number for the card's one-line facts.
+ *
+ * «۱۲۰,۰۰۰ کیلومتر» is eleven characters of chip for a number the reader
+ * compares in tens of thousands. Hundreds are still spelled out — «۸,۵۰۰
+ * کیلومتر» is a fact about a nearly new car and must not round to «۹ هزار».
+ */
+function mileageShort(km) {
+  if (km === null || km === undefined) return null;
+  if (km === 0) return 'صفر کیلومتر';
+  if (km < 10000) return `${faDigits(Number(km).toLocaleString('en-US'))} کیلومتر`;
+  return `${faDigits(Math.round(km / 1000))} هزار کیلومتر`;
 }
 
 /**
@@ -753,8 +874,11 @@ export function applyCarFilters(form) {
     const value = form.elements[name]?.value;
     if (value) params[name] = enDigits(value);
   }
+  // The tab and the order are not on this form, and applying a filter must
+  // not quietly put the reader back on «همه، جدیدترین».
   const { params: current } = getState();
   if (current.kind) params.kind = current.kind;
+  if (current.sort) params.sort = current.sort;
   go('car-search', params);
 }
 

@@ -62,12 +62,18 @@ const carRepository = {
     });
   },
 
-  /** The public list, newest first, numbered pages only — no cursor need yet. */
-  listPublic({ where, take, skip = 0 }) {
+  /**
+   * The public list, numbered pages only — no cursor need yet.
+   *
+   * The order comes from the caller (see orderFor in the service) because in
+   * this market it is a product choice — price, mileage, newest — not a fact
+   * about the table. Newest first when nobody says otherwise.
+   */
+  listPublic({ where, take, skip = 0, orderBy }) {
     return prisma.listing.findMany({
       where: { ...where, market: MARKET },
       include: WITH_DETAIL,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: orderBy || [{ createdAt: 'desc' }, { id: 'desc' }],
       skip,
       take,
     });

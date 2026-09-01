@@ -431,8 +431,21 @@ await step('a car is posted with its body marked', async () => {
   const refusal = await page.locator('form[data-form="car"] .banner.danger').count();
   if (!refusal) throw new Error('an empty «دارد» table was not refused');
 
+  // The parts live in five folded groups now, so marking one means opening
+  // its group — which is the whole point: nobody scrolls past twenty-two
+  // rows to reach a fender.
+  await page.click('.bm-group:has(.bm-chip[data-body-chip="fnd-f-d"]) > summary');
   await page.click('.bm-chip[data-body-chip="fnd-f-d"][data-st="PARTIAL"]');
+  await page.click('.bm-group:has(.bm-chip[data-body-chip="hood"]) > summary');
   await page.click('.bm-chip[data-body-chip="hood"][data-st="PAINT"]');
+
+  // A folded group has to say what is inside it, or a mark disappears the
+  // moment the seller closes it.
+  const counted = await page
+    .locator('.bm-group:has(.bm-chip[data-body-chip="fnd-f-d"]) [data-body-count]')
+    .innerText();
+  if (!counted.includes('۱')) throw new Error('the group does not count its marked part: ' + counted);
+
   const grade = (await page.textContent('[data-body-grade]')).trim();
   if (grade !== 'رنگ‌شده') throw new Error('the live grade is wrong: ' + grade);
   // The map redraws under the seller's hand: two chips, two dots, on the
