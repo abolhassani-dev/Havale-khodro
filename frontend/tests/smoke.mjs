@@ -776,6 +776,17 @@ await step('each market has its own moderation screen', async () => {
   if (/حواله فروش|واگذاری/.test(registrations)) {
     throw new Error('a حواله row is showing on the ثبت‌نامی desk');
   }
+
+  // The third desk came from one config entry, which is exactly how it could
+  // be forgotten: the menu line, the page title and the table are the three
+  // places that entry has to reach.
+  await page.click('[data-go="adm-cars"]');
+  await page.waitForSelector('.card-h h2:has-text("آگهی‌های خودرو")', { timeout: 8000 });
+  const cars = await page.textContent('.content');
+  if (!cars.includes('قیمت خودرو')) throw new Error('the خودرو desk lost its price column');
+  if (/حواله فروش|واگذاری|ظرفیت ثبت‌نام/.test(cars)) {
+    throw new Error('another market\'s row is showing on the خودرو desk');
+  }
 });
 
 await step('catalogue editor shows the brand grid', async () => {

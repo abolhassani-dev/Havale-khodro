@@ -109,7 +109,7 @@ router.post(
   validate(schema.create),
   asyncHandler(async (req, res) => {
     const row = await carService.create({ user: req.user, payload: req.body });
-    return created(res, row, MESSAGES.HAVALE.CREATED);
+    return created(res, row, MESSAGES.LISTING.CREATED);
   })
 );
 
@@ -130,7 +130,7 @@ router.post(
     success(
       res,
       await carService.addPhotos({ user: req.user, id: req.params.id, files: req.files }),
-      MESSAGES.HAVALE.UPDATED
+      MESSAGES.LISTING.UPDATED
     )
   )
 );
@@ -180,7 +180,7 @@ router.patch(
     success(
       res,
       await carService.update({ user: req.user, id: req.params.id, payload: req.body }),
-      MESSAGES.HAVALE.UPDATED
+      MESSAGES.LISTING.UPDATED
     )
   )
 );
@@ -197,7 +197,7 @@ router.post(
   requireActiveSubscription,
   validate(schema.byId),
   asyncHandler(async (req, res) =>
-    success(res, await carService.renew({ user: req.user, id: req.params.id }), MESSAGES.HAVALE.RENEWED)
+    success(res, await carService.renew({ user: req.user, id: req.params.id }), MESSAGES.LISTING.RENEWED)
   )
 );
 
@@ -215,7 +215,7 @@ router.post(
     success(
       res,
       await carService.markFulfilled({ user: req.user, id: req.params.id }),
-      MESSAGES.HAVALE.FULFILLED
+      MESSAGES.LISTING.FULFILLED
     )
   )
 );
@@ -231,7 +231,7 @@ router.delete(
   '/:id',
   validate(schema.byId),
   asyncHandler(async (req, res) =>
-    success(res, await carService.remove({ user: req.user, id: req.params.id }), MESSAGES.HAVALE.DELETED)
+    success(res, await carService.remove({ user: req.user, id: req.params.id }), MESSAGES.LISTING.DELETED)
   )
 );
 
@@ -254,7 +254,7 @@ router.post(
     success(
       res,
       await carService.reveal({ user: req.user, access: req.access, id: req.params.id, ip: req.ip }),
-      MESSAGES.HAVALE.REVEALED
+      MESSAGES.LISTING.REVEALED
     )
   )
 );

@@ -134,6 +134,7 @@ const ADMIN_NAV = [
   // حواله rows out of the way first.
   { page: 'adm-havales', icon: 'file', label: 'مدیریت حواله‌ها', permission: 'listings' },
   { page: 'adm-registrations', icon: 'clipboard', label: 'مدیریت ثبت‌نامی‌ها', permission: 'listings' },
+  { page: 'adm-cars', icon: 'car', label: 'مدیریت خودروها', permission: 'listings' },
   // A report is a complaint about a listing, so it sits with the listings
   // rather than under a heading of its own.
   { page: 'adm-reports', icon: 'flag', label: 'گزارش تخلف', permission: 'reports' },
@@ -436,8 +437,8 @@ export function expiredBanner() {
     <span class="b-ico">⚠</span>
     <div class="b-txt">
       <b>اشتراک شما تمام شده است</b>
-      حواله‌ها را می‌بینید، ولی <b>مشخصات تماس و کد نمایندگی مخفی است</b> و امکان ثبت حواله،
-      ثبت درخواست خرید و تمدید آگهی ندارید.
+      آگهی‌های هر سه بازار را می‌بینید، ولی <b>مشخصات تماس و کد نمایندگی مخفی است</b> و
+      امکان ثبت آگهی، ثبت درخواست خرید و تمدید آگهی ندارید.
     </div>
     <button class="btn primary" data-go="subscription">تمدید اشتراک</button>
   </div>`;

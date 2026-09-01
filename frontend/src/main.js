@@ -45,7 +45,7 @@ import { handleBodyChip, handleBodyToggle } from './ui/bodyMap.js';
 import {
   loadCarSearch, loadCarForm, loadCarMine, carSearchPage, carFormPage, carMinePage,
   submitCar, applyCarFilters, onCarBrandChange, onCarModelChange, confirmCarReveal,
-  openCarModal, carEditModal, carRenew, carFulfill, carDelete,
+  openCarModal, carEditModal, carRenew, carFulfill, carDelete, carPhotoDelete,
 } from './pages/agent/car.js';
 import { loadNotices, noticesPage } from './pages/agent/notices.js';
 import { SOON_PAGES } from './ui/shell.js';
@@ -287,6 +287,7 @@ function adminTitle(page) {
     'adm-new-agent': 'ساخت نمایندگی',
     'adm-havales': 'مدیریت حواله‌ها',
     'adm-registrations': 'مدیریت ثبت‌نامی‌ها',
+    'adm-cars': 'مدیریت خودروها',
     'adm-listing': 'پرونده‌ی آگهی',
     'adm-reports': 'گزارش‌های تخلف',
     'adm-tickets': 'پشتیبانی',
@@ -338,7 +339,7 @@ const CLICK_KEYS = new Set([
   'toggleCompany', 'toggleBrand', 'toggleModel', 'toggleColor',
   'brandAll', 'brandNone', 'brandExpand',
   'bodyChip', 'bodyClean', 'bodyMarked',
-  'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete',
+  'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete', 'carPhotoDel',
 ]);
 
 function findTarget(node) {
@@ -390,6 +391,7 @@ function onClick(event) {
   if (d.carRenew) return carRenew(d.carRenew);
   if (d.carFulfill) return carFulfill(d.carFulfill);
   if (d.carDelete) return carDelete(d.carDelete);
+  if (d.carPhotoDel) return carPhotoDelete(el);
   if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);

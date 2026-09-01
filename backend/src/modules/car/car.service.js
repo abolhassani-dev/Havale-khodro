@@ -149,7 +149,7 @@ const carService = {
     // it said when it was posted, and its cut-out map must not break if the
     // catalogue row is renamed or retired next season.
     const model = await catalogRepository.findModel(payload.carModelId);
-    if (!model) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_MODEL);
+    if (!model) throw new BadRequestError(MESSAGES.LISTING.UNKNOWN_MODEL);
 
     const { listing, detail } = split(payload, model.bodyType || 'SEDAN');
 
@@ -273,7 +273,7 @@ const carService = {
 
   async update({ user, id, payload }) {
     const row = await this.requireOwn(user, id);
-    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
+    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.LISTING.NOT_EDITABLE);
 
     assertClean(freeText(payload), identity(user));
     if (payload.bodyStatus !== undefined) assertBody(payload.bodyStatus);
@@ -382,7 +382,7 @@ const carService = {
   /** Attach up to the cap, owner only, sale advertisements only. */
   async addPhotos({ user, id, files }) {
     const row = await this.requireOwn(user, id);
-    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
+    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.LISTING.NOT_EDITABLE);
     if (row.kind !== 'OFFER') {
       throw new BadRequestError('درخواست خرید عکس ندارد — عکس مال خودرویی است که وجود دارد');
     }

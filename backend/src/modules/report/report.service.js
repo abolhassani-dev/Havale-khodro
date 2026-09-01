@@ -36,7 +36,7 @@ const reportService = {
    */
   async create({ user, listingId, reason, description }) {
     const havale = await reportRepository.findHavaleIncludingDeleted(listingId);
-    if (!havale) throw new NotFoundError('حواله');
+    if (!havale) throw new NotFoundError('آگهی');
 
     if (havale.ownerId === user.id) throw new BadRequestError(MESSAGES.REPORT.OWN_LISTING);
 

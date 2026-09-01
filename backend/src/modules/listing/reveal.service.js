@@ -130,7 +130,7 @@ async function reveal({ user, access, id, ip, notFound = 'آگهی', targetType 
   if (!listing) throw new NotFoundError(notFound);
 
   if (listing.ownerId === user.id) {
-    throw new BadRequestError(MESSAGES.HAVALE.OWN_CONTACT);
+    throw new BadRequestError(MESSAGES.LISTING.OWN_CONTACT);
   }
 
   // A suspended agency's listings are not in the market, and paying to reach
@@ -148,10 +148,10 @@ async function reveal({ user, access, id, ip, notFound = 'آگهی', targetType 
   const usage = await usageFor({ user, access });
 
   if (usage.dailyUsed >= usage.dailyLimit) {
-    throw new ForbiddenError(MESSAGES.HAVALE.DAILY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
+    throw new ForbiddenError(MESSAGES.LISTING.DAILY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
   }
   if (usage.monthlyUsed >= usage.monthlyLimit) {
-    throw new ForbiddenError(MESSAGES.HAVALE.MONTHLY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
+    throw new ForbiddenError(MESSAGES.LISTING.MONTHLY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
   }
 
   await revealRepository.record({

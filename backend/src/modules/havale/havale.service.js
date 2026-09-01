@@ -462,7 +462,7 @@ const havaleService = {
 
     if (carModelId !== undefined && carModelId !== null) {
       const model = await catalogRepository.findModel(carModelId);
-      if (!model) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_MODEL);
+      if (!model) throw new BadRequestError(MESSAGES.LISTING.UNKNOWN_MODEL);
 
       data.carModelId = model.id;
       data.carType = model.name;
@@ -477,7 +477,7 @@ const havaleService = {
 
     if (carColor !== undefined && carColor !== null) {
       const colour = await catalogRepository.findColorByName(carColor);
-      if (!colour) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_COLOR);
+      if (!colour) throw new BadRequestError(MESSAGES.LISTING.UNKNOWN_COLOR);
       data.carColor = colour.name;
     } else if (carColor === null) {
       data.carColor = null;

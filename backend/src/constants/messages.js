@@ -11,7 +11,9 @@ const MESSAGES = {
     MUST_CHANGE_PASSWORD: 'برای ادامه باید رمز عبور را تغییر دهید',
   },
   SUBSCRIPTION: {
-    EXPIRED: 'اشتراک شما تمام شده — برای ثبت حواله و دیدن مشخصات تمدید کنید',
+    // Market-neutral on purpose: this banner shows on the خودرو and ثبت‌نامی
+    // pages exactly as it does on حواله.
+    EXPIRED: 'اشتراک شما تمام شده — برای ثبت آگهی و دیدن مشخصات تمدید کنید',
     GRANTED: 'اشتراک ثبت شد',
   },
   SEAT: {
@@ -25,16 +27,28 @@ const MESSAGES = {
     ALREADY_REVIEWED: 'این درخواست قبلاً بررسی شده است',
     SUBAGENT_CREATED: 'زیرنماینده ساخته شد',
   },
+  // Wording that names the حواله — for the havale module alone. The other
+  // markets and every shared service (reveal, report) speak in «آگهی» through
+  // the LISTING block below, so a خودرو page never says «حواله ثبت شد».
   HAVALE: {
     CREATED: 'حواله ثبت شد',
     UPDATED: 'حواله به‌روز شد',
     RENEWED: 'آگهی تمدید شد',
     FULFILLED: 'حواله «فروخته شد» علامت خورد',
     DELETED: 'حواله حذف شد',
-    REVEALED: 'مشخصات نمایش داده شد',
     NOT_EDITABLE: 'این حواله در وضعیت فعلی قابل ویرایش نیست',
     SUSPENDED: 'این حواله تعلیق شده است',
-    OWN_CONTACT: 'این حواله متعلق به خودتان است',
+  },
+  LISTING: {
+    CREATED: 'آگهی ثبت شد',
+    UPDATED: 'آگهی به‌روز شد',
+    RENEWED: 'آگهی تمدید شد',
+    FULFILLED: 'آگهی «انجام شد» علامت خورد',
+    DELETED: 'آگهی حذف شد',
+    REVEALED: 'مشخصات نمایش داده شد',
+    NOT_EDITABLE: 'این آگهی در وضعیت فعلی قابل ویرایش نیست',
+    SUSPENDED: 'این آگهی تعلیق شده است',
+    OWN_CONTACT: 'این آگهی متعلق به خودتان است',
     UNKNOWN_MODEL: 'مدل خودرو در فهرست سامانه نیست',
     UNKNOWN_COLOR: 'رنگ انتخاب‌شده در فهرست سامانه نیست',
     DAILY_LIMIT: 'سقف نمایش مشخصات امروز پر شده است',
@@ -43,12 +57,12 @@ const MESSAGES = {
   REPORT: {
     FILED: 'گزارش تخلف ثبت شد و بررسی می‌شود',
     REVIEWED: 'گزارش بررسی شد',
-    HELD: 'حواله تا پایان بررسی از دید عموم پنهان شد',
+    HELD: 'آگهی تا پایان بررسی از دید عموم پنهان شد',
     SUSPENSION_APPROVED: 'تعلیق حساب تأیید و اعمال شد',
-    OWN_LISTING: 'نمی‌توانید حواله‌ی خودتان را گزارش کنید',
-    ALREADY_REPORTED: 'قبلاً برای این حواله گزارش ثبت کرده‌اید',
+    OWN_LISTING: 'نمی‌توانید آگهی خودتان را گزارش کنید',
+    ALREADY_REPORTED: 'قبلاً برای این آگهی گزارش ثبت کرده‌اید',
     ALREADY_REVIEWED: 'این گزارش قبلاً بررسی شده است',
-    TOO_OLD: 'مهلت گزارش این حواله تمام شده است',
+    TOO_OLD: 'مهلت گزارش این آگهی تمام شده است',
     DAILY_LIMIT: 'سقف گزارش‌های امروز شما پر شده است',
     NEEDS_CONTACT_FIRST: 'برای دلیل «عدم پاسخگویی» ابتدا باید مشخصات تماس را باز کرده باشید',
     NO_APPROVAL_PENDING: 'این گزارش در صف تأیید تعلیق نیست',

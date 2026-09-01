@@ -48,7 +48,8 @@ export async function loadDashboard() {
  * written into the row — see marketRegistry on the server for the same idea in
  * the other direction.
  */
-const MARKET_LABEL = { HAVALE: 'حواله', REGISTRATION: 'ثبت‌نامی' };
+const MARKET_LABEL = { HAVALE: 'حواله', REGISTRATION: 'ثبت‌نامی', CAR: 'خودرو' };
+const MARKET_TONE = { HAVALE: '', REGISTRATION: 'c', CAR: 'b' };
 
 /** A decided capacity order the buyer has not dismissed — shown until they do. */
 function seatAlertBanner(order) {
@@ -125,17 +126,19 @@ export function dashboardPage() {
               ${closingSoon.slice(0, 5).map(
                 (h) => html`<tr>
                   <td>${h.carType}</td>
-                  <td><span class="tag ${h.market === 'HAVALE' ? '' : 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
+                  <td><span class="tag ${MARKET_TONE[h.market] || 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
                   <td><span class="tag w">${until(h.closesAt)}</span></td>
                   <td style="text-align:left">
                     ${
                       // Each market renews through its own module. One button
-                      // calling the حواله endpoint for both would 404 on half
-                      // of them — silently, since a failed renewal looks like a
-                      // click that did nothing.
+                      // calling the حواله endpoint for all three would 404 on
+                      // the rest — silently, since a failed renewal looks like
+                      // a click that did nothing.
                       h.market === 'HAVALE'
                         ? html`<button class="btn sm" data-renew="${h.id}">تمدید</button>`
-                        : html`<button class="btn sm" data-reg-renew="${h.id}" data-reg-kind="${h.kind}">تمدید</button>`
+                        : h.market === 'CAR'
+                          ? html`<button class="btn sm" data-car-renew="${h.id}">تمدید</button>`
+                          : html`<button class="btn sm" data-reg-renew="${h.id}" data-reg-kind="${h.kind}">تمدید</button>`
                     }
                   </td>
                 </tr>`
@@ -156,9 +159,9 @@ export function dashboardPage() {
               <thead><tr><th>خودرو</th><th>بازار</th>${reseller ? html`<th>زیرشاخه</th>` : ''}<th>وضعیت</th><th>بازدید</th></tr></thead>
               <tbody>
                 ${items.slice(0, 6).map(
-                  (h) => html`<tr ${raw(h.market === 'HAVALE' ? `data-open-havale="${h.id}"` : '')} style="cursor:pointer">
+                  (h) => html`<tr ${raw(h.market === 'HAVALE' ? `data-open-havale="${h.id}"` : h.market === 'CAR' ? `data-open-car="${h.id}"` : '')} style="cursor:pointer">
                     <td>${h.carType}</td>
-                    <td><span class="tag ${h.market === 'HAVALE' ? '' : 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
+                    <td><span class="tag ${MARKET_TONE[h.market] || 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
                     ${
                       reseller
                         ? html`<td>${h.isOwn ? html`<span class="tag b">خودم</span>` : html`<span class="num">${h.agency?.code || '—'}</span>`}</td>`

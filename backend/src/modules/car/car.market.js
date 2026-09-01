@@ -25,11 +25,15 @@ registerMarket('CAR', {
 
   summarise(row) {
     const d = row.car || {};
+    const isOffer = row.kind === 'OFFER';
     return {
       bodyType: BODY_TYPE_FA[d.bodyType] || null,
       year: d.year ?? null,
       mileageKm: d.mileageKm ?? null,
-      bodyGrade: GRADE_FA[d.bodyGrade] || null,
+      // A request has no body to grade — its column default would read «بدون
+      // رنگ» on the desk as if a buyer had certified a car they do not own.
+      // What a request does say is how much paint it will accept.
+      bodyGrade: isOffer ? GRADE_FA[d.bodyGrade] || null : PAINT_TOLERANCE_FA[d.paintTolerance] || null,
       headlineToman: toNumber(row.carPriceToman),
       headlineLabel: 'قیمت خودرو',
     };

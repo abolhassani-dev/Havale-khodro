@@ -332,7 +332,7 @@ router.put(
         status: req.body.status,
         reason: req.body.reason,
       }),
-      MESSAGES.HAVALE.UPDATED
+      MESSAGES.LISTING.UPDATED
     )
   )
 );
@@ -366,7 +366,7 @@ router.put(
         removed: req.body.removed,
         reason: req.body.reason,
       }),
-      MESSAGES.HAVALE.UPDATED
+      MESSAGES.LISTING.UPDATED
     )
   )
 );

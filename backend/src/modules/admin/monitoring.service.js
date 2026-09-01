@@ -48,12 +48,12 @@ const ACTION_PHRASES = {
   CAR_RENEWED: 'آگهی خودرو را تمدید کرد',
   CAR_FULFILLED: 'خودرو را «فروخته شد» علامت زد',
   CAR_DELETED: 'آگهی خودرو را حذف کرد',
-  CONTACT_REVEALED: 'مشخصات تماس این حواله را دید',
-  REPORT_FILED: 'برای این حواله گزارش تخلف ثبت کرد',
+  CONTACT_REVEALED: 'مشخصات تماس این آگهی را دید',
+  REPORT_FILED: 'برای این آگهی گزارش تخلف ثبت کرد',
   REPORT_CONFIRMED: 'گزارش تخلف را تأیید کرد',
   REPORT_REJECTED: 'گزارش تخلف را رد کرد',
   REPORT_MARKED_ABUSIVE: 'گزارش را بی‌مورد تشخیص داد',
-  REPORT_HELD: 'حواله را تا پایان بررسی پنهان کرد',
+  REPORT_HELD: 'آگهی را تا پایان بررسی پنهان کرد',
   ACCOUNT_SUSPENDED_BY_STRIKES: 'حساب را به دلیل اخطارها تعلیق کرد',
   TICKET_OPENED: 'تیکت پشتیبانی باز کرد',
   SUBSCRIPTION_GRANTED: 'اشتراک صادر کرد',
@@ -363,7 +363,7 @@ const monitoringService = {
         // this the log would quietly rewrite history (review round 3, fix 6).
         shown: { phone: row.phoneShown, agencyCode: row.agencyCodeShown },
         description:
-          `${actorName(row.viewer)} مشخصات تماس حواله «${row.listing.carType}» ` +
+          `${actorName(row.viewer)} مشخصات تماس آگهی «${row.listing.carType}» ` +
           `از ${row.listing.owner.agencyName} را دید`,
       })),
     };
@@ -431,8 +431,8 @@ const monitoringService = {
             // reasoning from two numbers.
             reason:
               row.havales === 0
-                ? `در ${toPersianDigits(days)} روز گذشته ${toPersianDigits(row.reveals)} بار مشخصات دیده و هیچ حواله‌ای ثبت نکرده`
-                : `در ${toPersianDigits(days)} روز گذشته ${toPersianDigits(row.reveals)} بار مشخصات دیده در برابر ${toPersianDigits(row.havales)} حواله`,
+                ? `در ${toPersianDigits(days)} روز گذشته ${toPersianDigits(row.reveals)} بار مشخصات دیده و هیچ آگهی‌ای ثبت نکرده`
+                : `در ${toPersianDigits(days)} روز گذشته ${toPersianDigits(row.reveals)} بار مشخصات دیده در برابر ${toPersianDigits(row.havales)} آگهی`,
           };
         })
         .filter((row) => row.flags.length)

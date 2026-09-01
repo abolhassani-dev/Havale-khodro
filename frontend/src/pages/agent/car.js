@@ -513,9 +513,15 @@ export function carFormPage(kind) {
             <h2>عکس خودرو <span class="opt">(اختیاری، تا ۶ عکس)</span></h2>
           </div>
           <div style="padding:8px 14px 4px">
-            <input class="in" type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple
-                   data-attach-input>
-            <div class="hint" data-attach-names></div>
+            <!-- The bare <input type="file"> renders as the browser's English
+                 «Choose Files» button; the input hides behind a house-styled
+                 label instead, the same trick the ticket paperclip uses. -->
+            <label class="btn sm tk-clip" title="تا ۶ عکس، JPG یا PNG یا WebP">
+              ${icon('file', 15)} انتخاب عکس‌ها
+              <input type="file" name="photos" hidden
+                     accept="image/jpeg,image/png,image/webp" multiple data-attach-input>
+            </label>
+            <span class="tk-attach-names hint" data-attach-names></span>
             <div class="hint">
               عکس‌ها روی کارت عمومی نمایش داده نمی‌شوند و بعد از «نمایش مشخصات» به خریدار می‌رسند —
               روی شیشه می‌شود شماره نوشت، پس عکس هم مثل متن آزاد پشت پرداخت است.
@@ -906,6 +912,32 @@ export function carEditModal(id) {
         <label for="e-desc">توضیحات</label>
         <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${c.description || ''}</textarea>
       </div>
+      ${
+        // The photo shelf — only offers carry photos. Deleting acts at once
+        // (each photo is its own row and file); new files ride with «ثبت
+        // تغییرات» like the posting form. This is also the promised recovery
+        // path when the upload failed right after posting.
+        offer
+          ? html`<div class="field wide">
+              <label>عکس‌ها <span class="opt">(تا ۶ عکس)</span></label>
+              <div class="car-photos" data-edit-photos>
+                ${(c.photos || []).map(
+                  (p) => html`<span class="car-photo-edit">
+                    <img src="${p.url}" alt="عکس خودرو" loading="lazy">
+                    <button type="button" class="btn sm danger" data-car-photo-del="${p.id}"
+                            data-car-listing="${c.id}">حذف</button>
+                  </span>`
+                )}
+              </div>
+              <label class="btn sm tk-clip" title="JPG یا PNG یا WebP">
+                ${icon('file', 15)} افزودن عکس
+                <input type="file" name="photos" hidden
+                       accept="image/jpeg,image/png,image/webp" multiple data-attach-input>
+              </label>
+              <span class="tk-attach-names hint" data-attach-names></span>
+            </div>`
+          : ''
+      }
       <p style="color:var(--ink-3);font-size:12px">
         خودِ خودرو و نوع آگهی قابل تغییر نیست. آگهی نشان «ویرایش‌شده» می‌گیرد و به کسانی که
         قبلاً مشخصاتش را باز کرده‌اند اطلاع داده می‌شود.
@@ -930,10 +962,49 @@ export function carEditModal(id) {
       }
 
       await car.update(id, payload);
+
+      // New photos ride after the row is saved, same bargain as the posting
+      // form: a failed upload reports itself instead of eating the edit.
+      const files = form.elements.photos?.files;
+      if (offer && files?.length) {
+        const body = new FormData();
+        [...files].slice(0, 6).forEach((file) => body.append('photos', file));
+        try {
+          await car.addPhotos(id, body);
+        } catch (err) {
+          toast(`تغییرات ثبت شد ولی عکس‌ها بارگذاری نشد: ${err.message}`, 'danger');
+        }
+      }
+
       toast('آگهی به‌روز شد');
       await resolve();
     },
   });
+}
+
+/**
+ * Deleting one photo from the edit dialogue.
+ *
+ * No confirm dialogue on purpose: a second modal would tear down the edit
+ * form and everything typed into it. The photo disappears at once and the
+ * toast says so — and the store's copy is trimmed too, so reopening the
+ * dialogue does not resurrect a thumbnail whose file is gone.
+ */
+export async function carPhotoDelete(el) {
+  const photoId = el.dataset.carPhotoDel;
+  try {
+    await car.removePhoto(photoId);
+  } catch (err) {
+    return toast(err.message, 'danger');
+  }
+  el.closest('.car-photo-edit')?.remove();
+  const { data } = getState();
+  const item = (data.mine?.items || []).find((row) => row.id === el.dataset.carListing);
+  if (item?.photos) {
+    item.photos = item.photos.filter((p) => p.id !== photoId);
+    item.photoCount = item.photos.length;
+  }
+  toast('عکس حذف شد');
 }
 
 export function carRenew(id) {

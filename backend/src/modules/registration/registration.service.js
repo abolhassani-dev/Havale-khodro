@@ -158,7 +158,7 @@ const registrationService = {
     // operator renames a model next year, an agency looking at an old one would
     // otherwise see a car description that changed underneath it.
     const model = await catalogRepository.findModel(payload.carModelId);
-    if (!model) throw new BadRequestError(MESSAGES.HAVALE.UNKNOWN_MODEL);
+    if (!model) throw new BadRequestError(MESSAGES.LISTING.UNKNOWN_MODEL);
 
     // Offers only — the same rule as the حواله market, for the same reason. An
     // agency that handles Peugeot still buys whatever its customer walked in
@@ -326,7 +326,7 @@ const registrationService = {
 
   async update({ user, id, payload }) {
     const row = await this.requireOwn(user, id);
-    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.HAVALE.NOT_EDITABLE);
+    if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.LISTING.NOT_EDITABLE);
 
     // On the edit too: writing clean text and editing the number in afterwards
     // is the obvious way round a check that only runs once.

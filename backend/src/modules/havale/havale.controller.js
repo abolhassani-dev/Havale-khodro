@@ -68,7 +68,7 @@ const havaleController = {
       id: req.params.id,
       ip: req.ip,
     });
-    return success(res, result, MESSAGES.HAVALE.REVEALED);
+    return success(res, result, MESSAGES.LISTING.REVEALED);
   }),
 
   usage: asyncHandler(async (req, res) => {

@@ -622,7 +622,7 @@ maybe('admin panel', () => {
       expect(flagged.flags).toContain('NO_LISTINGS_MANY_REVEALS');
       // A flag somebody has to take on trust gets ignored after the first false
       // positive, so the numbers travel with it.
-      expect(flagged.reason).toContain('هیچ حواله‌ای');
+      expect(flagged.reason).toContain('هیچ آگهی‌ای');
     });
 
     it('does not flag an agency that trades normally', async () => {

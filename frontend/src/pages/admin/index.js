@@ -159,6 +159,7 @@ export function renderAdminPage(page) {
     case 'adm-new-agent': return newAgentPage();
     case 'adm-havales': return listingsPage(MARKETS.HAVALE);
     case 'adm-registrations': return listingsPage(MARKETS.REGISTRATION);
+    case 'adm-cars': return listingsPage(MARKETS.CAR);
     case 'adm-listing': return listingPage();
     case 'adm-reports': return reportsPage();
     case 'adm-tickets': return adminTicketsPage();
@@ -389,7 +390,7 @@ function dashPage() {
       faDigits(o.liveListings ?? 0),
       // Per market, because one number labelled «حواله» that has ثبت‌نامی
       // inside it is the mistake the agency dashboard made until this morning.
-      `حواله ${faDigits(o.liveByMarket?.HAVALE ?? 0)} · ثبت‌نامی ${faDigits(o.liveByMarket?.REGISTRATION ?? 0)}`,
+      `حواله ${faDigits(o.liveByMarket?.HAVALE ?? 0)} · ثبت‌نامی ${faDigits(o.liveByMarket?.REGISTRATION ?? 0)} · خودرو ${faDigits(o.liveByMarket?.CAR ?? 0)}`,
       'file'
     )}
     ${stat(
@@ -955,6 +956,23 @@ const MARKETS = {
     searchHint: 'شماره آگهی، خودرو، نام یا کد نمایندگی',
     detail: (h) => [h.planName, h.method].filter(Boolean).join(' · '),
     tip: 'همه‌ی آگهی‌های ثبت‌نامی سامانه در هر وضعیتی — اعلام ظرفیت و درخواست ظرفیت. «تعلیق» و «برداشتن» دقیقاً مثل حواله کار می‌کنند و رکورد را پاک نمی‌کنند.',
+  },
+  CAR: {
+    key: 'CAR',
+    page: 'adm-cars',
+    title: 'آگهی‌های خودرو',
+    unit: 'آگهی خودرو',
+    icon: 'car',
+    totalLabel: 'کل آگهی‌ها',
+    fulfilledLabel: 'فروخته‌شده',
+    amountHead: 'قیمت خودرو',
+    kinds: [['OFFER', 'فروش خودرو'], ['REQUEST', 'درخواست خرید']],
+    kindLabel: (kind) => (kind === 'OFFER' ? 'فروش خودرو' : 'درخواست خرید'),
+    searchHint: 'شماره آگهی، خودرو، نام یا کد نمایندگی',
+    // Year and body verdict — the two facts a moderator needs to recognise
+    // the advertisement someone is complaining about.
+    detail: (h) => [h.bodyType, h.year ? faDigits(h.year) : null, h.bodyGrade].filter(Boolean).join(' · '),
+    tip: 'همه‌ی آگهی‌های بازار خودرو در هر وضعیتی — فروش و درخواست خرید. «تعلیق» و «برداشتن» دقیقاً مثل حواله کار می‌کنند و رکورد را پاک نمی‌کنند.',
   },
 };
 

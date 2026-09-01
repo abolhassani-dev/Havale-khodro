@@ -80,7 +80,7 @@ router.post(
   validate(schema.create),
   asyncHandler(async (req, res) => {
     const row = await registrationService.create({ user: req.user, payload: req.body });
-    return created(res, row, MESSAGES.HAVALE.CREATED);
+    return created(res, row, MESSAGES.LISTING.CREATED);
   })
 );
 
@@ -117,7 +117,7 @@ router.patch(
     success(
       res,
       await registrationService.update({ user: req.user, id: req.params.id, payload: req.body }),
-      MESSAGES.HAVALE.UPDATED
+      MESSAGES.LISTING.UPDATED
     )
   )
 );
@@ -141,7 +141,7 @@ router.post(
         id: req.params.id,
         registerDeadline: req.body?.registerDeadline,
       }),
-      MESSAGES.HAVALE.RENEWED
+      MESSAGES.LISTING.RENEWED
     )
   )
 );
@@ -160,7 +160,7 @@ router.post(
     success(
       res,
       await registrationService.markFulfilled({ user: req.user, id: req.params.id }),
-      MESSAGES.HAVALE.FULFILLED
+      MESSAGES.LISTING.FULFILLED
     )
   )
 );
@@ -179,7 +179,7 @@ router.delete(
     success(
       res,
       await registrationService.remove({ user: req.user, id: req.params.id }),
-      MESSAGES.HAVALE.DELETED
+      MESSAGES.LISTING.DELETED
     )
   )
 );
@@ -207,7 +207,7 @@ router.post(
         id: req.params.id,
         ip: req.ip,
       }),
-      MESSAGES.HAVALE.REVEALED
+      MESSAGES.LISTING.REVEALED
     )
   )
 );

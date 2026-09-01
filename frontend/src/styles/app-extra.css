@@ -2131,3 +2131,6 @@ button.af-parent:hover { text-decoration: underline; }
   width: 110px; height: 82px; object-fit: cover;
   border-radius: 8px; border: 1px solid var(--line);
 }
+/* یک عکس در مودال ویرایش: بندانگشتی + دکمه‌ی حذف زیرش */
+.car-photo-edit { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.car-photo-edit .btn { width: 100%; }
