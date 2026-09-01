@@ -12,10 +12,16 @@ import { html, raw } from './html.js';
  * re-validates and re-derives regardless; this copy exists so the form can
  * refuse and label things before a round-trip.
  *
- * The cut-outs are the owner's own sheets in `assets/body/*.png`. Each sheet
- * carries several views; the two used here — the plan and the profile — are
- * cropped out with pixel-exact windows measured from the images themselves
- * (scripts in the repo history; re-measure if a sheet is ever replaced).
+ * The cut-outs come from the owner's own sheets in `assets/body/sheets/*.png`.
+ * Each sheet carries several views; the two used here — the plan and the
+ * profile — are cropped out with pixel-exact windows measured from the images
+ * themselves, and `scripts/crop-body-sheets.py` turns those windows into the
+ * small WebP files the page actually loads (`assets/body/<type>-plan.webp`,
+ * `<type>-side.webp`). The first version cropped in CSS, by showing a 900 KB
+ * sheet three times through a window; on a phone that was a long wait for
+ * three empty boxes with dots on them. Thirty kilobytes per view is not.
+ * Re-run the script if a sheet or a window is ever changed.
+ *
  * Iranian cars are left-hand drive: the nose-left profile is the DRIVER
  * flank, the passenger flank is the same view mirrored, and in the plan view
  * the lower half is the driver side.
@@ -100,11 +106,15 @@ export function gradeOf(bodyStatus) {
 
 // ── the cut-out geometry ────────────────────────────────────────────────────
 
-const SHEET_ASPECT = 1086 / 1448; // every sheet is 1448×1086
+// planCrop / sideCrop are still the windows on the 1448×1086 sheet, in
+// percent — the dot coordinates below are measured on the sheet, not on the
+// crop, and the crop script reads the same numbers.
 
 const SHEETS = {
   SEDAN: {
-    file: 'sedan.png',
+    file: 'sedan',
+    planSize: [800, 369],
+    sideSize: [800, 261],
     planCrop: [18.23, 31.12, 81.49, 70.07],
     sideCrop: [19.61, 71.45, 80.04, 97.7],
     plan: {
@@ -116,7 +126,9 @@ const SHEETS = {
     side: { 'fnd-f-d': [27, 86], 'dr-f-d': [43, 84.5], 'dr-r-d': [55.5, 84.5], 'fnd-r-d': [72.5, 85] },
   },
   HATCHBACK: {
-    file: 'hatchback.png',
+    file: 'hatchback',
+    planSize: [800, 402],
+    sideSize: [800, 314],
     planCrop: [20.23, 29.83, 79.07, 69.24],
     sideCrop: [21.48, 69.8, 76.17, 98.43],
     plan: {
@@ -128,7 +140,9 @@ const SHEETS = {
     side: { 'fnd-f-d': [28, 86], 'dr-f-d': [44, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [68.5, 85] },
   },
   SUV: {
-    file: 'suv.png',
+    file: 'suv',
+    planSize: [800, 354],
+    sideSize: [800, 304],
     planCrop: [17.96, 30.2, 81.42, 67.68],
     sideCrop: [21.27, 69.24, 77.35, 97.7],
     plan: {
@@ -140,7 +154,9 @@ const SHEETS = {
     side: { 'fnd-f-d': [27, 86], 'dr-f-d': [43.5, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [72, 85] },
   },
   PICKUP: {
-    file: 'pickup.png',
+    file: 'pickup',
+    planSize: [800, 351],
+    sideSize: [800, 285],
     planCrop: [19.82, 31.03, 79.14, 65.75],
     sideCrop: [17.4, 67.13, 82.04, 97.88],
     plan: {
@@ -156,15 +172,15 @@ const SHEETS = {
 /** Passenger side-view twins: the same point, mirrored on the flipped view. */
 const DRIVER_TWIN = { 'fnd-f-p': 'fnd-f-d', 'fnd-r-p': 'fnd-r-d', 'dr-f-p': 'dr-f-d', 'dr-r-p': 'dr-r-d' };
 
-function viewBox(sheet, crop, { flip = false, label, dots }) {
-  const [x0, y0, x1, y1] = crop;
-  const w = x1 - x0;
-  const h = y1 - y0;
-  const aspect = w / (h * SHEET_ASPECT);
-  const img = `<img src="/assets/body/${sheet.file}" alt="" loading="lazy"
-    style="position:absolute;width:${(10000 / w).toFixed(2)}%;left:-${((x0 / w) * 100).toFixed(2)}%;top:-${((y0 / h) * 100).toFixed(2)}%">`;
-  return html`<div class="bm-view" style="aspect-ratio:${aspect.toFixed(4)}">
-    ${raw(flip ? `<div class="bm-flip">${img}</div>` : img)}
+/**
+ * One view: a plain image with its intrinsic size on the tag, so the box has
+ * the right height before a byte arrives and on browsers that never heard of
+ * aspect-ratio; the dots sit on top in percent of the same box.
+ */
+function viewBox(sheet, view, { flip = false, label, dots }) {
+  const [w, h] = view === 'plan' ? sheet.planSize : sheet.sideSize;
+  return html`<div class="bm-view ${flip ? 'bm-flip' : ''}">
+    <img src="/assets/body/${sheet.file}-${view}.webp" width="${w}" height="${h}" alt="" decoding="async">
     <span class="bm-tag">${label}</span>
     ${dots}
   </div>`;
@@ -201,9 +217,11 @@ export function bodyMapView(bodyType, bodyStatus = {}) {
   }
 
   return html`<div class="bm-map">
-    ${viewBox(sheet, sheet.planCrop, { label: 'نمای بالا', dots: planDots })}
-    ${viewBox(sheet, sheet.sideCrop, { label: 'سمت راننده', dots: driverDots })}
-    ${viewBox(sheet, sheet.sideCrop, { flip: true, label: 'سمت شاگرد', dots: passengerDots })}
+    <div class="bm-views">
+      ${viewBox(sheet, 'plan', { label: 'نمای بالا', dots: planDots })}
+      ${viewBox(sheet, 'side', { label: 'سمت راننده', dots: driverDots })}
+      ${viewBox(sheet, 'side', { flip: true, label: 'سمت شاگرد', dots: passengerDots })}
+    </div>
     <div class="bm-legend">
       ${Object.entries(PART_STATUS_FA).map(
         ([key, fa]) => html`<b><span class="bm-sw st-${key}"></span>${fa}</b>`

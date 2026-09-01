@@ -2052,16 +2052,23 @@ button.af-parent:hover { text-decoration: underline; }
   --st-REPLACE: #9d2b21;  /* تعویض */
 }
 
-/* ---- نمای نقشه (نمایش روی آگهی) ---- */
-.bm-map { max-width: 560px; margin: 0 auto; }
-.bm-view { position: relative; overflow: hidden; }
-.bm-view + .bm-view { margin-top: 6px; }
-.bm-view img { display: block; max-width: none; }
-.bm-flip { width: 100%; height: 100%; transform: scaleX(-1); }
-.bm-tag {
-  position: absolute; right: 8px; top: 4px; font-size: 11px; color: var(--ink-3);
-  background: #ffffffcc; border-radius: 6px; padding: 0 8px; pointer-events: none;
+/* ---- نمای نقشه (نمایش روی آگهی) ----
+   سه نما کنار هم تا کل نقشه بی‌اسکرول جلوی چشم باشد؛ روی گوشی نمای بالا
+   تمام‌عرض و دو پهلو زیرش کنار هم. عکس‌ها برش‌خورده و کوچک‌اند (webp) و
+   width/height روی خود تگ است تا جعبه قبل از رسیدن عکس هم اندازه‌ی درست
+   داشته باشد و نقطه‌ها روی جای خودشان بنشینند. */
+.bm-map { max-width: 760px; margin: 0 auto; }
+.bm-views { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+.bm-view { position: relative; }
+.bm-view img { display: block; width: 100%; height: auto; }
+.bm-flip img { transform: scaleX(-1); }
+@media (max-width: 640px) {
+  .bm-views { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .bm-views .bm-view:first-child { grid-column: 1 / -1; }
 }
+/* عنوان هر نما زیرش می‌نشیند نه رویش — روی گوشی نمای پهلو کوچک است و
+   برچسبِ روی سقف، سقف را می‌پوشاند */
+.bm-tag { display: block; text-align: center; font-size: 11px; color: var(--ink-3); padding-top: 2px; }
 .bm-dot {
   position: absolute; width: 13px; height: 13px; border-radius: 50%;
   border: 2px solid #fff; box-shadow: 0 0 0 1px #00000022, 0 1px 3px #00000033;
@@ -2122,6 +2129,8 @@ button.af-parent:hover { text-decoration: underline; }
   border-radius: 10px; overflow: hidden; margin: 0 0 12px;
 }
 .modal-specs > div { background: var(--card); padding: 7px 12px; }
+/* تعداد فرد → آخرین خانه تمام‌عرض، نه یک خانه‌ی خالی رنگی */
+.modal-specs > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .modal-specs dt { font-size: 11px; color: var(--ink-3); font-weight: 700; }
 .modal-specs dd { margin: 0; font-weight: 700; font-size: 13px; }
 

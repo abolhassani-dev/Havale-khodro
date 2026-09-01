@@ -215,10 +215,20 @@ function card(c) {
         ${editedTag(c)}
         <h3>${c.carType}</h3>
       </div>
-      <span class="solh ${GRADE_TONE[c.bodyGrade] === 'g' ? 'is-solh' : 'is-vek'}">
-        <span class="solh-k">وضعیت بدنه</span>
-        <b>${offer ? GRADE_FA[c.bodyGrade] || '—' : TOLERANCE_FA[c.paintTolerance] || 'فرقی نمی‌کند'}</b>
-      </span>
+      ${
+        // A request has no body to grade. Its corner says what the buyer
+        // will accept, under that name — not «وضعیت بدنه» over a car that
+        // does not exist yet.
+        offer
+          ? html`<span class="solh ${GRADE_TONE[c.bodyGrade] === 'g' ? 'is-solh' : 'is-vek'}">
+              <span class="solh-k">وضعیت بدنه</span>
+              <b>${GRADE_FA[c.bodyGrade] || '—'}</b>
+            </span>`
+          : html`<span class="solh is-solh">
+              <span class="solh-k">بدنه‌ی قابل قبول</span>
+              <b>${TOLERANCE_FA[c.paintTolerance] || 'فرقی نمی‌کند'}</b>
+            </span>`
+      }
     </header>
 
     <dl>
@@ -267,7 +277,7 @@ function card(c) {
         <span class="tag">${until(c.closesAt)}</span>
       </div>
       <div class="row-actions" style="padding:0 14px 10px">
-        <button class="btn sm" data-open-car="${c.id}">جزئیات و نقشه بدنه</button>
+        <button class="btn sm" data-open-car="${c.id}">${offer ? 'جزئیات و نقشه بدنه' : 'جزئیات'}</button>
       </div>
       ${carContact(c)}
     </footer>
@@ -361,7 +371,7 @@ export async function openCarModal(id) {
         ${offer ? field('کارکرد', mileage(c.mileageKm)) : ''}
         ${offer ? field('رنگ', c.carColor || '—') : ''}
         ${field(offer ? 'قیمت خودرو' : 'تا قیمت', c.carPriceToman ? money(c.carPriceToman) : '—')}
-        ${offer ? field('وضعیت بدنه', GRADE_FA[c.bodyGrade] || '—') : field('وضعیت قابل قبول', TOLERANCE_FA[c.paintTolerance] || '—')}
+        ${offer ? field('وضعیت بدنه', GRADE_FA[c.bodyGrade] || '—') : field('بدنه‌ی قابل قبول', TOLERANCE_FA[c.paintTolerance] || '—')}
       </dl>
 
       ${offer ? bodyMapView(c.bodyType, c.bodyStatus) : ''}
@@ -899,7 +909,7 @@ export function carEditModal(id) {
               ${moneyInput('carPriceToman', { value: c.carPriceToman || '' })}
             </div>
             <div class="field">
-              <label for="e-tolerance">وضعیت قابل قبول</label>
+              <label for="e-tolerance">بدنه‌ی قابل قبول</label>
               <select class="in" id="e-tolerance" name="paintTolerance">
                 ${Object.entries(TOLERANCE_FA).map(
                   ([value, label]) =>

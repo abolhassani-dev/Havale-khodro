@@ -400,6 +400,28 @@ maybe('car market', () => {
 
       await request(app).get(api('/cars?page=51')).set('Cookie', viewer.cookie).expect(422);
     });
+
+    it('a request has no body: it carries no grade and never answers a body filter', async () => {
+      const owner = await agent();
+      const req = await post(owner.cookie, wanted()).expect(201);
+      // The column defaults to NO_PAINT; the API must not let that read as a
+      // verdict on a car nobody has seen.
+      expect(req.body.data.bodyGrade).toBeNull();
+      expect(req.body.data.bodyStatus).toEqual({});
+
+      const viewer = await agent();
+      const all = await request(app).get(api('/cars')).set('Cookie', viewer.cookie).expect(200);
+      expect(all.body.data.items.map((r) => r.id)).toContain(req.body.data.id);
+
+      for (const body of ['NO_PAINT', 'NO_REPLACE', 'CHASSIS_OK']) {
+        const res = await request(app)
+          .get(api(`/cars?body=${body}`))
+          .set('Cookie', viewer.cookie)
+          .expect(200);
+        expect(res.body.data.items.map((r) => r.id)).not.toContain(req.body.data.id);
+        expect(res.body.data.items.every((r) => r.kind === 'OFFER')).toBe(true);
+      }
+    });
   });
 
   describe('the owner’s side', () => {

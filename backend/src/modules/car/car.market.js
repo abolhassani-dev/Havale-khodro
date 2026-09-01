@@ -71,13 +71,16 @@ registerMarket('CAR', {
             icon: 'ticket',
           },
       { label: 'قیمت خودرو', value: toNumber(row.carPriceToman), money: true, icon: 'ticket' },
-      { label: 'وضعیت بدنه', value: GRADE_FA[d.bodyGrade] || '—', icon: 'shield' },
-      { label: 'جزئیات بدنه', value: bodySentence(d.bodyStatus), icon: 'clipboard' },
+      // The body rows belong to a car that exists; a request gets the one
+      // line it actually said — what it will accept.
       ...(isOffer
-        ? []
+        ? [
+            { label: 'وضعیت بدنه', value: GRADE_FA[d.bodyGrade] || '—', icon: 'shield' },
+            { label: 'جزئیات بدنه', value: bodySentence(d.bodyStatus), icon: 'clipboard' },
+          ]
         : [
             {
-              label: 'وضعیت قابل قبول',
+              label: 'بدنه‌ی قابل قبول',
               value: PAINT_TOLERANCE_FA[d.paintTolerance] || '—',
               icon: 'shield',
             },

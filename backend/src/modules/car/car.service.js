@@ -99,7 +99,7 @@ const DETAIL_FIELDS = {
   mileageKm: ['کارکرد', 'number'],
   maxMileageKm: ['حداکثر کارکرد', 'number'],
   priceFromToman: ['قیمت از', 'money'],
-  paintTolerance: ['وضعیت قابل قبول'],
+  paintTolerance: ['بدنه‌ی قابل قبول'],
 };
 
 function detailPatch(payload) {
@@ -199,6 +199,10 @@ const carService = {
     if (filters.yearTo) detail.year = { ...(detail.year || {}), lte: filters.yearTo };
     if (filters.maxMileage !== undefined) detail.mileageKm = { lte: filters.maxMileage };
     // Three cuts in the buyer's language rather than five grades to memorise.
+    // A body filter is a question about cars for sale, so it narrows the
+    // list to them: a request has no body, and its column default of
+    // NO_PAINT would otherwise answer «فقط بدون رنگ» with every request.
+    if (filters.body) where.kind = 'OFFER';
     if (filters.body === 'NO_PAINT') detail.bodyGrade = 'NO_PAINT';
     if (filters.body === 'NO_REPLACE') {
       detail.bodyGrade = { in: ['NO_PAINT', 'MINOR_PAINT', 'PAINTED'] };

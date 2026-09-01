@@ -40,8 +40,11 @@ function baseFields(row) {
     // The body table is structured input — public by design, on the card and
     // under the cut-out map. The grade is derived server-side and cannot
     // disagree with it.
-    bodyStatus: d.bodyStatus || {},
-    bodyGrade: d.bodyGrade || 'NO_PAINT',
+    // A request has no body: its table is empty and its grade is null,
+    // whatever the column's default says — a «بدون رنگ» on a request would
+    // read as a certificate for a car nobody has seen.
+    bodyStatus: row.kind === 'OFFER' ? d.bodyStatus || {} : {},
+    bodyGrade: row.kind === 'OFFER' ? d.bodyGrade || 'NO_PAINT' : null,
     paintTolerance: d.paintTolerance || null,
 
     closesAt: row.closesAt,
