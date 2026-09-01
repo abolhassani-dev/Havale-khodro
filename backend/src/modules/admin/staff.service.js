@@ -154,7 +154,7 @@ const staffService = {
     assertOwner(actor);
 
     const target = await prisma.user.findUnique({ where: { id }, select: SELECT });
-    if (!target || target.role === ROLES.AGENT) throw new NotFoundError('کاربر پیدا نشد');
+    if (!target || target.role === ROLES.AGENT) throw new NotFoundError('کاربر');
 
     // The owner account is not editable from here — not its role, not its
     // permissions, not its status. Locking yourself out of your own system
@@ -217,7 +217,7 @@ const staffService = {
     assertOwner(actor);
 
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
-    if (!target || target.role === ROLES.AGENT) throw new NotFoundError('کاربر پیدا نشد');
+    if (!target || target.role === ROLES.AGENT) throw new NotFoundError('کاربر');
     if (target.role === ROLES.OWNER) throw new ForbiddenError('رمز حساب مالک از اینجا عوض نمی‌شود');
 
     await prisma.user.update({

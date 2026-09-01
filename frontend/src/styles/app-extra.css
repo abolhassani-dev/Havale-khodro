@@ -223,6 +223,9 @@ textarea.in { resize: vertical; min-height: 60px; }
 .contact.shown { background: #e7f1e6; border-top: 1px solid #2c6b4142; color: #1d4a2d; }
 .contact.own { background: var(--primary-08); border-top: 1px solid var(--primary-15); }
 .contact .phone { font-weight: 700; display: block; direction: ltr; text-align: right; }
+/* همان نوار داخل پنل جزئیات: آنجا آخرین سطر کارت نیست، پس تا لبه‌های
+   پنل کشیده می‌شود تا مثل یک تکه‌ی جدا وسط متن نیفتد. */
+.modal-b .contact { margin: 14px -16px -14px; }
 
 /* ---- tabs, rows, catalogue ---- */
 

@@ -468,6 +468,32 @@ await step('the map shows the marked parts as dots, grade and all', async () => 
   await page.click('[data-close-modal]');
 });
 
+/**
+ * Paying hands over what was paid for, in the same breath.
+ *
+ * The reveal used to leave the reader looking at the card, with the
+ * photographs and the seller's description still behind a second button they
+ * had to go and find again — after spending one of the day's allowance on
+ * them. So the panel opens itself, with the contact on it.
+ */
+await step('a reveal opens the panel it paid for', async () => {
+  await navigate('car-search');
+  await page.waitForSelector('.hcard, .empty', { timeout: 8000 });
+
+  const reveal = page.locator('.hcard .contact.hidden [data-car-reveal]').first();
+  if (!(await reveal.count())) return; // every car here is already open to this agent
+  await reveal.click();
+  await page.waitForSelector('.modal [data-confirm]', { timeout: 8000 });
+  await page.click('.modal [data-confirm]');
+
+  // Not the card — the detail panel, with the number on it and the map under
+  // it, without a second click anywhere.
+  await page.waitForSelector('.modal .contact.shown', { timeout: 8000 });
+  const opened = (await page.textContent('.modal')).replace(/\s+/g, ' ');
+  if (!opened.includes('نوع بدنه')) throw new Error('the reveal did not open the details');
+  await page.click('[data-close-modal]');
+});
+
 await step('the run removes the car it posted', async () => {
   if (!smokeCarId) throw new Error('nothing was captured to clean up');
   const status = await page.evaluate(

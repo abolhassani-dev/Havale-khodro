@@ -49,9 +49,15 @@ class ForbiddenError extends AppError {
   }
 }
 
+/**
+ * Takes the noun, not the sentence — «حواله», «آگهی خودرو», «تیکت» — and says
+ * it in Persian. The sentence used to be built in English around a Persian
+ * noun, which put «آگهی خودرو not found» in front of an agency in a toast.
+ * Callers pass the thing; the wording lives here so it stays one wording.
+ */
 class NotFoundError extends AppError {
-  constructor(resource = 'Resource') {
-    super(`${resource} not found`, 404, ERROR_CODES.NOT_FOUND);
+  constructor(resource = 'مورد درخواستی') {
+    super(`${resource} پیدا نشد`, 404, ERROR_CODES.NOT_FOUND);
   }
 }
 

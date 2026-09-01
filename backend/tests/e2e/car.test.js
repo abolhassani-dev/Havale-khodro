@@ -495,7 +495,12 @@ maybe('car market', () => {
       expect(sold.body.data.status).toBe('FULFILLED');
 
       await request(app).delete(api(`/cars/${id}`)).set('Cookie', owner.cookie).expect(200);
-      await request(app).get(api(`/cars/${id}`)).set('Cookie', owner.cookie).expect(404);
+      const gone = await request(app).get(api(`/cars/${id}`)).set('Cookie', owner.cookie).expect(404);
+      // The refusal is read by an agency, so it is written in Persian. The
+      // message used to be built as `${noun} not found`, which put «آگهی خودرو
+      // not found» in a toast in front of them.
+      expect(gone.body.error.message).toBe('آگهی خودرو پیدا نشد');
+      expect(gone.body.error.message).not.toMatch(/[A-Za-z]/);
     });
 
     it('lists its own with numbered pages', async () => {

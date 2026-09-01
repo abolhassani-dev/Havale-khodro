@@ -21,6 +21,18 @@ export function closeModal() {
   setState({ modal: null });
 }
 
+/**
+ * Run something once the modal that is open right now has closed.
+ *
+ * `runModalAction` closes the modal as soon as its action resolves, so a modal
+ * opened from inside a confirm handler would be closed together with the
+ * confirmation it replaces. A timeout — not a microtask, which would still run
+ * before that close — is what puts the new panel after it.
+ */
+export function afterModalCloses(run) {
+  setTimeout(run, 0);
+}
+
 export function renderToast() {
   const { toast: current } = getState();
   if (!current) return raw('');

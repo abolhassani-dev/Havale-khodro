@@ -4,7 +4,8 @@ import { car, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
 import { money, faDigits, until, enDigits } from '../../ui/format.js';
 import {
-  emptyBox, toast, openModal, qtip, formErrorSlot, showFormError, clearFormError, pager,
+  emptyBox, toast, openModal, afterModalCloses, qtip, formErrorSlot, showFormError,
+  clearFormError, pager,
 } from '../../ui/feedback.js';
 import { pickSelect, syncPickSelect } from '../../ui/pickSelect.js';
 import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
@@ -307,11 +308,17 @@ function mileage(km) {
   return `${faDigits(Number(km).toLocaleString('en-US'))} کیلومتر`;
 }
 
-function carContact(c) {
+/**
+ * The contact strip, on the card and inside the detail panel.
+ *
+ * `inModal` drops the one control that would navigate: leaving the page while
+ * a modal is open leaves the modal hanging over whatever comes next.
+ */
+function carContact(c, { inModal = false } = {}) {
   if (c.isOwn) {
     return html`<div class="contact own">
       <span>آگهی خودتان — ${faDigits(c.revealCount || 0)} بازدید</span>
-      <button class="btn sm" data-go="car-mine">آگهی‌های من</button>
+      ${inModal ? '' : html`<button class="btn sm" data-go="car-mine">آگهی‌های من</button>`}
     </div>`;
   }
 
@@ -329,6 +336,21 @@ function carContact(c) {
     <span>اطلاعات تماس مخفی است</span>
     <button class="btn primary sm" data-car-reveal="${c.id}">نمایش مشخصات</button>
   </div>`;
+}
+
+/**
+ * A card whose advertisement is no longer there.
+ *
+ * Between the page being drawn and the click, an advertisement can be
+ * withdrawn, sold, or its agency suspended — and the card is still on screen,
+ * answering 404 to everything pressed on it. Saying so plainly and reloading
+ * the list is what turns a dead card into a page that corrects itself.
+ */
+async function carGone(err) {
+  if (err.code !== 'NOT_FOUND') return false;
+  toast('این آگهی دیگر در دسترس نیست — احتمالاً برداشته شده است.', 'danger');
+  await resolve();
+  return true;
 }
 
 /** Confirms first: the allowance is small, shared across markets, not refundable. */
@@ -351,8 +373,13 @@ export function confirmCarReveal(id) {
         await car.reveal(id);
         toast('مشخصات تماس نمایش داده شد');
         await resolve();
+        // What the view was just paid for — the photographs, the seller's
+        // description, the contact — opens by itself. Asking the buyer to
+        // find «جزئیات و نقشه بدنه» again after paying is asking them to
+        // hunt for something they already bought.
+        afterModalCloses(() => openCarModal(id));
       } catch (err) {
-        toast(err.message, 'danger');
+        if (!(await carGone(err))) toast(err.message, 'danger');
       }
     },
   });
@@ -370,7 +397,8 @@ export async function openCarModal(id) {
   try {
     c = await car.get(id);
   } catch (err) {
-    return toast(err.message, 'danger');
+    if (!(await carGone(err))) toast(err.message, 'danger');
+    return undefined;
   }
 
   const offer = c.kind === 'OFFER';
@@ -405,7 +433,10 @@ export async function openCarModal(id) {
         !c.contactRevealed && c.hasDescription && !c.description
           ? html`<p class="hint" style="margin:8px 0 0">توضیحات فروشنده با «نمایش مشخصات» باز می‌شود.</p>`
           : ''
-      }`,
+      }
+      <!-- The same block the card carries, so «نمایش مشخصات» is within reach
+           of whatever it unlocks rather than behind the panel. -->
+      ${carContact(c, { inModal: true })}`,
   });
   return undefined;
 }
