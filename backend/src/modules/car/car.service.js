@@ -17,7 +17,10 @@ const { diffOf } = require('../../utils/diff');
 const { assertClean } = require('../../utils/textGuard');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
 const { MESSAGES } = require('../../constants/messages');
-const { NotFoundError, BadRequestError, ValidationError } = require('../../errors/AppError');
+const { ERROR_CODES } = require('../../constants/errorCodes');
+const {
+  AppError, NotFoundError, BadRequestError, ValidationError,
+} = require('../../errors/AppError');
 
 /**
  * The خودرو market: a finished car — zero-kilometre or used — offered or
@@ -276,10 +279,16 @@ const carService = {
 
   async getById({ user, access, id }) {
     const row = await carRepository.findById(id);
-    if (!row) throw new NotFoundError(NOT_FOUND);
+    // The two ways this stops being there say which one they are. They said
+    // the same sentence, and a reader looking at a card that is still on the
+    // page could not tell «برداشته شده» from «نمایندگی‌اش تعلیق شده» — nor
+    // could anybody reading a screenshot of it.
+    if (!row) throw new AppError(MESSAGES.LISTING.GONE, 404, ERROR_CODES.NOT_FOUND);
 
     if (row.ownerId === user.id) return toOwn(row, { viewerId: user.id });
-    if (row.owner.status !== 'ACTIVE') throw new NotFoundError(NOT_FOUND);
+    if (row.owner.status !== 'ACTIVE') {
+      throw new AppError(MESSAGES.LISTING.OWNER_INACTIVE, 404, ERROR_CODES.NOT_FOUND);
+    }
 
     const seen = await revealService.revealRepository.findReveal(id, user.id);
     return toCard(row, { subscriptionActive: access.active, revealed: Boolean(seen) });

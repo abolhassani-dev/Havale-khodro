@@ -416,14 +416,19 @@ function carContact(c, { inModal = false } = {}) {
  *
  * Between the page being drawn and the click, an advertisement can be
  * withdrawn, sold, or its agency suspended — and the card is still on screen,
- * answering 404 to everything pressed on it. Saying so plainly and reloading
- * the list is what turns a dead card into a page that corrects itself.
+ * answering 404 to everything pressed on it. Reloading the list is what turns
+ * a dead card into a page that corrects itself.
+ *
+ * The sentence shown is the server's own — the caller toasts it. This used
+ * to write its own here, «احتمالاً برداشته شده است», over the top of it,
+ * which meant the three different things a 404 can mean («برداشته شده»,
+ * «نمایندگی‌اش فعال نیست», «این اصلاً آدرس یک آگهی نیست») all reached the
+ * reader as one guess, with the word that would have said which thrown away
+ * on the way.
  */
 async function carGone(err) {
-  if (err.code !== 'NOT_FOUND') return false;
-  toast('این آگهی دیگر در دسترس نیست — احتمالاً برداشته شده است.', 'danger');
+  if (err.code !== 'NOT_FOUND') return;
   await resolve();
-  return true;
 }
 
 /** Confirms first: the allowance is small, shared across markets, not refundable. */
@@ -452,7 +457,8 @@ export function confirmCarReveal(id) {
         // hunt for something they already bought.
         afterModalCloses(() => openCarModal(id));
       } catch (err) {
-        if (!(await carGone(err))) toast(err.message, 'danger');
+        toast(err.message, 'danger');
+        await carGone(err);
       }
     },
   });
@@ -470,7 +476,8 @@ export async function openCarModal(id) {
   try {
     c = await car.get(id);
   } catch (err) {
-    if (!(await carGone(err))) toast(err.message, 'danger');
+    toast(err.message, 'danger');
+    await carGone(err);
     return undefined;
   }
 

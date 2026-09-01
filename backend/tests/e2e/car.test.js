@@ -629,10 +629,12 @@ maybe('car market', () => {
 
       await request(app).delete(api(`/cars/${id}`)).set('Cookie', owner.cookie).expect(200);
       const gone = await request(app).get(api(`/cars/${id}`)).set('Cookie', owner.cookie).expect(404);
-      // The refusal is read by an agency, so it is written in Persian. The
-      // message used to be built as `${noun} not found`, which put «آگهی خودرو
-      // not found» in a toast in front of them.
-      expect(gone.body.error.message).toBe('آگهی خودرو پیدا نشد');
+      // The refusal is read by an agency, so it is written in Persian — the
+      // message used to be built as `${noun} not found` — and it says which
+      // of the two things happened, because a reader looking at a card that
+      // is still on the page cannot tell «برداشته شده» from «نمایندگی‌اش
+      // تعلیق شده» otherwise.
+      expect(gone.body.error.message).toBe('این آگهی برداشته شده است');
       expect(gone.body.error.message).not.toMatch(/[A-Za-z]/);
     });
 
