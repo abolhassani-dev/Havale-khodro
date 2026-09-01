@@ -4,6 +4,13 @@ const { toPersianDigits } = require('../../utils/persian');
 
 const toNumber = (v) => (v === null || v === undefined ? null : Number(v));
 
+/** The one place this market spells a warranty out, on either side. */
+function warrantyFa(value, isOffer) {
+  if (value === true) return 'فعال';
+  if (value === false) return isOffer ? 'غیرفعال' : 'فقط بدون گارانتی';
+  return isOffer ? 'نامشخص' : 'فرقی نمی‌کند';
+}
+
 /**
  * How the moderation desk reads the خودرو market.
  *
@@ -71,15 +78,14 @@ registerMarket('CAR', {
             icon: 'ticket',
           },
       { label: 'قیمت خودرو', value: toNumber(row.carPriceToman), money: true, icon: 'ticket' },
-      ...(isOffer
-        ? [
-            {
-              label: 'گارانتی',
-              value: d.warranty === null || d.warranty === undefined ? 'نامشخص' : d.warranty ? 'فعال' : 'غیرفعال',
-              icon: 'shield',
-            },
-          ]
-        : []),
+      {
+        // On a sale it is a fact about the car; on a request it is what the
+        // buyer will take — and «فرقی نمی‌کند» is a real answer there, not a
+        // missing one, so it is not called «نامشخص».
+        label: isOffer ? 'گارانتی' : 'گارانتی موردنظر',
+        value: warrantyFa(d.warranty, isOffer),
+        icon: 'shield',
+      },
       // The body rows belong to a car that exists; a request gets the one
       // line it actually said — what it will accept.
       ...(isOffer

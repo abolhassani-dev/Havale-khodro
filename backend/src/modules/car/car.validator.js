@@ -62,10 +62,18 @@ const createBody = Joi.object({
   year: requiredForOffer(year),
   mileageKm: requiredForOffer(Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX)),
   carColor: requiredForOffer(Joi.string().trim().max(40)),
-  // A yes or no, and the seller has to say which: an advertisement that is
-  // silent about the warranty reads as «no» to one buyer and «probably» to
-  // the next.
-  warranty: requiredForOffer(Joi.boolean()),
+  // On a sale: a yes or no, and the seller has to say which — an
+  // advertisement silent about the warranty reads as «no» to one buyer and
+  // «probably» to the next.
+  //
+  // On a request it is the third thing this side always has: what the buyer
+  // will accept. true «فقط گارانتی فعال», false «فقط بدون گارانتی», and null
+  // — the default — «فرقی نمی‌کند», exactly the shape paintTolerance has.
+  warranty: Joi.when('kind', {
+    is: CAR_KIND.OFFER,
+    then: Joi.boolean().required(),
+    otherwise: Joi.boolean().allow(null).optional(),
+  }),
   carPriceToman: Joi.when('kind', {
     is: CAR_KIND.OFFER,
     then: toman.required(),
@@ -108,7 +116,7 @@ const updateBody = Joi.object({
   year: year,
   mileageKm: Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX),
   carColor: Joi.string().trim().max(40),
-  warranty: Joi.boolean(),
+  warranty: Joi.boolean().allow(null),
   carPriceToman: toman,
   bodyStatus: Joi.object().max(BODY_PARTS.length),
   yearFrom: year.allow(null),

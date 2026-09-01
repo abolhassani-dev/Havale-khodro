@@ -42,11 +42,18 @@ const TOLERANCE_FA = {
   ANY: 'فرقی نمی‌کند',
 };
 
-const WARRANTY_FA = { true: 'فعال', false: 'غیرفعال' };
-
-function warrantyLabel(value) {
-  if (value === true || value === false) return WARRANTY_FA[value];
-  return 'نامشخص';
+/**
+ * A warranty said in words.
+ *
+ * On a sale it is a fact about the car and the seller had to state it, so
+ * nothing is «نامشخص» unless the advertisement predates the field. On a
+ * request it is what the buyer will take, and «فرقی نمی‌کند» is a real
+ * answer there rather than a missing one.
+ */
+function warrantyLabel(value, offer = true) {
+  if (value === true) return 'فعال';
+  if (value === false) return offer ? 'غیرفعال' : 'فقط بدون گارانتی';
+  return offer ? 'نامشخص' : 'فرقی نمی‌کند';
 }
 
 // ── loaders ─────────────────────────────────────────────────────────────────
@@ -320,7 +327,7 @@ function card(c) {
             )
       }
       ${offer ? field('رنگ', c.carColor || '—') : ''}
-      ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
+      ${field(offer ? 'گارانتی' : 'گارانتی موردنظر', warrantyLabel(c.warranty, offer))}
       ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
     </dl>
 
@@ -477,7 +484,7 @@ export async function openCarModal(id) {
         ${field('نوع بدنه', BODY_TYPE_FA[c.bodyType] || '—')}
         ${offer ? field('کارکرد', mileage(c.mileageKm)) : ''}
         ${offer ? field('رنگ', c.carColor || '—') : ''}
-        ${offer ? field('گارانتی', warrantyLabel(c.warranty)) : ''}
+        ${field(offer ? 'گارانتی' : 'گارانتی موردنظر', warrantyLabel(c.warranty, offer))}
         ${field(offer ? 'قیمت خودرو' : 'تا قیمت', c.carPriceToman ? money(c.carPriceToman) : '—')}
         ${offer ? field('وضعیت بدنه', GRADE_FA[c.bodyGrade] || '—') : field('بدنه‌ی قابل قبول', TOLERANCE_FA[c.paintTolerance] || '—')}
       </dl>
@@ -633,6 +640,14 @@ export function carFormPage(kind) {
                   .reverse()
                   .map(([value, label]) => html`<option value="${value}">${label}</option>`)}
               </select>
+            </div>
+            <div class="field">
+              <label for="warranty">گارانتی موردنظر</label>
+              <select class="in" id="warranty" name="warranty">
+                <option value="">فرقی نمی‌کند</option>
+                <option value="true">فقط گارانتی فعال</option>
+                <option value="false">فقط بدون گارانتی</option>
+              </select>
             </div>`
       }
     </div>
@@ -779,6 +794,9 @@ export async function submitCar(form) {
     payload.bodyStatus = bodyStatusOf(form);
   } else {
     payload.paintTolerance = entered('paintTolerance') || 'ANY';
+    // «فرقی نمی‌کند» is the empty option: nothing is sent, and the column
+    // stays null — which is what the card and the desk read as «فرقی نمی‌کند».
+    if (entered('warranty')) payload.warranty = entered('warranty') === 'true';
   }
   if (entered('description')) payload.description = entered('description');
 
@@ -1063,6 +1081,14 @@ export function carEditModal(id) {
                     html`<option value="${value}" ${raw(value === c.paintTolerance ? 'selected' : '')}>${label}</option>`
                 )}
               </select>
+            </div>
+            <div class="field">
+              <label for="e-warranty">گارانتی موردنظر</label>
+              <select class="in" id="e-warranty" name="warranty">
+                <option value="" ${raw(c.warranty === null || c.warranty === undefined ? 'selected' : '')}>فرقی نمی‌کند</option>
+                <option value="true" ${raw(c.warranty === true ? 'selected' : '')}>فقط گارانتی فعال</option>
+                <option value="false" ${raw(c.warranty === false ? 'selected' : '')}>فقط بدون گارانتی</option>
+              </select>
             </div>`
       }
       <div class="field wide">
@@ -1117,6 +1143,9 @@ export function carEditModal(id) {
         payload.bodyStatus = bodyStatusOf(form);
       } else {
         payload.paintTolerance = entered('paintTolerance');
+        // The empty option means «فرقی نمی‌کند», and clearing it has to be
+        // sendable — so null goes on the wire rather than nothing at all.
+        payload.warranty = entered('warranty') === '' ? null : entered('warranty') === 'true';
       }
 
       await car.update(id, payload);

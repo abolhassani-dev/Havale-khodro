@@ -435,10 +435,34 @@ maybe('car market', () => {
       }
     });
 
+    /**
+     * The same column, two meanings, and the difference is the kind.
+     *
+     * A sale must say yes or no — silence there reads as «no» to one buyer
+     * and «probably» to the next. A request says what it will accept, and
+     * saying nothing is a real answer: «فرقی نمی‌کند», which is the column's
+     * null and needs no migration to store.
+     */
+    it('a request says which warranty it will take, or that it does not mind', async () => {
+      const buyer = await agent();
+      const any = await post(buyer.cookie, wanted()).expect(201);
+      expect(any.body.data.warranty).toBeNull();
+
+      const strict = await post(buyer.cookie, wanted({ warranty: true })).expect(201);
+      expect(strict.body.data.warranty).toBe(true);
+
+      // And it can be changed back to «فرقی نمی‌کند».
+      const back = await request(app)
+        .patch(api(`/cars/${strict.body.data.id}`))
+        .set('Cookie', buyer.cookie)
+        .send({ warranty: null })
+        .expect(200);
+      expect(back.body.data.warranty).toBeNull();
+    });
+
     it('a sale says whether the warranty is live, and the filter finds it', async () => {
       const owner = await agent();
       await post(owner.cookie, sale({ warranty: undefined })).expect(422);
-      await post(owner.cookie, wanted({ warranty: true })).expect(422);
       const live = await post(owner.cookie, sale({ warranty: true })).expect(201);
       const dead = await post(owner.cookie, sale({ warranty: false })).expect(201);
       expect(live.body.data.warranty).toBe(true);
