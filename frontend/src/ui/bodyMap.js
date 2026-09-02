@@ -13,7 +13,7 @@ import { faDigits } from './format.js';
  * re-validates and re-derives regardless; this copy exists so the form can
  * refuse and label things before a round-trip.
  *
- * The cut-outs come from the owner's own sheets in `assets/body/sheets/*.png`.
+ * The cut-outs come from the owner's own sheets in `assets/body/sheets/`.
  * Each sheet carries several views; the two used here — the plan and the
  * profile — are cropped out with pixel-exact windows measured from the images
  * themselves, and `scripts/crop-body-sheets.py` turns those windows into the
@@ -69,6 +69,22 @@ export const BODY_PARTS = [
 
 const PART_BY_KEY = Object.fromEntries(BODY_PARTS.map((p) => [p.key, p]));
 
+/**
+ * Parts a body type simply does not have.
+ *
+ * A single-cab pickup has one door on each side. Offering «درب عقب راننده» on
+ * its form would invite a seller to declare a door the car never had, and the
+ * server rejects it anyway — this list keeps the form honest, and mirrors
+ * NO_PART in backend/src/modules/car/car.constants.js.
+ */
+const NO_PART = { PICKUP_SINGLE: ['dr-r-d', 'dr-r-p'] };
+
+/** The parts this body type actually has, as a key → part map. */
+export function partsFor(bodyType) {
+  const gone = new Set(NO_PART[bodyType] || []);
+  return Object.fromEntries(BODY_PARTS.filter((p) => !gone.has(p.key)).map((p) => [p.key, p]));
+}
+
 export const GRADE_FA = {
   NO_PAINT: 'بدون رنگ',
   MINOR_PAINT: 'رنگ جزئی',
@@ -90,7 +106,8 @@ export const BODY_TYPE_FA = {
   SEDAN: 'سدان',
   HATCHBACK: 'هاچبک',
   SUV: 'شاسی‌بلند',
-  PICKUP: 'وانت',
+  PICKUP: 'وانت دوکابین',
+  PICKUP_SINGLE: 'وانت تک‌کابین',
 };
 
 /** The client-side twin of the server's ladder, for live labels only. */
@@ -107,9 +124,24 @@ export function gradeOf(bodyStatus) {
 
 // ── the cut-out geometry ────────────────────────────────────────────────────
 
-// planCrop / sideCrop are still the windows on the 1448×1086 sheet, in
-// percent — the dot coordinates below are measured on the sheet, not on the
-// crop, and the crop script reads the same numbers.
+// planCrop / sideCrop are the windows on the owner's sheet, in percent of it —
+// the crop script reads these very numbers, so the picture and this file
+// cannot drift apart.
+//
+// The dots underneath are in percent of the CROPPED picture: the one on the
+// screen. They were measured on it, one part at a time, on every body type —
+// the first round stored them in sheet percent, which meant nobody could look
+// at «31, 59.5» and say whether it was the chassis or the tyre, and half of
+// them were a little of both. Landmarks used, per drawing (also percent of
+// the crop): where the bonnet ends, where each door is cut, where the wheel
+// arches peak. A fender dot sits in the middle of the panel ABOVE the arch —
+// never on the tyre; a door dot sits in the middle of the door's own panel,
+// below the window line; the chassis pair sits on one line each side of the
+// centre, with the rail tip (سرشاسی) further out along the same line, because
+// it is the same rail.
+//
+// To move one: run scripts/body-dots.py, which draws them onto the real
+// crops at the size the page shows them.
 
 const SHEETS = {
   SEDAN: {
@@ -119,12 +151,12 @@ const SHEETS = {
     planCrop: [18.23, 31.12, 81.49, 70.07],
     sideCrop: [19.61, 71.45, 80.04, 97.7],
     plan: {
-      hood: [29.5, 50], roof: [51, 50], trunk: [72, 50],
-      'chs-f-d': [31, 59.5], 'chs-f-p': [31, 41], 'chs-r-d': [67, 58.5], 'chs-r-p': [67, 41.5],
-      'rl-f-d': [24, 57.5], 'rl-f-p': [24, 42.5], 'rl-r-d': [75, 57.5], 'rl-r-p': [75, 42.5],
-      'sill-f': [20.5, 50], 'sill-r': [79.5, 50], tray: [26.5, 50],
+      hood: [17, 49.9], roof: [54, 49.9], trunk: [86, 49.9],
+      'chs-f-d': [23, 69.2], 'chs-f-p': [23, 30.6], 'chs-r-d': [78, 69.2], 'chs-r-p': [78, 30.6],
+      'rl-f-d': [10, 69.2], 'rl-f-p': [10, 30.6], 'rl-r-d': [91, 69.2], 'rl-r-p': [91, 30.6],
+      'sill-f': [4, 49.9], 'sill-r': [96, 49.9], tray: [11, 49.9],
     },
-    side: { 'fnd-f-d': [29.9, 83], 'dr-f-d': [43, 84.5], 'dr-r-d': [55.5, 84.5], 'fnd-r-d': [66.1, 83] },
+    side: { 'fnd-f-d': [23, 39], 'dr-f-d': [40, 56], 'dr-r-d': [62, 56], 'fnd-r-d': [78, 39] },
   },
   HATCHBACK: {
     file: 'hatchback',
@@ -133,12 +165,12 @@ const SHEETS = {
     planCrop: [20.23, 29.83, 79.07, 69.24],
     sideCrop: [21.48, 69.8, 76.17, 98.43],
     plan: {
-      hood: [31, 50], roof: [51, 50], trunk: [69, 50],
-      'chs-f-d': [31, 59.5], 'chs-f-p': [31, 41], 'chs-r-d': [65, 58.5], 'chs-r-p': [65, 41.5],
-      'rl-f-d': [24.5, 57.5], 'rl-f-p': [24.5, 42.5], 'rl-r-d': [72.5, 57.5], 'rl-r-p': [72.5, 42.5],
-      'sill-f': [21.5, 50], 'sill-r': [77, 50], tray: [27, 50],
+      hood: [18, 50.3], roof: [55, 50.3], trunk: [87, 50.3],
+      'chs-f-d': [23, 69.9], 'chs-f-p': [23, 30.7], 'chs-r-d': [78, 69.9], 'chs-r-p': [78, 30.7],
+      'rl-f-d': [10, 69.9], 'rl-f-p': [10, 30.7], 'rl-r-d': [91, 69.9], 'rl-r-p': [91, 30.7],
+      'sill-f': [4, 50.3], 'sill-r': [96, 50.3], tray: [11, 50.3],
     },
-    side: { 'fnd-f-d': [31.3, 81.5], 'dr-f-d': [44, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [64.7, 81.5] },
+    side: { 'fnd-f-d': [21, 41], 'dr-f-d': [42, 56], 'dr-r-d': [63, 56], 'fnd-r-d': [79, 41] },
   },
   SUV: {
     file: 'suv',
@@ -147,12 +179,12 @@ const SHEETS = {
     planCrop: [17.96, 30.2, 81.42, 67.68],
     sideCrop: [21.27, 69.24, 77.35, 97.7],
     plan: {
-      hood: [30, 50], roof: [51, 50], trunk: [72, 50],
-      'chs-f-d': [30, 59.5], 'chs-f-p': [30, 41], 'chs-r-d': [66, 58.5], 'chs-r-p': [66, 41.5],
-      'rl-f-d': [23.5, 57.5], 'rl-f-p': [23.5, 42.5], 'rl-r-d': [75.5, 57.5], 'rl-r-p': [75.5, 42.5],
-      'sill-f': [20, 50], 'sill-r': [80, 50], tray: [26, 50],
+      hood: [18, 50], roof: [54, 50], trunk: [87, 50],
+      'chs-f-d': [23, 68.9], 'chs-f-p': [23, 31.1], 'chs-r-d': [78, 68.9], 'chs-r-p': [78, 31.1],
+      'rl-f-d': [10, 68.9], 'rl-f-p': [10, 31.1], 'rl-r-d': [91, 68.9], 'rl-r-p': [91, 31.1],
+      'sill-f': [4, 50], 'sill-r': [96, 50], tray: [11, 50],
     },
-    side: { 'fnd-f-d': [31.4, 81.5], 'dr-f-d': [43.5, 84.5], 'dr-r-d': [56, 84.5], 'fnd-r-d': [65.6, 81.5] },
+    side: { 'fnd-f-d': [20, 40], 'dr-f-d': [41, 56], 'dr-r-d': [61, 56], 'fnd-r-d': [76, 40] },
   },
   PICKUP: {
     file: 'pickup',
@@ -161,12 +193,28 @@ const SHEETS = {
     planCrop: [19.82, 31.03, 79.14, 65.75],
     sideCrop: [17.4, 67.13, 82.04, 97.88],
     plan: {
-      hood: [27.5, 47.5], roof: [48, 47.5], trunk: [69, 47.5],
-      'chs-f-d': [28, 56], 'chs-f-p': [28, 39.5], 'chs-r-d': [63, 56], 'chs-r-p': [63, 39.5],
-      'rl-f-d': [22.5, 54], 'rl-f-p': [22.5, 42], 'rl-r-d': [73, 54], 'rl-r-p': [73, 42],
-      'sill-f': [20, 47.5], 'sill-r': [77, 47.5], tray: [24.5, 47.5],
+      hood: [16, 50.7], roof: [45, 50.7], trunk: [79, 50.7],
+      'chs-f-d': [22, 69.4], 'chs-f-p': [22, 32], 'chs-r-d': [72, 69.4], 'chs-r-p': [72, 32],
+      'rl-f-d': [9, 69.4], 'rl-f-p': [9, 32], 'rl-r-d': [92, 69.4], 'rl-r-p': [92, 32],
+      'sill-f': [4, 50.7], 'sill-r': [96, 50.7], tray: [11, 50.7],
     },
-    side: { 'fnd-f-d': [27.7, 80.1], 'dr-f-d': [40.7, 80], 'dr-r-d': [53, 80], 'fnd-r-d': [66.5, 80.1] },
+    side: { 'fnd-f-d': [18, 40], 'dr-f-d': [37, 56], 'dr-r-d': [54, 56], 'fnd-r-d': [78, 40] },
+  },
+  // The single cab has one door a side, so it has no درب عقب at all — see
+  // NO_PART below, which takes the pair off the form and out of the list.
+  PICKUP_SINGLE: {
+    file: 'takkabin',
+    planSize: [800, 337],
+    sideSize: [800, 280],
+    planCrop: [18.6, 31.8, 80.8, 66.2],
+    sideCrop: [16.8, 68, 82.8, 98.9],
+    plan: {
+      hood: [17, 50.3], roof: [44, 50.3], trunk: [78, 50.3],
+      'chs-f-d': [22, 68.8], 'chs-f-p': [22, 31.8], 'chs-r-d': [72, 68.8], 'chs-r-p': [72, 31.8],
+      'rl-f-d': [9, 68.8], 'rl-f-p': [9, 31.8], 'rl-r-d': [92, 68.8], 'rl-r-p': [92, 31.8],
+      'sill-f': [4, 50.3], 'sill-r': [96, 50.3], tray: [11, 50.3],
+    },
+    side: { 'fnd-f-d': [20, 40], 'dr-f-d': [37, 55], 'fnd-r-d': [72, 40] },
   },
 };
 
@@ -187,13 +235,10 @@ function viewBox(sheet, view, { flip = false, label, dots }) {
   </div>`;
 }
 
-function dotIn(crop, [x, y], status, title, mirror = false) {
-  const [x0, y0, x1, y1] = crop;
-  let lx = ((x - x0) / (x1 - x0)) * 100;
-  if (mirror) lx = 100 - lx;
-  const ty = ((y - y0) / (y1 - y0)) * 100;
+/** One dot, where the numbers say — mirrored for the flipped passenger view. */
+function dot([x, y], status, title, mirror = false) {
   return html`<span class="bm-dot st-${status}" title="${title}"
-    style="left:${lx.toFixed(2)}%;top:${ty.toFixed(2)}%"></span>`;
+    style="left:${mirror ? 100 - x : x}%;top:${y}%"></span>`;
 }
 
 /**
@@ -203,6 +248,9 @@ function dotIn(crop, [x, y], status, title, mirror = false) {
  */
 export function bodyMapView(bodyType, bodyStatus = {}, { marked: showMarked = true } = {}) {
   const sheet = SHEETS[bodyType] || SHEETS.SEDAN;
+  // Everything the seller marked stays in the written list even if this
+  // drawing has nowhere to put a dot for it — a mark that quietly vanished
+  // would be worse than one without a dot.
   const marked = Object.entries(bodyStatus).filter(([key]) => PART_BY_KEY[key]);
 
   const planDots = [];
@@ -210,10 +258,11 @@ export function bodyMapView(bodyType, bodyStatus = {}, { marked: showMarked = tr
   const passengerDots = [];
   for (const [key, status] of marked) {
     const title = `${PART_BY_KEY[key].fa} — ${PART_STATUS_FA[status] || status}`;
-    if (sheet.plan[key]) planDots.push(dotIn(sheet.planCrop, sheet.plan[key], status, title));
-    else if (sheet.side[key]) driverDots.push(dotIn(sheet.sideCrop, sheet.side[key], status, title));
-    else if (DRIVER_TWIN[key]) {
-      passengerDots.push(dotIn(sheet.sideCrop, sheet.side[DRIVER_TWIN[key]], status, title, true));
+    const twin = DRIVER_TWIN[key];
+    if (sheet.plan[key]) planDots.push(dot(sheet.plan[key], status, title));
+    else if (sheet.side[key]) driverDots.push(dot(sheet.side[key], status, title));
+    else if (twin && sheet.side[twin]) {
+      passengerDots.push(dot(sheet.side[twin], status, title, true));
     }
   }
 
@@ -235,7 +284,8 @@ export function bodyMapView(bodyType, bodyStatus = {}, { marked: showMarked = tr
         ? html`<ul class="bm-marked">
             ${marked.map(
               ([key, status]) => html`<li>
-                <span class="bm-sw st-${status}"></span>${PART_BY_KEY[key].fa}
+                <span class="bm-sw st-${status}"></span>
+                <b>${PART_BY_KEY[key].fa}</b>
                 <span class="bm-st">${PART_STATUS_FA[status] || status}</span>
               </li>`
             )}
@@ -270,10 +320,13 @@ const PART_GROUPS = [
  * declare it, and nobody would notice for months. So the leftovers get their
  * own section rather than disappearing.
  */
-function partGroups() {
+function partGroups(bodyType) {
+  const parts = partsFor(bodyType);
+  const groups = PART_GROUPS.map(([fa, keys]) => [fa, keys.filter((key) => parts[key])]);
   const placed = new Set(PART_GROUPS.flatMap(([, keys]) => keys));
-  const rest = BODY_PARTS.filter((part) => !placed.has(part.key)).map((part) => part.key);
-  return rest.length ? [...PART_GROUPS, ['سایر قطعات', rest]] : PART_GROUPS;
+  const rest = Object.keys(parts).filter((key) => !placed.has(key));
+  if (rest.length) groups.push(['سایر قطعات', rest]);
+  return groups.filter(([, keys]) => keys.length);
 }
 
 /** One group: a header that counts what is marked inside it, and its parts. */
@@ -334,7 +387,9 @@ export function bodyMatrix(bodyStatus = {}, bodyType = null) {
     <div class="bm-parts" data-body-parts ${raw(has ? '' : 'hidden')}>
       <p class="bm-hint">گروهِ قطعه را باز کنید و وضعیتش را بزنید. هر قطعه فقط یک وضعیت
         می‌گیرد؛ کلیک دوباره یعنی «سالم». حداقل یک قطعه را علامت بزنید.</p>
-      ${partGroups().map((group) => groupBox(group, bodyStatus))}
+      <div data-body-groups>
+        ${partGroups(bodyType).map((group) => groupBox(group, bodyStatus))}
+      </div>
     </div>
     <!-- After the table on purpose: pinned to the bottom of the screen while
          the table scrolls past above it, so the dot appears the moment the
@@ -393,13 +448,29 @@ function refresh(wrap, table) {
   });
 }
 
-/** The form learned (or lost) the model's shape: redraw the preview on it. */
+/**
+ * The form learned (or lost) the model's shape: redraw the preview on it, and
+ * the table too — a single cab has no rear doors, so picking one has to take
+ * those two rows away (and any mark already on them) rather than leave a
+ * seller declaring a door the car never had.
+ */
 export function setBodyPreviewType(form, bodyType) {
   const wrap = form.querySelector('[data-body-form]');
   if (!wrap) return;
+  const was = wrap.dataset.bodyType || '';
   wrap.dataset.bodyType = bodyType || '';
+
+  const table = bodyStatusOf(form);
+  const groups = wrap.querySelector('[data-body-groups]');
+  if (groups && was !== (bodyType || '')) {
+    const parts = partsFor(bodyType);
+    for (const key of Object.keys(table)) if (!parts[key]) delete table[key];
+    groups.innerHTML = String(partGroups(bodyType).map((group) => groupBox(group, table)).join(''));
+    refresh(wrap, table);
+    return;
+  }
   const live = wrap.querySelector('[data-body-live]');
-  if (live) live.innerHTML = String(livePreview(bodyType || null, bodyStatusOf(form)));
+  if (live) live.innerHTML = String(livePreview(bodyType || null, table));
 }
 
 /** The chip click — one status per part, second click clears it. */

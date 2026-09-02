@@ -291,7 +291,8 @@ export const BODY_LABEL = {
   SEDAN: 'سدان',
   HATCHBACK: 'هاچبک',
   SUV: 'شاسی‌بلند',
-  PICKUP: 'وانت',
+  PICKUP: 'وانت دوکابین',
+  PICKUP_SINGLE: 'وانت تک‌کابین',
 };
 
 function editModal(kind, id, name, order, companyId = '', body = '') {

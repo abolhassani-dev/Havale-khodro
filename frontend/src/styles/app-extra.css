@@ -2162,13 +2162,17 @@ button.af-parent:hover { text-decoration: underline; }
    width/height روی خود تگ است تا جعبه قبل از رسیدن عکس هم اندازه‌ی درست
    داشته باشد و نقطه‌ها روی جای خودشان بنشینند. */
 .bm-map { max-width: 760px; margin: 0 auto; }
-.bm-views { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+/* نمای بالا تمام‌عرض و دو پهلو زیرش. سه‌تایی کنار هم که بودند، هر پهلو ۲۴۰
+   پیکسل عرض داشت و نقطه‌ی ۱۷پیکسلی روی آن یک‌پنجم ارتفاع تصویر می‌شد؛ هر جای
+   گلگیر که می‌گذاشتی، لبه‌اش روی لاستیک بود. حالا هر پهلو حدود ۳۷۶ پیکسل است
+   و روی گوشی تمام‌عرض. */
+.bm-views { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; }
+.bm-views .bm-view:first-child { grid-column: 1 / -1; }
 .bm-view { position: relative; }
 .bm-view img { display: block; width: 100%; height: auto; }
 .bm-flip img { transform: scaleX(-1); }
 @media (max-width: 640px) {
-  .bm-views { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .bm-views .bm-view:first-child { grid-column: 1 / -1; }
+  .bm-views { grid-template-columns: 1fr; gap: 6px; }
 }
 /* عنوان هر نما زیرش می‌نشیند نه رویش — روی گوشی نمای پهلو کوچک است و
    برچسبِ روی سقف، سقف را می‌پوشاند */
@@ -2184,14 +2188,42 @@ button.af-parent:hover { text-decoration: underline; }
 .bm-dot.st-DAMAGE, .bm-sw.st-DAMAGE, .bm-mini.st-DAMAGE { background: var(--st-DAMAGE); }
 .bm-dot.st-REPLACE, .bm-sw.st-REPLACE, .bm-mini.st-REPLACE { background: var(--st-REPLACE); }
 
-.bm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 2px 2px; font-size: 12px; color: var(--ink-2); }
-.bm-legend b { font-weight: 600; }
-.bm-sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 5px; vertical-align: -1px; }
+/* ---- راهنمای رنگ‌ها و فهرست قطعات علامت‌خورده ----
+   هر دو یک ردیف سیال بودند و پشت سر هم می‌آمدند: «رنگ جزئی رنگ پاشش رنگ …
+   کاپوت تعویض شاسی جلو راننده پاشش رنگ». چشم نمی‌فهمید کجا یک قلم تمام شد و
+   بعدی شروع شد. حالا راهنما چیپ‌های جدا از هم است و فهرست، سطرهای «قطعه —
+   وضعیت» با خط‌چین بینشان. */
 
-.bm-marked { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: 13px; }
-.bm-marked li { display: flex; align-items: center; gap: 7px; }
-.bm-st { color: var(--ink-3); font-size: 12px; }
-.bm-clean { color: var(--ink-3); font-size: 12.5px; margin: 6px 0 0; }
+.bm-legend {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 12px; padding: 10px 0 0;
+  border-top: 1px solid var(--line-2);
+  font-size: 11.5px; color: var(--ink-2);
+}
+.bm-legend b {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px 2px 7px;
+  border: 1px solid var(--line-2); border-radius: 999px;
+  background: var(--paper-2);
+  font-weight: 600; white-space: nowrap;
+}
+.bm-sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+.bm-marked {
+  list-style: none;
+  margin: 12px 0 0; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px;
+  font-size: 13px;
+}
+@media (max-width: 640px) { .bm-marked { grid-template-columns: 1fr; } }
+.bm-marked li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dotted var(--line-2);
+}
+.bm-marked li b { font-weight: 700; }
+.bm-st { margin-inline-start: auto; color: var(--ink-2); font-weight: 700; font-size: 12.5px; }
+.bm-clean { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; }
 
 /* پیش‌نمایش زنده‌ی نقشه داخل فرم — بعد از جدول می‌آید و به پایین صفحه
    می‌چسبد تا وقتی قطعه‌ای را می‌زنی، نقطه‌اش را همان لحظه ببینی. روی گوشی
@@ -2209,9 +2241,12 @@ button.af-parent:hover { text-decoration: underline; }
    so the preview can follow; browsers that never heard of it keep hidden
    and simply show the preview in place. */
 form.card[data-form="car"] { overflow: clip; }
+/* پیش‌نمایش زنده‌ی فرم به ته صفحه چسبیده و باید کوتاه بماند، پس همان سه‌تایی
+   کنار هم است — آنجا نقطه فقط باید بگوید «همین‌جا را زدی»، نه اینکه از روی
+   عکس خوانده شود. */
+.bm-live .bm-views { grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.bm-live .bm-views .bm-view:first-child { grid-column: auto; }
 @media (max-width: 640px) {
-  .bm-live .bm-views { grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
-  .bm-live .bm-views .bm-view:first-child { grid-column: auto; }
   .bm-live .bm-legend { display: none; }
   .bm-live .bm-tag { font-size: 10px; }
 }
@@ -2264,14 +2299,19 @@ form.card[data-form="car"] { overflow: clip; }
 .bm-pq.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .bm-grade { margin-right: auto; }
 
-.bm-parts { border-top: 1px solid var(--line-2); }
+.bm-parts { border-top: 1px solid var(--line-2); padding-top: 10px; display: grid; gap: 9px; }
 
 /* ---- گروه‌های قطعات ----
    بیست‌ودو قطعه پشت سر هم روی گوشی یک اسکرول دوهزارپیکسلی بود؛ حالا پنج
    گروه بسته است و هر کدام تعداد علامت‌خورده‌های داخلش را روی سربرگ می‌گوید،
-   تا چیزی که تا شده پنهان نشده باشد. */
+   تا چیزی که تا شده پنهان نشده باشد. هر گروه هم کادر خودش را دارد؛ با یک خط
+   جداکننده معلوم نبود چیزی که باز شده تا کجا ادامه دارد. */
 
-.bm-group { border-bottom: 1px solid var(--line-2); }
+.bm-group {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper); overflow: hidden;
+}
+.bm-group[open] { border-color: #cfc3a8; }
 .bm-group > summary {
   display: flex; align-items: center; gap: 8px;
   padding: 11px 12px;
