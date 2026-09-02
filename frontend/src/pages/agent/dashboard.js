@@ -73,9 +73,14 @@ export function dashboardPage() {
 
   const items = mine?.items || [];
   const active = items.filter((h) => h.status === 'ACTIVE');
+  // Past deadlines belong here too — an advertisement whose week ran out an
+  // hour ago is the most urgent thing on this list, not something that has
+  // stopped being the agency's problem. It is out of everyone else's search
+  // already; one click puts it back.
   const closingSoon = active
     .filter((h) => h.closesAt && new Date(h.closesAt) - Date.now() < 3 * 24 * 60 * 60 * 1000)
     .sort((a, b) => new Date(a.closesAt) - new Date(b.closesAt));
+  const ended = (h) => new Date(h.closesAt) < Date.now();
 
   const totalReveals = items.reduce((sum, h) => sum + (h.revealCount || 0), 0);
   const openTickets = (ticketList || []).filter((t) => t.status !== 'CLOSED');
@@ -117,7 +122,11 @@ export function dashboardPage() {
     closingSoon.length
       ? html`<div class="card">
           <div class="card-h">
-            <h2>آگهی‌هایی که به‌زودی منقضی می‌شوند ${qtip('آگهی‌های فعال شما که مهلتشان رو به پایان است. با دکمه‌ی «تمدید»، آگهی هفت روز دیگر فعال می‌ماند؛ اگر تمدید نکنید، بعد از پایان مهلت از استعلام دیگران حذف می‌شود.')}</h2>
+            <!-- Not «به‌زودی منقضی می‌شوند»: half of these had already
+                 expired, and a heading that argues with the row under it is
+                 read as a bug. The one thing true of every row is that it
+                 needs the button on the right of it. -->
+            <h2>آگهی‌هایی که باید تمدید شوند ${qtip('آگهی‌هایی که مهلتشان تمام شده یا تا سه روز دیگر تمام می‌شود. آگهی با مهلت تمام‌شده در استعلام دیگران دیده نمی‌شود؛ با «تمدید» هفت روز دیگر برمی‌گردد.')}</h2>
             <span class="tag w">${faDigits(closingSoon.length)} مورد</span>
           </div>
           <table>
@@ -127,7 +136,7 @@ export function dashboardPage() {
                 (h) => html`<tr>
                   <td>${h.carType}</td>
                   <td><span class="tag ${MARKET_TONE[h.market] || 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
-                  <td><span class="tag w">${until(h.closesAt)}</span></td>
+                  <td><span class="tag ${ended(h) ? 'r' : 'w'}">${until(h.closesAt)}</span></td>
                   <td style="text-align:left">
                     ${
                       // Each market renews through its own module. One button
