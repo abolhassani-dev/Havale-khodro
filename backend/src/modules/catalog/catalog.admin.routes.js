@@ -36,7 +36,7 @@ const sortOrder = Joi.number().integer().min(0).max(9999);
 const isActive = Joi.boolean();
 // The body shape the خودرو market draws and filters by. Settable only here:
 // the classifier fills blanks at boot, this is where a person overrules it.
-const bodyType = Joi.string().valid('SEDAN', 'HATCHBACK', 'SUV', 'PICKUP');
+const bodyType = Joi.string().valid('SEDAN', 'HATCHBACK', 'SUV', 'PICKUP', 'PICKUP_SINGLE');
 
 /** Records who changed the catalogue, so an unexpected change can be traced. */
 async function log(actor, summary) {

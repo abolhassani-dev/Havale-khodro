@@ -47,13 +47,26 @@ describe('body classifier', () => {
     ['ب ام و', 'ب ام و X3 25', 'SUV'],
     ['شاهین', 'شاهین کراس اتوماتیک', 'SUV'],
 
-    // pickups
+    // pickups — double cab
     ['تویوتا', 'تویوتا هایلوکس دو کابین بلند', 'PICKUP'],
-    ['زامیاد', 'زامیاد Z24 بنزینی', 'PICKUP'],
-    ['پراید', 'پراید 151 پلاس', 'PICKUP'],
-    ['رنو', 'رنو تندر 90 وانت', 'PICKUP'],
-    ['آریسان', 'آریسان 2', 'PICKUP'],
     ['ایسوزو', 'ایسوزو دی مکس دو کابین', 'PICKUP'],
+    ['زامیاد', 'زامیاد ریچ', 'PICKUP'],
+    ['کاپرا', 'کاپرا U دوکابین 2.4 لیتر اتوماتیک', 'PICKUP'],
+    ['نیسان', 'نیسان پیکاپ دو کابین', 'PICKUP'],
+
+    // pickups — single cab, a shape of its own with no rear doors. The cab
+    // words outrank every brand rule, in both directions: کاپرا and گریت وال
+    // build both, and زامیاد builds only single cabs except ریچ.
+    ['زامیاد', 'زامیاد Z24 بنزینی', 'PICKUP_SINGLE'],
+    ['زامیاد', 'زامیاد شوکا', 'PICKUP_SINGLE'],
+    ['پراید', 'پراید 151 پلاس', 'PICKUP_SINGLE'],
+    ['رنو', 'رنو تندر 90 وانت', 'PICKUP_SINGLE'],
+    ['آریسان', 'آریسان 2', 'PICKUP_SINGLE'],
+    ['پیکان', 'پیکان وانت بنزین', 'PICKUP_SINGLE'],
+    ['کاپرا', 'کاپرا B تک کابین 2.0 لیتر دنده ای', 'PICKUP_SINGLE'],
+    ['گریت وال', 'گریت وال وینگل 5 تک کابین تک دیفرانسیل', 'PICKUP_SINGLE'],
+    ['مزدا', 'مزدا وانت تک‌کابين', 'PICKUP_SINGLE'],
+    ['تویوتا', 'تویوتا هایلوکس تک کابین', 'PICKUP_SINGLE'],
 
     // an import nobody wrote a rule for stays unclassified, not guessed
     ['مازراتی', 'مازراتی گرن توریسمو', null],
@@ -63,7 +76,7 @@ describe('body classifier', () => {
     // pickup only when وانت stands as its own word.
     ['مازراتی', 'مازراتی لوانته S', 'SUV'],
     ['هیوندای', 'هیوندای آوانته اتوماتیک', null],
-    ['دوج', 'دوج رم چارجر (وانت)', 'PICKUP'],
+    ['دوج', 'دوج رم چارجر (وانت)', 'PICKUP_SINGLE'],
     ['دوج', 'دوج رم چارجر', 'SUV'],
     ['دوج', 'دوج رم 1500', 'PICKUP'],
     // «رنجرور» is Range Rover, not a Ranger pickup.
@@ -82,7 +95,7 @@ describe('body classifier', () => {
     ['اکستریم', 'اکستریم VX (QX) 2.0 لیتر توربو', 'PICKUP'],
     ['پادرا موتور', 'پادرا موتور تاگا H استاندارد', 'PICKUP'],
     ['پاژن', 'پاژن دو در', 'SUV'],
-    ['پاژن', 'پاژن وانت تک کابین', 'PICKUP'],
+    ['پاژن', 'پاژن وانت تک کابین', 'PICKUP_SINGLE'],
     // the diacritic in «جِی ام سی» must not hide the brand
     ['جِی ام سی (JMC)', 'جِی ام سی (JMC) S350', 'SUV'],
     ['جی ام سی (GMC)', 'جی ام سی (GMC) یوکان', 'SUV'],

@@ -80,7 +80,10 @@ enum BodyType {
   SEDAN // سدان
   HATCHBACK // هاچبک
   SUV // شاسی‌بلند و کراس‌اوور
-  PICKUP // وانت و دوکابین
+  PICKUP // وانت دوکابین
+  /// وانت تک‌کابین — نقشه‌ی بدنه‌ی خودش را دارد و درب عقب ندارد، پس دسته‌ی
+  /// جداست نه یک برچسب روی همان PICKUP.
+  PICKUP_SINGLE
 }
 
 enum HavaleKind {

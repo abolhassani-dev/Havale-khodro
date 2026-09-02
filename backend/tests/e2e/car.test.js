@@ -104,6 +104,29 @@ maybe('car market', () => {
       expect(res.body.data.bodyType).toBe(model.bodyType || 'SEDAN');
     });
 
+    it('refuses a part the catalogue shape does not have', async () => {
+      const { cookie } = await agent();
+      const single = await prisma.carModel.findFirst({
+        where: { bodyType: 'PICKUP_SINGLE' },
+        select: { id: true },
+      });
+      // The classifier fills these at boot; if a run has none, there is
+      // nothing to assert rather than a false pass.
+      if (!single) return;
+
+      const res = await post(
+        cookie,
+        sale({ carModelId: single.id, bodyStatus: { 'dr-r-d': 'PAINT' } })
+      ).expect(422);
+      expect(JSON.stringify(res.body)).toMatch(/وجود ندارد/);
+
+      // The doors it does have are still fine.
+      await post(
+        cookie,
+        sale({ carModelId: single.id, bodyStatus: { 'dr-f-d': 'PAINT' } })
+      ).expect(201);
+    });
+
     it('refuses an unknown part rather than silently dropping it', async () => {
       const { cookie } = await agent();
       const res = await post(cookie, sale({ bodyStatus: { spoiler: 'PAINT' } })).expect(422);

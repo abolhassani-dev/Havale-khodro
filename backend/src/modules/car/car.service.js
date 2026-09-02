@@ -171,15 +171,14 @@ function identity(user) {
  * would silently drop a mis-keyed part, and a قطعه that vanishes without a
  * word is worse than a refusal (see car.validator.js).
  */
-function assertBody(bodyStatus) {
-  const problem = bodyStatusError(bodyStatus);
+function assertBody(bodyStatus, bodyType) {
+  const problem = bodyStatusError(bodyStatus, bodyType);
   if (problem) throw new ValidationError(problem);
 }
 
 const carService = {
   async create({ user, payload }) {
     assertClean(freeText(payload), identity(user));
-    assertBody(payload.bodyStatus);
 
     // The car's name — and in this market its body shape — are copied onto
     // the row rather than only referenced: an advertisement keeps saying what
@@ -188,7 +187,12 @@ const carService = {
     const model = await catalogRepository.findModel(payload.carModelId);
     if (!model) throw new BadRequestError(MESSAGES.LISTING.UNKNOWN_MODEL);
 
-    const { listing, detail } = split(payload, model.bodyType || 'SEDAN');
+    // The shape has to be known before the table is judged: a single cab may
+    // not declare a rear door.
+    const bodyType = model.bodyType || 'SEDAN';
+    assertBody(payload.bodyStatus, bodyType);
+
+    const { listing, detail } = split(payload, bodyType);
 
     const row = await carRepository.create({
       ...listing,
@@ -327,7 +331,7 @@ const carService = {
     if (row.status !== 'ACTIVE') throw new BadRequestError(MESSAGES.LISTING.NOT_EDITABLE);
 
     assertClean(freeText(payload), identity(user));
-    if (payload.bodyStatus !== undefined) assertBody(payload.bodyStatus);
+    if (payload.bodyStatus !== undefined) assertBody(payload.bodyStatus, row.car?.bodyType);
 
     const detail = detailPatch(payload);
     const updated = await carRepository.update(id, {

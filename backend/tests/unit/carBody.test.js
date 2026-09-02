@@ -66,6 +66,16 @@ describe('car body vocabulary', () => {
       expect(bodyStatusError('hood:PAINT')).toMatch(/معتبر نیست/);
     });
 
+    it('refuses a part the shape does not have, and only for that shape', () => {
+      // A single cab has one door a side; a rear door on one is a claim about
+      // a panel the car never had.
+      expect(bodyStatusError({ 'dr-r-d': 'PAINT' }, 'PICKUP_SINGLE')).toMatch(/وجود ندارد/);
+      expect(bodyStatusError({ 'dr-r-p': 'REPLACE' }, 'PICKUP_SINGLE')).toMatch(/وجود ندارد/);
+      expect(bodyStatusError({ 'dr-f-d': 'PAINT' }, 'PICKUP_SINGLE')).toBeNull();
+      expect(bodyStatusError({ 'dr-r-d': 'PAINT' }, 'PICKUP')).toBeNull();
+      expect(bodyStatusError({ 'dr-r-d': 'PAINT' })).toBeNull();
+    });
+
     it('every declared part accepts each of its own conditions', () => {
       for (const part of BODY_PARTS) {
         for (const status of part.allowed) {

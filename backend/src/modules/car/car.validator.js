@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 const {
   CAR_KIND, CAR_SORT, PAINT_TOLERANCE, LIMITS, currentJalaliYear, BODY_PARTS, GRADE_FA,
+  BODY_TYPE_FA,
 } = require('./car.constants');
 const { idList, nameList } = require('../../utils/queryList');
 const { LIST_PAGE_SIZE, MAX_PAGE } = require('../../constants/havale');
@@ -150,7 +151,7 @@ const listQuery = Joi.object({
   carColors: nameList(),
   // Several at once: a buyer who will take a sedan or a hatchback should not
   // have to search twice.
-  bodyType: pickOf(['SEDAN', 'HATCHBACK', 'SUV', 'PICKUP']),
+  bodyType: pickOf(Object.keys(BODY_TYPE_FA)),
   yearFrom: year,
   yearTo: year,
   priceFrom: toman,

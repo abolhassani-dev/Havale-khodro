@@ -65,6 +65,16 @@ const BODY_PARTS = [
 const PART_BY_KEY = Object.fromEntries(BODY_PARTS.map((p) => [p.key, p]));
 
 /**
+ * Parts a body type does not have.
+ *
+ * A single-cab pickup has one door on each side, so «درب عقب راننده» is not a
+ * panel it can have painted — a table claiming one is either a mistake or a
+ * lie, and either way the map has nowhere to draw it. The frontend hides the
+ * two rows (NO_PART in src/ui/bodyMap.js); this is where it is refused.
+ */
+const NO_PART = { PICKUP_SINGLE: ['dr-r-d', 'dr-r-p'] };
+
+/**
  * The one-word summary a buyer filters by, derived from the table and never
  * asked separately — a summary that is computed cannot contradict its table.
  *
@@ -87,18 +97,23 @@ function deriveGrade(bodyStatus) {
 
 /**
  * The deep check of a body table: every key a real part, every condition one
- * that part accepts. Returns the Persian sentence to refuse with, or null.
- * Lives here beside the vocabulary so the rules and the derivation that
- * consumes them cannot drift apart.
+ * that part accepts, and — when the shape is known — a part this shape has.
+ * Returns the Persian sentence to refuse with, or null. Lives here beside the
+ * vocabulary so the rules and the derivation that consumes them cannot drift
+ * apart.
  */
-function bodyStatusError(bodyStatus) {
+function bodyStatusError(bodyStatus, bodyType = null) {
   if (bodyStatus === null || bodyStatus === undefined) return null;
   if (typeof bodyStatus !== 'object' || Array.isArray(bodyStatus)) {
     return 'قالب وضعیت بدنه معتبر نیست';
   }
+  const missing = new Set(NO_PART[bodyType] || []);
   for (const [key, status] of Object.entries(bodyStatus)) {
     const part = PART_BY_KEY[key];
     if (!part) return 'قطعه‌ای ناشناخته در وضعیت بدنه علامت خورده است';
+    if (missing.has(key)) {
+      return `«${part.fa}» روی ${BODY_TYPE_FA[bodyType]} وجود ندارد`;
+    }
     if (!part.allowed.includes(status)) {
       return `وضعیت انتخاب‌شده برای «${part.fa}» مجاز نیست`;
     }
@@ -123,20 +138,19 @@ const PART_STATUS_FA = {
 };
 
 /**
- * The four shapes, as they are named on screen.
+ * The five shapes, as they are named on screen.
  *
- * PICKUP is «وانت» and not «وانت / دوکابین»: it covers both cabs, and a
- * تک‌کابین labelled «دوکابین» in the catalogue is simply wrong — which is
- * how it was found. The cut-out drawn for it is a double cab, the shape most
- * of this catalogue's pickups are; a single cab shares every panel the map
- * marks except its rear doors, and telling the two apart properly needs a
- * second drawing and a parts list without them.
+ * The two cabs are separate shapes, not one «وانت» covering both: they are
+ * drawn differently and one of them has no rear doors, so a تک‌کابین shown as
+ * a دوکابین is a wrong diagram on a live advertisement — which is how the
+ * split was asked for. The classifier decides which from the model's name.
  */
 const BODY_TYPE_FA = {
   SEDAN: 'سدان',
   HATCHBACK: 'هاچبک',
   SUV: 'شاسی‌بلند',
-  PICKUP: 'وانت',
+  PICKUP: 'وانت دوکابین',
+  PICKUP_SINGLE: 'وانت تک‌کابین',
 };
 
 const PAINT_TOLERANCE = {

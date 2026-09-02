@@ -53,15 +53,26 @@ function normalise(text) {
 //     «رنجرور». Anchor the short ones with `( |^)`/`( |$)` or scope them to
 //     a brand.
 const RULES = [
-  // ── وانت و دوکابین — first, because the word ends the argument ──────────
-  [/(^|[ (])وانت($|[ )])|پیکاپ|پیک اپ|دوکابین|دو کابین|تک کابین|کمپرسی/, 'PICKUP'],
-  [/^کاپرا |^زامیاد |^آریسان|^ریچ |^پادرا موتور |^اکستریم |^زد ایکس اتو /, 'PICKUP'],
-  [/هایلوکس|تونلند|وینگل|پوئر|دی مکس|d-?max|آماروک|amarok|( |^)رنجر( |$)|ranger(?! ?rover)|ناوارا|توندرا|سیلورادو|استاوت/, 'PICKUP'],
+  // ── وانت — first, because the word ends the argument ────────────────────
+  //
+  // Two shapes, drawn differently, so the words that tell the cabs apart come
+  // before every brand rule: «کاپرا دو کابین» must not fall into a rule that
+  // says کاپرا, and a name that says «تک کابین» has settled the question.
+  [/دوکابین|دو کابین|کابین مضاعف|کمپرسی/, 'PICKUP'],
+  [/تک کابین|کانوپی/, 'PICKUP_SINGLE'],
+  // Then the ones with only one cab ever built. An old import called simply
+  // «… وانت» is one of them: every double cab in the catalogue says so in its
+  // name, so a name that does not is a single cab. The whole زامیاد line —
+  // نیسان، شوکا، پادرا، کارون، درکا، اکستند، زاگرس — is single-cab too, but
+  // for ریچ, which is a double.
+  [/(^|[ (])وانت($|[ )])|^آریسان|پراید 151|استاوت|^زامیاد (?!.*(ریچ|ون ))/, 'PICKUP_SINGLE'],
+  [/پیکاپ|پیک اپ/, 'PICKUP'],
+  [/^کاپرا |^زامیاد |^ریچ |^پادرا موتور |^اکستریم |^زد ایکس اتو /, 'PICKUP'],
+  [/هایلوکس|تونلند|وینگل|پوئر|دی مکس|d-?max|آماروک|amarok|( |^)رنجر( |$)|ranger(?! ?rover)|ناوارا|توندرا|سیلورادو/, 'PICKUP'],
   // Brand-scoped rules use `.*` after the brand, because model names repeat
   // the brand: the row is «هایما | هایما S5», so the haystack starts
   // «هایما هایما…» and `^هایما (اس|s)` would never fire.
   [/^فورد .*((اف|f)-? ?150|\bf-?\d)/, 'PICKUP'],
-  [/پراید 151/, 'PICKUP'],
   [/^کی ام سی .*(تی|t) ?[89]( |$)/, 'PICKUP'],
   [/^جی ام سی .*سیرا( |$)/, 'PICKUP'],
   [/^دوج .*( |^)رم(?! ?چارجر)/, 'PICKUP'],
@@ -208,7 +219,7 @@ async function classifyUnsetBodyTypes() {
   if (!unset.length) return { examined: 0, classified: 0 };
 
   let classified = 0;
-  const byType = { SEDAN: [], HATCHBACK: [], SUV: [], PICKUP: [] };
+  const byType = { SEDAN: [], HATCHBACK: [], SUV: [], PICKUP: [], PICKUP_SINGLE: [] };
   for (const model of unset) {
     const type = classify(model.brand.name, model.name);
     if (type) byType[type].push(model.id);
@@ -220,7 +231,8 @@ async function classifyUnsetBodyTypes() {
   }
   logger.info(
     `body types: ${classified}/${unset.length} classified ` +
-      `(hatch ${byType.HATCHBACK.length}, suv ${byType.SUV.length}, pickup ${byType.PICKUP.length}); ` +
+      `(hatch ${byType.HATCHBACK.length}, suv ${byType.SUV.length}, ` +
+      `pickup ${byType.PICKUP.length}, single-cab ${byType.PICKUP_SINGLE.length}); ` +
       `the rest read as sedan until someone says otherwise`
   );
   return { examined: unset.length, classified };
