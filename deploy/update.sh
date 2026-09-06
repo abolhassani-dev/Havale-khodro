@@ -199,6 +199,20 @@ CRON
   echo "→ nightly housekeeping scheduled (03:30)"
 fi
 
+# ---- 3.96 the hourly price fetch is installed ----
+#
+# Minute 7, not 0: nothing else here runs at :07, and a source that gets its
+# own traffic spike on the hour does not need ours on top of it.
+if [ -x ./deploy/car-prices.sh ]; then
+  cat > /etc/cron.d/feranocar-car-prices <<CRON
+# Every hour at :07 — the market price list for the panel.
+# A failed fetch leaves the previous list in place and sends one alert.
+7 * * * * root cd $ROOT && ./deploy/car-prices.sh >> /var/log/feranocar-car-prices.log 2>&1
+CRON
+  chmod 644 /etc/cron.d/feranocar-car-prices
+  echo "→ hourly car-price fetch scheduled (:07)"
+fi
+
 # ---- 4. rebuild and restart ----
 echo "→ rebuilding"
 # A failed build leaves the running containers untouched — the site stays up on

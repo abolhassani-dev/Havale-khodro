@@ -106,6 +106,39 @@ module.exports = {
       // deleted at all — they are one row per rule per address, so they cannot
       // grow the way a raw log does.
       resolvedSecurity: Number(process.env.RETAIN_RESOLVED_SECURITY_DAYS || 180),
+      // Price points: one per change plus one a day, so a year is a few
+      // thousand rows per car at most. Long, because the trend chart that
+      // will read them is worth more the further back it can look.
+      carPriceHistory: Number(process.env.RETAIN_CAR_PRICE_HISTORY_DAYS || 400),
     },
+  },
+
+  carPrices: {
+    // Where the hourly job (src/jobs/car-prices.js) reads the market price
+    // list. Two pages, one per group; nothing in the request path ever
+    // touches them — agencies read the snapshot in the database.
+    sources: {
+      DOMESTIC:
+        process.env.CAR_PRICES_URL_DOMESTIC ||
+        'https://www.iranjib.ir/showgroup/45/%D9%82%DB%8C%D9%85%D8%AA-%D8%AE%D9%88%D8%AF%D8%B1%D9%88-%D8%AA%D9%88%D9%84%DB%8C%D8%AF-%D8%AF%D8%A7%D8%AE%D9%84/',
+      IMPORTED:
+        process.env.CAR_PRICES_URL_IMPORTED ||
+        'https://www.iranjib.ir/showgroup/46/%D9%82%DB%8C%D9%85%D8%AA-%D8%AE%D9%88%D8%AF%D8%B1%D9%88-%D9%88%D8%A7%D8%B1%D8%AF%D8%A7%D8%AA%DB%8C/',
+    },
+    timeoutMs: Number(process.env.CAR_PRICES_TIMEOUT_MS || 20000),
+    // Says who is asking, the way a polite crawler does. Overridable in case
+    // the source only answers browsers.
+    userAgent:
+      process.env.CAR_PRICES_USER_AGENT ||
+      'Mozilla/5.0 (compatible; FeranoCar/1.0; +https://feranocar.com)',
+    // Below this many rows the page is not the price list — a maintenance
+    // page, a block page, a redesign — and the previous snapshot stays.
+    minItems: Number(process.env.CAR_PRICES_MIN_ITEMS || 20),
+    // «به‌روزرسانی با تأخیر» past this, on the page and in the API.
+    staleAfterMs: Number(process.env.CAR_PRICES_STALE_MS || 3 * 60 * 60 * 1000),
+    // A row not seen for this long falls out of the list (kept, not deleted).
+    dropAfterMs: Number(process.env.CAR_PRICES_DROP_MS || 7 * 24 * 60 * 60 * 1000),
+    // How many cars an agency may star.
+    watchLimit: Number(process.env.CAR_PRICES_WATCH_LIMIT || 30),
   },
 };

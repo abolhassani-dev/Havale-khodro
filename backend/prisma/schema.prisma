@@ -243,6 +243,7 @@ model User {
   reportsFiled        ViolationReport[] @relation("ReportReporter")
   reportsReviewed     ViolationReport[] @relation("ReportReviewer")
   tickets             Ticket[]
+  carPriceWatches     CarPriceWatch[]
   ticketMessages      TicketMessage[]
   seatOrders          SeatOrder[]       @relation("SeatOrderBuyer")
   seatOrdersReviewed  SeatOrder[]       @relation("SeatOrderReviewer")
@@ -1037,4 +1038,113 @@ model SmsMessage {
   @@index([status, createdAt])
   @@index([to, createdAt])
   @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// قیمت روز خودرو
+//
+// یک snapshot از فهرست قیمت بازار که کرونِ ساعتی (src/jobs/car-prices.js) از
+// منبع می‌گیرد. صفحه‌ی پنل فقط همین جدول‌ها را می‌خواند — هیچ درخواستی به بیرون
+// در مسیر کاربر نیست، پس هرقدر نمایندگی هم‌زمان نگاه کنند فرقی نمی‌کند.
+//
+// کلید هر ردیف، شناسه‌ی عددیِ خودِ منبع است نه اسم: اسم عوض شود، تاریخچه و
+// «فهرست من» سر جایشان می‌مانند.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// تولید داخل / وارداتی — همان دو صفحه‌ی منبع.
+enum CarPriceGroup {
+  DOMESTIC
+  IMPORTED
+}
+
+enum PriceDirection {
+  UP
+  DOWN
+  FLAT
+}
+
+model CarPriceItem {
+  /// شناسه‌ی پایدار منبع — عددی، ولی متن نگه داشته می‌شود تا صفرِ اول یا
+  /// تغییر قالبش چیزی را نشکند.
+  id    String        @id
+  group CarPriceGroup
+  /// سرفصلی که منبع ردیف را زیرش چاپ کرده: «ایران خودرو»، «ولوو - Volvo».
+  brand String
+  name  String
+
+  /// قیمت بازار به تومان؛ null یعنی منبع عددی نداده («---»، «به زودی»).
+  /// متنِ همان خانه هم می‌ماند تا «توقف فروش» صفر نشود.
+  priceToman BigInt?
+  priceText  String
+  /// ستون سوم: کارخانه (داخلی) یا نمایندگی (وارداتی). عنوانش روی CarPriceRun است.
+  secondToman BigInt?
+  secondText  String
+
+  /// تغییر روزانه به گفته‌ی منبع — اندازه، بی‌علامت؛ جهت جداست.
+  changeToman BigInt?
+  changePct   Decimal?        @db.Decimal(7, 2)
+  /// از رنگ منبع، و اگر قیمت نسبت به snapshot قبلی ما عوض شده باشد از خود
+  /// مقایسه — رنگ آن‌ها فقط تأیید دوم است.
+  direction   PriceDirection?
+  /// قیمت در snapshot قبلی ما، وقتی این بار فرق کرده.
+  prevToman   BigInt?
+
+  /// ترتیب چاپ در منبع، تا فهرست همان‌طور که مردم عادت دارند بیاید.
+  sortOrder Int @default(0)
+  /// آخرین اجرایی که این ردیف را دید. ردیفی که هفت روز دیده نشده از فهرست
+  /// می‌افتد ولی پاک نمی‌شود — تاریخچه و ستاره‌هایش ارزش دارند.
+  seenAt    DateTime
+  changedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  history CarPriceHistory[]
+  watches CarPriceWatch[]
+
+  @@index([group, sortOrder])
+  @@index([seenAt])
+}
+
+/// هر اجرای کرون، موفق یا نه. «آخرین به‌روزرسانی» روی صفحه یعنی آخرین اجرای
+/// موفق — نه آخرین تلاش.
+model CarPriceRun {
+  id         String        @id @default(cuid())
+  group      CarPriceGroup
+  startedAt  DateTime      @default(now())
+  finishedAt DateTime?
+  ok         Boolean       @default(false)
+  itemCount  Int           @default(0)
+  changed    Int           @default(0)
+  /// عنوان ستون سوم همان‌طور که منبع نوشته، تا اگر عوضش کردند ما هم عوض کنیم.
+  secondLabel String?
+  error       String?
+
+  @@index([group, ok, finishedAt])
+}
+
+/// یک نقطه در هر تغییر قیمت، به‌علاوه‌ی یک نقطه در روز — نه یکی در هر ساعت.
+/// نمودار روند هنوز کشیده نمی‌شود؛ داده‌اش از روز اول جمع می‌شود.
+model CarPriceHistory {
+  id         String       @id @default(cuid())
+  itemId     String
+  item       CarPriceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  priceToman BigInt?
+  at         DateTime     @default(now())
+
+  @@index([itemId, at])
+  @@index([at])
+}
+
+/// «فهرست من» — برای نمایندگی، نه کاربر: مدیر و زیرنمایندگی‌هایش یکی می‌بینند.
+model CarPriceWatch {
+  id        String       @id @default(cuid())
+  ownerId   String
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      CarPriceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([ownerId, itemId])
+  @@index([ownerId])
 }

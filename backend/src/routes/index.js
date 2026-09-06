@@ -13,6 +13,7 @@ const settingsRoutes = require('../modules/settings/settings.routes');
 const reportRoutes = require('../modules/report/report.routes');
 const ticketRoutes = require('../modules/ticket/ticket.routes');
 const noticeRoutes = require('../modules/notice/notice.routes');
+const carPriceRoutes = require('../modules/carprice/carprice.routes');
 const adminRoutes = require('../modules/admin/admin.routes');
 const alertRoutes = require('../modules/alert/alert.routes');
 const securityRoutes = require('../modules/security/security.routes');
@@ -35,6 +36,7 @@ router.use('/security', securityRoutes);
 router.use('/reports', reportRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/notices', noticeRoutes);
+router.use('/car-prices', carPriceRoutes);
 router.use('/admin', adminRoutes);
 
 module.exports = router;

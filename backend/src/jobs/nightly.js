@@ -18,6 +18,7 @@
  */
 const { connectDatabase, disconnectDatabase } = require('../config/database');
 const retentionService = require('../modules/admin/retention.service');
+const carPriceService = require('../modules/carprice/carprice.service');
 const telegram = require('../modules/alert/telegram');
 const logger = require('../utils/logger');
 const { toPersianDigits } = require('../utils/persian');
@@ -45,6 +46,12 @@ function summarise(report) {
   if (report.securityRemoved) {
     lines.push(`• ${toPersianDigits(report.securityRemoved)} رویداد امنیتی بررسی‌شده پاک شد`);
   }
+  if (report.pricePointsRemoved) {
+    lines.push(`• ${toPersianDigits(report.pricePointsRemoved)} نقطه‌ی قدیمی قیمت روز پاک شد`);
+  }
+  if (report.pricePointsError) {
+    lines.push(`• ⚠ پاک‌سازی تاریخچه‌ی قیمت روز: ${report.pricePointsError}`);
+  }
   return lines.join('\n');
 }
 
@@ -54,6 +61,16 @@ async function main() {
   let report;
   try {
     report = await retentionService.run({ dryRun });
+    // Its own step, its own failure: the price history is a different table
+    // with a different owner, and a problem there must not undo the audit
+    // work above or hide behind it.
+    if (!dryRun) {
+      try {
+        report.pricePointsRemoved = await carPriceService.pruneHistory();
+      } catch (err) {
+        report.pricePointsError = err.message;
+      }
+    }
   } finally {
     await disconnectDatabase();
   }
