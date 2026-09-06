@@ -21,6 +21,9 @@ import { BRAND } from '../constants.js';
  */
 const AGENT_NAV = [
   { page: 'dash', icon: 'dashboard', label: 'داشبورد' },
+  // Right under the dashboard: the one page an agency may open before it
+  // has decided to post anything — a reason to come back every morning.
+  { page: 'car-prices', icon: 'tag', label: 'قیمت روز خودروها' },
   // Top level, beside the dashboard, rather than buried under the profile: what
   // is in it is a penalty on their account with a deadline attached, and a
   // person who does not know it exists will not go looking for it.

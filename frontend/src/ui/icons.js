@@ -34,6 +34,7 @@ const PATHS = {
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c.9-4 4.1-6 8-6s7.1 2 8 6"/>',
   phone: '<path d="M5 3.5h3.2l1.7 4.3-2.1 1.6a12.5 12.5 0 006.8 6.8l1.6-2.1 4.3 1.7V19a2 2 0 01-2 2A16.5 16.5 0 013 5.5a2 2 0 012-2z"/>',
   pin: '<path d="M12 21.5s-7-5.6-7-11a7 7 0 0114 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10.2" r="2.6"/>',
+  tag: '<path d="M20.6 13.4L13.4 20.6a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   // Points down; the stylesheet rotates it a quarter turn when the group is
   // closed, so one icon covers both states and they can never disagree.
   chevron: '<path d="M6 9l6 6 6-6"/>',

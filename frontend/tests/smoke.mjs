@@ -698,6 +698,48 @@ await step('the notice box opens and marks itself read', async () => {
   if (badge) throw new Error('the badge survived reading the box');
 });
 
+/**
+ * The market price list: read from our snapshot, searched in place, and a
+ * star that makes «فهرست من» appear and disappear without a reload.
+ */
+await step('the price list opens, groups by model, searches in place', async () => {
+  await navigate('car-prices');
+  await page.waitForSelector('[data-price-list]', { timeout: 8000 });
+  const rows = await page.locator('[data-price-list] .pr-row').count();
+  if (rows < 50) throw new Error(`only ${rows} rows — is the snapshot loaded?`);
+  if (!(await page.locator('.pr-model').count())) throw new Error('no model grouped its trims');
+  const stamp = await page.textContent('.card-h .tag');
+  if (!stamp.includes('به‌روزرسانی')) throw new Error('no update stamp on the page');
+
+  await page.fill('[data-price-search]', 'دنا');
+  await page.waitForTimeout(300);
+  const shown = await page.locator('[data-price-list] .pr-model:visible, [data-price-list] > .pr-brand > .pr-row:visible').count();
+  if (!shown) throw new Error('searching «دنا» hid everything');
+  const others = await page.locator('[data-price-list] .pr-row:visible').evaluateAll((els) =>
+    els.filter((el) => !el.closest('.pr-model') && !el.dataset.q.includes('دنا')).length);
+  if (others) throw new Error(`${others} rows without «دنا» stayed visible`);
+  await page.fill('[data-price-search]', '');
+  await page.waitForTimeout(200);
+});
+
+await step('a star makes «فهرست من» appear, and unstarring removes it', async () => {
+  if (await page.locator('[data-price-mine]').count()) {
+    // A previous run left a star behind: clear it first.
+    while (await page.locator('[data-price-mine] .pr-star').count()) {
+      await page.locator('[data-price-mine] .pr-star').first().click();
+      await page.waitForTimeout(500);
+    }
+  }
+  await page.locator('.pr-model').first().click();
+  await page.locator('.pr-model[open] .pr-star').first().click();
+  await page.waitForSelector('[data-price-mine]', { timeout: 5000 });
+  if (!(await page.locator('[data-price-mine] .pr-row').count())) throw new Error('the card appeared empty');
+
+  await page.locator('[data-price-mine] .pr-star').first().click();
+  await page.waitForTimeout(600);
+  if (await page.locator('[data-price-mine]').count()) throw new Error('the card stayed after the last star was removed');
+});
+
 // A menu item that goes nowhere reads as broken, so these must render real
 // copy rather than an empty frame — and must not silently bounce home, which
 // is what an unregistered route would do.

@@ -49,6 +49,9 @@ import {
   openCarModal, carEditModal, carRenew, carFulfill, carDelete, carPhotoDelete,
 } from './pages/agent/car.js';
 import { loadNotices, noticesPage } from './pages/agent/notices.js';
+import {
+  loadCarPrices, carPricesPage, applyPriceFilters, handlePriceSearch, togglePriceWatch,
+} from './pages/agent/carPrices.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
 import { subAgents, tickets, subscription } from './api/index.js';
@@ -56,6 +59,7 @@ import { subAgents, tickets, subscription } from './api/index.js';
 /** Page titles, so the top bar and the document title agree. */
 const TITLES = {
   dash: ['داشبورد', 'خلاصه‌ی وضعیت شما'],
+  'car-prices': ['قیمت روز خودروها', 'به‌روزرسانی خودکار هر ساعت'],
   search: ['استعلام حواله‌ها', 'جستجو در حواله‌های موجود'],
   'new-offer': ['ثبت حواله فروش', 'حواله‌ای که دارید و می‌فروشید'],
   'new-request': ['ثبت درخواست خرید', 'حواله‌ای که می‌خواهید بخرید'],
@@ -89,6 +93,7 @@ for (const [page, { section, child }] of SOON_PAGES) {
 
 function registerRoutes() {
   route('dash', loadDashboard);
+  route('car-prices', loadCarPrices);
   route('search', loadSearch);
   route('new-offer', loadCatalogForm);
   route('new-request', loadCatalogForm);
@@ -145,6 +150,7 @@ function pageBody() {
 
   switch (page) {
     case 'dash': return dashboardPage();
+    case 'car-prices': return carPricesPage();
     case 'search': return searchPage();
     case 'new-offer': return havaleFormPage('OFFER');
     case 'new-request': return havaleFormPage('REQUEST');
@@ -341,6 +347,7 @@ const CLICK_KEYS = new Set([
   'brandAll', 'brandNone', 'brandExpand',
   'bodyChip', 'bodyClean', 'bodyMarked',
   'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete', 'carPhotoDel',
+  'priceWatch',
 ]);
 
 function findTarget(node) {
@@ -393,6 +400,7 @@ function onClick(event) {
   if (d.carFulfill) return carFulfill(d.carFulfill);
   if (d.carDelete) return carDelete(d.carDelete);
   if (d.carPhotoDel) return carPhotoDelete(el);
+  if (d.priceWatch) return togglePriceWatch(el);
   if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);
@@ -489,6 +497,7 @@ function onSubmit(event) {
     case 'registration': return submitRegistration(form);
     case 'car': return submitCar(form);
     case 'car-filters': return applyCarFilters(form);
+    case 'price-filters': return applyPriceFilters(form);
     case 'reg-filters': return applyRegFilters(form);
     case 'profile-password': return submitProfilePassword(form);
     case 'ticket-reply': return submitTicketReply(form);
@@ -549,6 +558,9 @@ function onCatalogSearch(event) {
 
   // The search inside a pick-select — options shown and hidden in place.
   if (handlePickSelectSearch(input)) return;
+
+  // The price list: rows hidden in place across every brand, no re-render.
+  if (handlePriceSearch(input)) return;
 
   if (!input.matches?.('[data-catalog-search]')) return;
 

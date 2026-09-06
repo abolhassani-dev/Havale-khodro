@@ -2383,3 +2383,137 @@ form.card[data-form="car"] { overflow: clip; }
   .af-tabs { margin: 10px 12px 12px; }
   .af-tabs .tab { flex: 1 1 auto; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   قیمت روز خودروها
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* نوار بالای فهرست: تب‌ها و جستجو */
+.pr-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 18px; border-bottom: 1px solid var(--line-2);
+}
+.pr-bar .tabs .tab { text-decoration: none; }
+.pr-search {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px;
+  margin-inline-start: auto;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff;
+  padding: 0 12px; color: var(--ink-3);
+}
+.pr-search input {
+  flex: 1; min-width: 0; border: 0; background: none; padding: 7px 0; font: inherit; font-size: 14px; color: var(--ink);
+}
+.pr-search input:focus { outline: none; }
+.pr-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3.5px var(--primary-08); }
+.pr-search input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* چیپ‌های شرکت — یکی در هر لحظه، و «همه» */
+.pr-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--line-2); }
+.bchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--ink-2);
+  background: var(--paper-2); border: 1px solid var(--line);
+  text-decoration: none; white-space: nowrap;
+}
+.bchip small { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.bchip:hover { border-color: #b3a88e; }
+.bchip.on { background: var(--primary); border-color: var(--primary-2); color: #fff; font-weight: 700; }
+.bchip.on small { color: #ffffffb3; }
+
+/* مرتب‌سازی و سرستون‌ها روی یک خط */
+.pr-sort {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 18px; font-size: 12.5px; color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+  background: #f6f3ea;
+}
+.pr-sort .sort { text-decoration: none; }
+.pr-cols {
+  margin-inline-start: auto; display: grid; grid-template-columns: 150px 150px 150px; gap: 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .03em; padding-inline-end: 42px;
+}
+
+/* سرفصل هر شرکت */
+.pr-bh {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 9px 18px; background: var(--paper-2); border-bottom: 1px solid var(--line-2);
+  font-size: 14px; color: var(--primary-2);
+}
+.pr-bh small { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.pr-brand + .pr-brand .pr-bh { border-top: 1px solid var(--line-2); }
+
+/* یک ردیف: نام | قیمت بازار | قیمت دوم | تغییر | ستاره */
+.pr-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 150px 42px; align-items: center; gap: 12px;
+  padding: 9px 18px; border-bottom: 1px solid var(--line-2); font-size: 14px;
+}
+.pr-row:hover { background: #faf8f1; }
+.pr-nm { display: flex; flex-direction: column; min-width: 0; line-height: 1.5; }
+.pr-nm b { font-weight: 700; overflow-wrap: anywhere; }
+.pr-nm small { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+.pr-c { display: flex; flex-direction: column; min-width: 0; }
+.pr-k { display: none; font-size: 11px; color: var(--ink-3); font-weight: 600; line-height: 1.4; }
+.pr-price { font-weight: 800; color: var(--primary-2); }
+.pr-second { color: var(--ink-2); font-weight: 600; }
+.pr-chg { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+.pr-chg small { font-weight: 600; font-size: 11.5px; opacity: .85; }
+.pr-chg.up { color: var(--ok); }
+.pr-chg.down { color: var(--danger); }
+.pr-chg.flat { color: var(--ink-3); font-weight: 500; }
+.pr-act { display: flex; justify-content: flex-end; }
+.pr-star {
+  width: 32px; height: 32px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
+  color: #b9b1a0; border: 1px solid transparent; background: none; cursor: pointer;
+}
+.pr-star:hover { color: var(--copper); background: var(--copper-08); }
+.pr-star.on { color: var(--copper); background: var(--copper-08); border-color: #a85a2433; }
+
+/* یک مدل با چند تیپ: خطِ خلاصه که باز می‌شود */
+.pr-model { border-bottom: 1px solid var(--line-2); }
+.pr-model > summary {
+  display: grid; grid-template-columns: minmax(0, 1fr) 312px 150px 42px; align-items: center; gap: 12px;
+  padding: 10px 18px; cursor: pointer; list-style: none; font-size: 14px;
+}
+.pr-model > summary::-webkit-details-marker { display: none; }
+.pr-model > summary:hover { background: #faf8f1; }
+.pr-model[open] > summary { background: var(--paper-2); }
+.pr-range { font-weight: 700; color: var(--primary-2); }
+.pr-range small { font-weight: 500; color: var(--ink-3); font-size: 12px; margin: 0 2px; }
+.pr-chev { display: flex; justify-content: flex-end; color: var(--ink-3); transition: transform .15s; }
+.pr-model[open] > summary .pr-chev { transform: rotate(180deg); }
+.pr-trims { background: #fdfcf9; border-top: 1px dotted var(--line-2); }
+.pr-trims .pr-row { padding-inline-start: 34px; }
+.pr-trims .pr-row:last-child { border-bottom: 0; }
+
+.pr-none { padding: 14px 18px; font-size: 13px; color: var(--ink-3); margin: 0; }
+.pr-foot { padding: 9px 18px; font-size: 12px; color: var(--ink-3); background: #fbfaf6; border-top: 1px solid var(--line-2); }
+.pr-mine .pr-row:last-child { border-bottom: 0; }
+
+/* روی گوشی: هر ردیف یک کارت با «عنوان: پاسخ»، همان زبان بقیه‌ی سایت */
+@media (max-width: 760px) {
+  .pr-cols { display: none; }
+  .pr-search { max-width: none; }
+  .pr-row { grid-template-columns: minmax(0, 1fr) 42px; grid-template-areas: 'nm act' 'p act' 's act' 'c act'; gap: 2px 8px; padding: 10px 14px; }
+  .pr-row .pr-nm { grid-area: nm; margin-bottom: 3px; }
+  .pr-row .pr-c:nth-of-type(1) { grid-area: p; }
+  .pr-row .pr-c:nth-of-type(2) { grid-area: s; }
+  .pr-row .pr-c:nth-of-type(3) { grid-area: c; }
+  .pr-row .pr-act { grid-area: act; align-self: start; }
+  .pr-c { flex-direction: row; align-items: baseline; gap: 8px; font-size: 13.5px; }
+  .pr-k { display: inline; flex: none; }
+  .pr-c > :last-child { margin-inline-start: auto; }
+  .pr-model > summary { grid-template-columns: minmax(0, 1fr) 24px; grid-template-areas: 'nm chev' 'range chev' 'chg chev'; gap: 2px 8px; padding: 10px 14px; }
+  .pr-model > summary .pr-nm { grid-area: nm; }
+  .pr-model > summary .pr-range { grid-area: range; }
+  .pr-model > summary .pr-chg { grid-area: chg; }
+  .pr-model > summary .pr-chev { grid-area: chev; }
+  .pr-trims .pr-row { padding-inline-start: 22px; }
+  .pr-bar, .pr-chips, .pr-sort, .pr-bh, .pr-foot { padding-left: 14px; padding-right: 14px; }
+  .pr-chips { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .pr-chips::-webkit-scrollbar { display: none; }
+}
+
+/* `hidden` must win over the grid rules above — the search hides rows in
+   place, and a row whose display is set by a class would ignore it. */
+.pr-row[hidden], .pr-model[hidden], .pr-brand[hidden], .pr-none[hidden] { display: none; }

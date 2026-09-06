@@ -126,6 +126,12 @@ export const notices = {
   seen: () => api.post('/notices/seen'),
 };
 
+export const carPrices = {
+  list: () => api.get('/car-prices'),
+  watch: (id) => api.post(`/car-prices/watch/${encodeURIComponent(id)}`),
+  unwatch: (id) => api.delete(`/car-prices/watch/${encodeURIComponent(id)}`),
+};
+
 export const tickets = {
   list: (status, category) => api.get('/tickets', { status, category }),
   get: (id) => api.get(`/tickets/${id}`),
