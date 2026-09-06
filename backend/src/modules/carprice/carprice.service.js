@@ -7,6 +7,7 @@ const { MESSAGES } = require('../../constants/messages');
 const carPriceRepository = require('./carprice.repository');
 const { parsePage, headingProblem } = require('./carprice.parser');
 const { fetchPage } = require('./carprice.fetch');
+const { priceKey, buildFamilies, bestMatch } = require('./carprice.link');
 
 /**
  * The market price list, kept as a snapshot and served from it.
@@ -27,6 +28,9 @@ const { fetchPage } = require('./carprice.fetch');
  */
 
 const GROUPS = ['DOMESTIC', 'IMPORTED'];
+
+/** Above this many of our models on one price line, the line is too vague to use. */
+const MAX_MODELS_PER_LINE = 3;
 
 /** The previous snapshot's price, the new one, and what the source said. */
 function directionOf(oldItem, parsed) {
@@ -119,6 +123,9 @@ const carPriceService = {
           group,
           brand: p.brand || '',
           name: p.name,
+          // Rewritten every run, so a change to the folding rule corrects
+          // every row by itself rather than needing a backfill.
+          familyKey: priceKey(p.name),
           priceToman: p.priceToman,
           priceText: p.priceText,
           secondToman: p.secondToman,
@@ -198,6 +205,107 @@ const carPriceService = {
       stale: !updatedAt || now - updatedAt.getTime() > config.carPrices.staleAfterMs,
       groups,
     };
+  },
+
+  /**
+   * Point every catalogue model at the price line that covers it.
+   *
+   * Run after a successful fetch, so a new model or a new line is picked up
+   * without anybody doing anything. Two things it will not do: touch a model
+   * an admin has set by hand, and guess. Where the answer is not clear the
+   * link is cleared rather than left as it was — a car whose line disappeared
+   * from the source must stop showing that line's last known price.
+   */
+  async relink({ dryRun = false } = {}) {
+    const [items, models] = await Promise.all([
+      carPriceRepository.allItems(),
+      carPriceRepository.linkableModels(),
+    ]);
+    const families = buildFamilies(items);
+
+    const wanted = new Map();
+    for (const m of models) {
+      const match = bestMatch({ name: m.name, brand: m.brand?.name || '' }, families);
+      wanted.set(m.id, match ? match.key : null);
+    }
+
+    // A line claimed by too many of our models is not describing any of them.
+    // Measured: one «آکورد» line is claimed by thirteen cars from a Crosstour
+    // to a DX, one «X3» by seven from an X3 20 to an X3 35, one «E200» by four
+    // including the coupé and the convertible. Those are not one price. Two or
+    // three is the ordinary case and stays — «پژو 207 اتوماتیک TU5» and
+    // «TU5P» are one car as far as the market is concerned.
+    const claims = new Map();
+    for (const key of wanted.values()) {
+      if (key) claims.set(key, (claims.get(key) || 0) + 1);
+    }
+    const tooVague = new Set([...claims].filter(([, n]) => n > MAX_MODELS_PER_LINE).map(([k]) => k));
+
+    const changes = [];
+    let linked = 0;
+    for (const m of models) {
+      const key = wanted.get(m.id);
+      const next = key && !tooVague.has(key) ? key : null;
+      if (next) linked += 1;
+      if (next !== m.priceKey) changes.push({ id: m.id, priceKey: next });
+    }
+
+    if (!dryRun && changes.length) await carPriceRepository.setPriceKeys(changes);
+    return {
+      models: models.length,
+      linked,
+      changed: changes.length,
+      droppedAsVague: tooVague.size,
+      dryRun,
+    };
+  },
+
+  /**
+   * What the market says a catalogue model is worth today.
+   *
+   * A range, not a single figure: several rows can name the same car — a wheel
+   * choice, the same model listed twice — and the honest answer spans them.
+   *
+   * Nothing comes back for a model with no link, and nothing at all for any
+   * model while our own snapshot is behind. A price carrying yesterday's date
+   * beside somebody's advertisement is worse than no price.
+   *
+   * @param {string[]} modelIds
+   * @returns {Promise<Map<string, {min:number,max:number,rows:number,name:string}>>}
+   */
+  async marketFor(modelIds) {
+    const out = new Map();
+    const ids = [...new Set((modelIds || []).filter(Boolean))];
+    if (!ids.length) return out;
+
+    const [runs, models] = await Promise.all([
+      Promise.all(GROUPS.map((g) => carPriceRepository.lastOkRun(g))),
+      carPriceRepository.priceKeysOf(ids),
+    ]);
+    const times = runs.filter(Boolean).map((r) => new Date(r.finishedAt).getTime());
+    if (!times.length || Date.now() - Math.min(...times) > config.carPrices.staleAfterMs) return out;
+
+    const keys = [...new Set(models.map((m) => m.priceKey).filter(Boolean))];
+    if (!keys.length) return out;
+
+    const rows = await carPriceRepository.itemsByFamilyKeys(keys);
+    const byKey = new Map();
+    for (const row of rows) {
+      if (row.priceToman === null || row.priceToman === undefined) continue;
+      const price = Number(row.priceToman);
+      const seen = byKey.get(row.familyKey);
+      if (!seen) byKey.set(row.familyKey, { min: price, max: price, rows: 1, name: row.name });
+      else {
+        seen.min = Math.min(seen.min, price);
+        seen.max = Math.max(seen.max, price);
+        seen.rows += 1;
+      }
+    }
+    for (const m of models) {
+      const found = m.priceKey ? byKey.get(m.priceKey) : null;
+      if (found) out.set(m.id, { ...found });
+    }
+    return out;
   },
 
   /**

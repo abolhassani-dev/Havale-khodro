@@ -68,6 +68,23 @@ async function main() {
       }
     }
 
+    // Catalogue models point at price lines by name, so a new model or a new
+    // line has to be picked up here — otherwise a car added on Monday shows
+    // no market price until somebody remembers to run something. Cheap, and
+    // it usually finds nothing to change. A failure here must not fail the
+    // fetch: the prices are written and correct either way.
+    if (!dryRun && !failed) {
+      try {
+        const r = await carPriceService.relink();
+        if (r.changed) {
+          lines.push(`• اتصال کاتالوگ: ${toPersianDigits(r.linked)} مدل به فهرست قیمت وصل است`);
+          logger.info(`car prices: relink ${r.linked}/${r.models} linked, ${r.changed} changed`);
+        }
+      } catch (err) {
+        logger.error(`car prices: relink failed: ${err.stack || err.message}`);
+      }
+    }
+
     // Told only when something is wrong, and not on every attempt. A message
     // four times an hour that says «۱۱۵ ردیف» is a message nobody reads — and
     // then nobody reads the one that says the list has been stale since
