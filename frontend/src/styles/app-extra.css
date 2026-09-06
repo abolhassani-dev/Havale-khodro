@@ -484,10 +484,43 @@ tr.dim, .dim { opacity: 0.55; }
   transition: opacity .13s, transform .13s, visibility .13s;
   pointer-events: none;
 }
-.qtip:hover .tip, .qtip:focus-visible .tip { opacity: 1; visibility: visible; transform: none; }
+/* `:focus` as well as `:focus-visible`: a tap gives the «؟» focus but does not
+   always match focus-visible, so on a touch screen the bubble opened only via
+   the browser's sticky-hover emulation — which not every one of them does. */
+.qtip:hover .tip, .qtip:focus .tip, .qtip:focus-visible .tip {
+  opacity: 1; visibility: visible; transform: none;
+}
 .qtip .tip::before {
   content: ''; position: absolute; top: -4px; inset-inline-start: 17px;
   width: 9px; height: 9px; background: #1b2422; transform: rotate(45deg);
+}
+
+/* ---- راهنمای «؟» روی موبایل: چسبیده به پایین صفحه ---- */
+/*
+   On a phone the bubble cannot hang off its own icon. The «؟» follows a
+   heading, so in a right-to-left line it lands in the middle of the screen,
+   and 290px running leftwards from there fell off the edge — measured at up
+   to 122px lost, which cut every line of the sentence in half.
+
+   No anchoring fixes that: from a mid-screen icon the box overflows to the
+   left, and mirroring it overflows to the right. The width simply does not
+   fit beside the thing it belongs to. So below this width it stops being a
+   bubble on a stalk and becomes a strip pinned across the bottom of the
+   viewport, where it is always whole and always in the same place. The arrow
+   goes with it, because it would now point at nothing.
+*/
+@media (max-width: 560px) {
+  .qtip .tip {
+    position: fixed;
+    inset-inline: 12px;
+    width: auto;
+    top: auto;
+    bottom: 14px;
+    font-size: 13px;
+    line-height: 1.9;
+    padding: 12px 14px;
+  }
+  .qtip .tip::before { display: none; }
 }
 
 /* ---- مقدار تنظیمات: قاب‌دار، نه رها در سلول ---- */

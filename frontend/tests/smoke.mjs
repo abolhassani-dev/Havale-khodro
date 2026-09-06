@@ -1298,6 +1298,40 @@ await step('phone: menu items take a pointer, not a text caret', async () => {
   if (cursor !== 'pointer') throw new Error(`cursor is "${cursor}"`);
 });
 
+/**
+ * Every «؟» bubble, on every screen an agency sees, wholly on the screen.
+ *
+ * The «؟» follows a heading, so on a right-to-left line it sits in the middle
+ * of a phone, and a bubble hanging off it ran 122px past the left edge with
+ * every line of the sentence cut in half. Checked by measuring rather than by
+ * looking, because a bubble that overflows still renders — it just loses its
+ * words, which no screenshot review reliably catches on the tenth page.
+ */
+await step('phone: every help bubble opens inside the screen', async () => {
+  const pages = ['dash', 'car-prices', 'search', 'new-offer', 'car-sell', 'reg-search', 'profile'];
+  for (const name of pages) {
+    await phone.goto(`${BASE}#${name}`, { waitUntil: 'networkidle' });
+    await phone.waitForTimeout(500);
+    const tips = await phone.locator('.qtip').all();
+    for (let i = 0; i < tips.length; i += 1) {
+      await tips[i].focus();
+      await phone.waitForTimeout(120);
+      const bad = await tips[i].evaluate((el) => {
+        const tip = el.querySelector('.tip');
+        if (!tip) return null;
+        const r = tip.getBoundingClientRect();
+        const w = document.documentElement.clientWidth;
+        if (r.left < -1) return `runs ${Math.round(-r.left)}px past the right-to-left end`;
+        if (r.right > w + 1) return `runs ${Math.round(r.right - w)}px past the other edge`;
+        if (tip.scrollWidth > tip.clientWidth + 1) return 'its text is wider than the bubble';
+        return null;
+      });
+      if (bad) throw new Error(`${name}, help bubble ${i + 1}: ${bad}`);
+      await phone.evaluate(() => document.activeElement?.blur());
+    }
+  }
+});
+
 if (errors.length) { console.log('\nconsole errors:'); errors.slice(0, 10).forEach((e) => console.log('  ', e)); process.exitCode = 1; }
 else console.log('\nno console errors');
 
