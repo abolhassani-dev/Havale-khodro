@@ -41,7 +41,7 @@ const carPriceRepository = {
    * it does — a half-written list is exactly the thing the gate exists to
    * prevent, and a crash mid-way must not produce one either.
    */
-  writeSnapshot({ runId, items, history, secondLabel, changed }) {
+  writeSnapshot({ runId, items, history, secondLabel, sourceStamp, changed }) {
     return prisma.$transaction([
       ...items.map((item) =>
         prisma.carPriceItem.upsert({
@@ -53,7 +53,7 @@ const carPriceRepository = {
       ...(history.length ? [prisma.carPriceHistory.createMany({ data: history })] : []),
       prisma.carPriceRun.update({
         where: { id: runId },
-        data: { ok: true, finishedAt: new Date(), itemCount: items.length, changed, secondLabel },
+        data: { ok: true, finishedAt: new Date(), itemCount: items.length, changed, secondLabel, sourceStamp },
       }),
     ]);
   },

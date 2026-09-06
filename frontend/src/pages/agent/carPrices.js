@@ -4,6 +4,7 @@ import { getState } from '../../state/store.js';
 import { faDigits, enDigits, num, dateTime } from '../../ui/format.js';
 import { toast, emptyBox, qtip } from '../../ui/feedback.js';
 import { filterBox, countFilters } from '../../ui/filterBox.js';
+import { moneyInput, moneyFieldId } from '../../ui/moneyInput.js';
 import { icon } from '../../ui/icons.js';
 import { go } from '../../router.js';
 
@@ -185,8 +186,8 @@ function groupModels(items) {
 // ── filters and sort ─────────────────────────────────────────────────────────
 
 function applyFilters(items, params, watching) {
-  const from = params.priceFrom ? Number(enDigits(params.priceFrom)) * 1e6 : null;
-  const to = params.priceTo ? Number(enDigits(params.priceTo)) * 1e6 : null;
+  const from = params.priceFrom ? Number(enDigits(params.priceFrom)) : null;
+  const to = params.priceTo ? Number(enDigits(params.priceTo)) : null;
   return items.filter((it) => {
     if (from !== null && (it.price === null || it.price < from)) return false;
     if (to !== null && (it.price === null || it.price > to)) return false;
@@ -319,7 +320,6 @@ function detailPanel(it, watching, secondLabel) {
         : html`<div><dt>فاصله‌ی بازار از ${secondLabel.replace('قیمت ', '')}</dt>
             <dd class="num ${gap > 0 ? 'up' : 'down'}">${gap > 0 ? '+' : '−'}${compact(Math.abs(gap))} (${faDigits(Math.abs(gapPct))}٪)</dd></div>`}
       <div><dt>تغییر امروز</dt><dd>${changeCell(it)}</dd></div>
-      <div><dt>آخرین جابه‌جایی قیمت</dt><dd class="num">${it.changedAt ? dateTime(it.changedAt) : 'از زمان ثبت، تغییری نکرده'}</dd></div>
     </dl>
 
     <div class="pr-dact">${star(it, watching, { big: true })}</div>
@@ -345,10 +345,34 @@ export function mineCard(prices) {
   </div>`;
 }
 
-function stampTag(prices) {
-  if (!prices.updatedAt) return html`<span class="tag o">${icon('clock', 13)} هنوز به‌روزرسانی نشده</span>`;
-  if (prices.stale) return html`<span class="tag o">${icon('clock', 13)} به‌روزرسانی با تأخیر — ${dateTime(prices.updatedAt)}</span>`;
-  return html`<span class="tag g">${icon('clock', 13)} آخرین به‌روزرسانی: ${dateTime(prices.updatedAt)}</span>`;
+/**
+ * The date the list itself carries — «چهارشنبه، ۱۵ شهریور ۱۴۰۵ ، ۱۳:۳۲:۴۴»
+ * without the weekday and the seconds. Anything that does not look like that
+ * is printed as it came, which is still better than a wrong guess.
+ */
+function pricedAtFa(stamp) {
+  // The digits arrive Persian, and `\d` does not match those — the first
+  // version quietly matched nothing and fell back to our own clock, which is
+  // the exact confusion this is here to remove.
+  const latin = enDigits(String(stamp || ''));
+  const m = latin.match(/(\d{1,2}\s+\S+\s+\d{4})\s*[،,]?\s*(\d{1,2}:\d{2})/);
+  if (m) return faDigits(`${m[1]} ساعت ${m[2]}`);
+  return String(stamp || '').replace(/^[^،]*،\s*/, '').trim();
+}
+
+/**
+ * When the prices are from.
+ *
+ * The list states its own date, and that is what «قیمت روز» means to a
+ * dealer; the minute our job happened to run is a fact about us. So the badge
+ * shows the list's date — and «با تأخیر» still comes from our own last
+ * successful run, so a fetch that quietly stopped is still visible.
+ */
+function stampTag(prices, group) {
+  const when = pricedAtFa(prices.groups[group]?.pricedAt) || (prices.updatedAt ? dateTime(prices.updatedAt) : '');
+  if (!when) return html`<span class="tag o">${icon('clock', 13)} هنوز به‌روزرسانی نشده</span>`;
+  if (prices.stale) return html`<span class="tag o">${icon('clock', 13)} به‌روزرسانی با تأخیر — ${when}</span>`;
+  return html`<span class="tag g">${icon('clock', 13)} آخرین به‌روزرسانی: ${when}</span>`;
 }
 
 /**
@@ -395,7 +419,7 @@ export function carPricesPage() {
   const total = Object.values(prices.groups).reduce((n, g) => n + g.items.length, 0);
   if (!total) {
     return html`<div class="card">
-      <div class="card-h"><h2>قیمت روز خودروها</h2>${stampTag(prices)}</div>
+      <div class="card-h"><h2>قیمت روز خودروها</h2>${stampTag(prices, 'DOMESTIC')}</div>
       ${emptyBox('فهرست قیمت هنوز دریافت نشده است — اولین به‌روزرسانی خودکار تا یک ساعت دیگر انجام می‌شود.')}
     </div>`;
   }
@@ -428,7 +452,7 @@ export function carPricesPage() {
       <div class="card">
         <div class="card-h">
           <h2>قیمت روز خودروها ${qtip('قیمت بازار خودروهای صفر کیلومتر، هر ساعت به‌طور خودکار به‌روز می‌شود. روی هر خودرو بزنید تا جزئیاتش را ببینید، و ستاره را بزنید تا به «فهرست من» برود.')}</h2>
-          ${stampTag(prices)}
+          ${stampTag(prices, group)}
         </div>
 
         <div class="pr-bar">
@@ -450,12 +474,12 @@ export function carPricesPage() {
             ${brandChips(current.items, params.brands)}
           </div>
           <div class="field">
-            <label for="priceFrom">قیمت بازار از (میلیون تومان)</label>
-            <input class="in num" id="priceFrom" name="priceFrom" inputmode="numeric" placeholder="۱٬۰۰۰" value="${params.priceFrom || ''}">
+            <label for="${moneyFieldId('priceFrom')}">قیمت بازار از (تومان)</label>
+            ${moneyInput('priceFrom', { value: params.priceFrom || '' })}
           </div>
           <div class="field">
-            <label for="priceTo">تا (میلیون تومان)</label>
-            <input class="in num" id="priceTo" name="priceTo" inputmode="numeric" placeholder="۳٬۰۰۰" value="${params.priceTo || ''}">
+            <label for="${moneyFieldId('priceTo')}">تا (تومان)</label>
+            ${moneyInput('priceTo', { value: params.priceTo || '' })}
           </div>
           <div class="field wide">
             <div class="fchips">

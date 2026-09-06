@@ -150,6 +150,7 @@ const carPriceService = {
         items,
         history,
         secondLabel: parsed.secondLabel,
+        sourceStamp: parsed.stamp,
         changed,
       });
       logger.info(`car prices: ${group} ${items.length} rows, ${changed} changed, ${history.length} points`);
@@ -179,6 +180,11 @@ const carPriceService = {
     GROUPS.forEach((group, i) => {
       const run = runs[i];
       groups[group] = {
+        // When the list itself says how old it is, that is the date a dealer
+        // means by «قیمت روز» — the moment we happened to look is a fact
+        // about us, not about the prices. Staleness still comes from our own
+        // run, so a fetch that quietly stopped is still caught.
+        pricedAt: run?.sourceStamp || null,
         updatedAt: run?.finishedAt || null,
         secondLabel: run?.secondLabel || null,
         items: rows.filter((r) => r.group === group).map(toItem),
