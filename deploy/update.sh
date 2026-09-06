@@ -199,18 +199,58 @@ CRON
   echo "→ nightly housekeeping scheduled (03:30)"
 fi
 
-# ---- 3.96 the hourly price fetch is installed ----
+# ---- 3.96 the price fetch is installed ----
 #
-# Minute 7, not 0: nothing else here runs at :07, and a source that gets its
-# own traffic spike on the hour does not need ours on top of it.
+# Every fifteen minutes, not every hour. The list we read restates its own
+# time whenever it moves, and it moves in the middle of the hour as readily as
+# on it, so an hourly read could show a price that had already been stale for
+# fifty-nine minutes. Fifteen puts the worst case at a quarter of an hour.
+#
+# Not faster than that. Every minute would be ninety-six times the traffic on
+# somebody else's site for a list that does not change that often — the
+# reliable way to get ourselves blocked, and then the panel has no prices at
+# all. Four reads an hour is unremarkable; sixty is a scraper.
+#
+# Offset by 7, not on the quarter: a source that gets its own traffic spike on
+# the hour does not need ours landing on top of it.
 if [ -x ./deploy/car-prices.sh ]; then
   cat > /etc/cron.d/feranocar-car-prices <<CRON
-# Every hour at :07 — the market price list for the panel.
+# Every 15 minutes at :07, :22, :37, :52 — the market price list for the panel.
 # A failed fetch leaves the previous list in place and sends one alert.
-7 * * * * root cd $ROOT && ./deploy/car-prices.sh >> /var/log/feranocar-car-prices.log 2>&1
+7,22,37,52 * * * * root cd $ROOT && ./deploy/car-prices.sh >> /var/log/feranocar-car-prices.log 2>&1
 CRON
   chmod 644 /etc/cron.d/feranocar-car-prices
-  echo "→ hourly car-price fetch scheduled (:07)"
+  echo "→ car-price fetch scheduled (every 15 min)"
+fi
+
+# ---- 3.97 the cron logs are kept from growing forever ----
+#
+# Everything the containers print is already bounded: docker-compose caps each
+# service at 10MB × 3 files, and the API only logs to the console, so it lands
+# there. The host-side logs do not have that: every cron line in this file
+# appends to a file in /var/log that nothing ever truncates. One price fetch
+# is under a kilobyte, which sounds like nothing until it is ninety-six a day
+# for a year, next to a nightly run and a certificate check.
+#
+# The failure this prevents is the worst kind — the disk fills, Postgres
+# cannot write, and the site goes down for a reason that has nothing to do
+# with the site. Weekly, four kept, compressed: about a month of history in a
+# couple of megabytes. `missingok` because a fresh server has none of these
+# yet, and `notifempty` so a quiet week does not rotate an empty file.
+if [ -d /etc/logrotate.d ]; then
+  cat > /etc/logrotate.d/feranocar <<'ROTATE'
+/var/log/feranocar-*.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+ROTATE
+  chmod 644 /etc/logrotate.d/feranocar
+  echo "→ cron logs set to rotate weekly (4 kept)"
 fi
 
 # ---- 4. rebuild and restart ----

@@ -11,16 +11,16 @@ import { go } from '../../router.js';
 /**
  * The market price list — «قیمت روز خودروها».
  *
- * Read from our own hourly snapshot, never from the source: the page is a
- * database read, and however many agencies open it at once, the source sees
- * two requests an hour. The whole list (both groups, ~250 rows) comes in one
+ * Read from our own snapshot, never from the source: the page is a database
+ * read, and however many agencies open it at once, the source sees the same
+ * two requests a quarter of an hour. The whole list (both groups, ~250 rows) comes in one
  * request and is kept for five minutes, so switching tab, brand or sort
  * re-renders from memory and costs nothing.
  *
  * The shape is a list beside a panel, because 115 rows read as a spreadsheet
  * when every fact is a column:
  *
- *   «فهرست من» — the cars this agency starred, always on top, and simply not
+ *   «فهرست من» — the cars this account starred, always on top, and simply not
  *   rendered while it is empty (the stars on the rows are the invitation).
  *
  *   the list — one row per MODEL with the price range across its trims, which
@@ -336,7 +336,7 @@ export function mineCard(prices) {
   if (!all.length) return html``;
   return html`<div class="card pr-mine" data-price-mine>
     <div class="card-h">
-      <h2>فهرست من ${qtip('خودروهایی که ستاره زده‌اید. برای همه‌ی حساب‌های نمایندگی شما یکی است و همیشه بالای این صفحه می‌ماند.')}</h2>
+      <h2>فهرست من ${qtip('خودروهایی که خودتان ستاره زده‌اید. فقط برای همین حساب است و کاربران دیگرِ نمایندگی آن را نمی‌بینند.')}</h2>
       <span class="tag n">${faDigits(all.length)} خودرو</span>
     </div>
     <div class="pr-list"><div class="pr-items">
@@ -420,7 +420,7 @@ export function carPricesPage() {
   if (!total) {
     return html`<div class="card">
       <div class="card-h"><h2>قیمت روز خودروها</h2>${stampTag(prices, 'DOMESTIC')}</div>
-      ${emptyBox('فهرست قیمت هنوز دریافت نشده است — اولین به‌روزرسانی خودکار تا یک ساعت دیگر انجام می‌شود.')}
+      ${emptyBox('فهرست قیمت هنوز دریافت نشده است — اولین به‌روزرسانی خودکار تا چند دقیقه‌ی دیگر انجام می‌شود.')}
     </div>`;
   }
 
@@ -451,7 +451,7 @@ export function carPricesPage() {
     <div class="pr-wrap">
       <div class="card">
         <div class="card-h">
-          <h2>قیمت روز خودروها ${qtip('قیمت بازار خودروهای صفر کیلومتر، هر ساعت به‌طور خودکار به‌روز می‌شود. روی هر خودرو بزنید تا جزئیاتش را ببینید، و ستاره را بزنید تا به «فهرست من» برود.')}</h2>
+          <h2>قیمت روز خودروها ${qtip('قیمت بازار خودروهای صفر کیلومتر، هر ۱۵ دقیقه به‌طور خودکار به‌روز می‌شود. روی هر خودرو بزنید تا جزئیاتش را ببینید، و ستاره را بزنید تا به «فهرست من» برود.')}</h2>
           ${stampTag(prices, group)}
         </div>
 

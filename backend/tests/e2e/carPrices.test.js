@@ -185,5 +185,64 @@ maybe('car prices', () => {
       res = await request(app).get(api('/car-prices')).set('Cookie', other.cookie).expect(200);
       expect(res.body.data.watching).toEqual([]);
     });
+
+    /**
+     * The star is a private bookmark, not a notice board.
+     *
+     * It used to be kept under the parent's id, so a head office starring six
+     * cars put them at the top of every branch's screen — and a branch
+     * unstarring one took it away from everybody. Branches watch different
+     * cars; each keeps its own list.
+     */
+    it('a branch of the same agency keeps its own list, separate from the parent’s', async () => {
+      const parent = await agent();
+      const branch = await agent({ parentId: parent.user.id });
+
+      await request(app).post(api('/car-prices/watch/16025')).set('Cookie', parent.cookie).expect(200);
+
+      const res = await request(app).get(api('/car-prices')).set('Cookie', branch.cookie).expect(200);
+      expect(res.body.data.watching).toEqual([]);
+
+      // And the branch's own star does not reach the parent either.
+      await request(app).post(api('/car-prices/watch/19350')).set('Cookie', branch.cookie).expect(200);
+      const back = await request(app).get(api('/car-prices')).set('Cookie', parent.cookie).expect(200);
+      expect(back.body.data.watching).toEqual(['16025']);
+    });
+  });
+
+  /**
+   * The job runs in a container of its own every fifteen minutes, so the
+   * in-process cooldown inside telegram.send never sees the previous run.
+   * Without a mark that outlives the container, one broken source is
+   * ninety-six notifications a day.
+   */
+  describe('how often a broken fetch is allowed to speak', () => {
+    beforeEach(async () => {
+      await prisma.setting.deleteMany({ where: { key: { startsWith: 'carPriceAlert:' } } });
+    });
+
+    it('says it once, then stays quiet until the cooldown is up', async () => {
+      const now = new Date();
+      expect(await carPriceService.shouldAlert('DOMESTIC', now)).toBe(true);
+      expect(await carPriceService.shouldAlert('DOMESTIC', new Date(now.getTime() + 60 * 1000))).toBe(false);
+      expect(
+        await carPriceService.shouldAlert('DOMESTIC', new Date(now.getTime() + 4 * 60 * 60 * 1000))
+      ).toBe(true);
+    });
+
+    it('speaks again for a fresh outage, however recently it last spoke', async () => {
+      const now = new Date();
+      expect(await carPriceService.shouldAlert('DOMESTIC', now)).toBe(true);
+      // The source came back, and then broke again a minute later. That is
+      // news, not a repeat, and waiting three hours to say so is wrong.
+      await carPriceService.refresh('DOMESTIC', { html: domestic });
+      expect(await carPriceService.shouldAlert('DOMESTIC', new Date(now.getTime() + 60 * 1000))).toBe(true);
+    });
+
+    it('one broken group does not silence the other', async () => {
+      const now = new Date();
+      expect(await carPriceService.shouldAlert('IMPORTED', now)).toBe(true);
+      expect(await carPriceService.shouldAlert('DOMESTIC', now)).toBe(true);
+    });
   });
 });

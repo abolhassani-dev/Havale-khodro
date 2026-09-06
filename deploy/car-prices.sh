@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# The hourly market-price fetch, from the host.
+# The market-price fetch, from the host, every fifteen minutes.
 #
 #   /opt/feranocar/deploy/car-prices.sh              # do it
 #   /opt/feranocar/deploy/car-prices.sh --dry-run    # fetch and judge, write nothing

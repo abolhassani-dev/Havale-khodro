@@ -90,6 +90,24 @@ const carPriceRepository = {
     return prisma.carPriceItem.findUnique({ where: { id }, select: { id: true } });
   },
 
+  /**
+   * When we last said out loud that a group's fetch is broken.
+   *
+   * In the settings table rather than in memory because the job is a new
+   * container every run — memory is empty every time, so an in-process
+   * cooldown cannot see the message it sent fifteen minutes ago.
+   */
+  async lastAlertAt(group) {
+    const row = await prisma.setting.findUnique({ where: { key: `carPriceAlert:${group}` } });
+    return row ? new Date(row.value) : null;
+  },
+
+  markAlerted(group, at) {
+    const key = `carPriceAlert:${group}`;
+    const value = at.toISOString();
+    return prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  },
+
   pruneHistoryBefore(before) {
     return prisma.carPriceHistory.deleteMany({ where: { at: { lt: before } } });
   },

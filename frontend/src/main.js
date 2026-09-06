@@ -60,7 +60,7 @@ import { subAgents, tickets, subscription } from './api/index.js';
 /** Page titles, so the top bar and the document title agree. */
 const TITLES = {
   dash: ['داشبورد', 'خلاصه‌ی وضعیت شما'],
-  'car-prices': ['قیمت روز خودروها', 'به‌روزرسانی خودکار هر ساعت'],
+  'car-prices': ['قیمت روز خودروها', 'به‌روزرسانی خودکار هر ۱۵ دقیقه'],
   search: ['استعلام حواله‌ها', 'جستجو در حواله‌های موجود'],
   'new-offer': ['ثبت حواله فروش', 'حواله‌ای که دارید و می‌فروشید'],
   'new-request': ['ثبت درخواست خرید', 'حواله‌ای که می‌خواهید بخرید'],

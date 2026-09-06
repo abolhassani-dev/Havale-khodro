@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The hourly price fetch.
+ * The market price fetch, run every fifteen minutes.
  *
  *   node src/jobs/car-prices.js                       # both groups, write
  *   node src/jobs/car-prices.js --dry-run             # fetch, parse, judge — write nothing
@@ -11,7 +11,7 @@
  * for the same reason: a timer inside the API process dies with the container
  * and nobody notices for a month; a cron entry is visible in one command.
  *
- * Two requests an hour, one after the other, never in parallel. Each group is
+ * Two requests a run, one after the other, never in parallel. Each group is
  * its own decision: a broken imported page must not stop the domestic list
  * from updating, and vice versa.
  */
@@ -44,7 +44,9 @@ async function main() {
 
   await connectDatabase();
   const lines = [];
+  const broken = [];
   let failed = false;
+  let speak = false;
 
   try {
     for (const group of groups) {
@@ -60,9 +62,20 @@ async function main() {
         );
       } catch (err) {
         failed = true;
+        broken.push(group);
         lines.push(`• ${LABEL[group] || group}: ✗ ${err.message}`);
         logger.error(`car prices: ${group} failed: ${err.stack || err.message}`);
       }
+    }
+
+    // Told only when something is wrong, and not on every attempt. A message
+    // four times an hour that says «۱۱۵ ردیف» is a message nobody reads — and
+    // then nobody reads the one that says the list has been stale since
+    // morning either. The mark is in the database, not in memory, because
+    // this job is a fresh container every run.
+    if (failed && !dryRun) {
+      const say = await Promise.all(broken.map((g) => carPriceService.shouldAlert(g)));
+      speak = say.some(Boolean);
     }
   } finally {
     await disconnectDatabase();
@@ -71,11 +84,7 @@ async function main() {
   const text = lines.join('\n');
   process.stdout.write(`${text}\n`);
 
-  // Told only when something is wrong. A message every hour that says «۱۱۵
-  // ردیف» is a message nobody reads — and then nobody reads the one that says
-  // the list has been stale since morning either. The cooldown inside
-  // telegram.send keeps a source that is down all night to a few messages.
-  if (failed && !dryRun) {
+  if (speak) {
     await telegram.send({
       title: 'قیمت روز خودرو به‌روز نشد',
       detail: `${text}\n\nفهرست قبلی با تاریخ خودش سر جایش است.`,

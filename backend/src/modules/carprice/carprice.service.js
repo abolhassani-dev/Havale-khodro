@@ -200,9 +200,18 @@ const carPriceService = {
     };
   },
 
-  /** The id an agency's list is kept under: the parent's, for a sub-agency. */
+  /**
+   * The id a starred list is kept under: the account that starred, always.
+   *
+   * It was the parent's for a while, so a head office and its branches shared
+   * one list. That reads as a broadcast — the head office stars six cars and
+   * every branch finds them at the top of its own screen — when the star is a
+   * private bookmark: the cars *this* person is watching today. Branches watch
+   * different cars, and one of them clearing the list for everyone is worse
+   * than each keeping its own.
+   */
   ownerOf(user) {
-    return user.parentId || user.id;
+    return user.id;
   },
 
   async watchList(user) {
@@ -231,6 +240,32 @@ const carPriceService = {
   async unwatch(user, itemId) {
     await carPriceRepository.removeWatch(this.ownerOf(user), itemId);
     return this.watchList(user);
+  },
+
+  /**
+   * Whether this group's failure is worth a message — and remembering that we
+   * sent one.
+   *
+   * A failure that follows a good run is news, and goes out at once. After
+   * that it is the same outage saying the same thing, and once every few
+   * hours is enough: the alert exists so somebody looks, not so the phone
+   * buzzes ninety-six times before morning.
+   *
+   * Each group decides for itself. One page being down for a week must not
+   * silence the first failure of the other.
+   */
+  async shouldAlert(group, now = new Date()) {
+    const [mark, ok] = await Promise.all([
+      carPriceRepository.lastAlertAt(group),
+      carPriceRepository.lastOkRun(group),
+    ]);
+    // The mark belongs to this outage if nothing has succeeded since it.
+    const sameOutage = mark && (!ok || mark.getTime() >= new Date(ok.finishedAt).getTime());
+    if (sameOutage && now.getTime() - mark.getTime() < config.carPrices.alertCooldownMs) {
+      return false;
+    }
+    await carPriceRepository.markAlerted(group, now);
+    return true;
   },
 
   /** Nightly: points older than the retention window. */

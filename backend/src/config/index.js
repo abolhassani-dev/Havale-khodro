@@ -140,5 +140,13 @@ module.exports = {
     dropAfterMs: Number(process.env.CAR_PRICES_DROP_MS || 7 * 24 * 60 * 60 * 1000),
     // How many cars an agency may star.
     watchLimit: Number(process.env.CAR_PRICES_WATCH_LIMIT || 30),
+    // How long to stay quiet after telling someone the fetch is broken.
+    //
+    // The job runs four times an hour in a container of its own, so the
+    // in-process cooldown inside telegram.send never sees the previous run:
+    // without this, a source that is down overnight sends a notification
+    // every fifteen minutes, and the message that matters drowns in them.
+    // The first failure after a good run still goes out at once.
+    alertCooldownMs: Number(process.env.CAR_PRICES_ALERT_COOLDOWN_MS || 3 * 60 * 60 * 1000),
   },
 };
