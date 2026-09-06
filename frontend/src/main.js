@@ -51,6 +51,7 @@ import {
 import { loadNotices, noticesPage } from './pages/agent/notices.js';
 import {
   loadCarPrices, carPricesPage, applyPriceFilters, handlePriceSearch, togglePriceWatch,
+  pickPrice, closePriceDetail,
 } from './pages/agent/carPrices.js';
 import { SOON_PAGES } from './ui/shell.js';
 import { toggleNavSection, toggleSidebar, closeSidebar } from './state/store.js';
@@ -347,7 +348,7 @@ const CLICK_KEYS = new Set([
   'brandAll', 'brandNone', 'brandExpand',
   'bodyChip', 'bodyClean', 'bodyMarked',
   'carReveal', 'openCar', 'editCar', 'carRenew', 'carFulfill', 'carDelete', 'carPhotoDel',
-  'priceWatch',
+  'priceWatch', 'pricePick', 'priceClose',
 ]);
 
 function findTarget(node) {
@@ -401,6 +402,8 @@ function onClick(event) {
   if (d.carDelete) return carDelete(d.carDelete);
   if (d.carPhotoDel) return carPhotoDelete(el);
   if (d.priceWatch) return togglePriceWatch(el);
+  if (d.pricePick) return pickPrice(el);
+  if (d.priceClose !== undefined) return closePriceDetail();
   if (d.regRenew) return regRenew(d.regRenew, d.regKind);
   if (d.regFulfill) return regFulfill(d.regFulfill);
   if (d.regDelete) return regDelete(d.regDelete);

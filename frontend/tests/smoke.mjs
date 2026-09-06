@@ -713,13 +713,32 @@ await step('the price list opens, groups by model, searches in place', async () 
 
   await page.fill('[data-price-search]', 'دنا');
   await page.waitForTimeout(300);
-  const shown = await page.locator('[data-price-list] .pr-model:visible, [data-price-list] > .pr-brand > .pr-row:visible').count();
+  const shown = await page.locator('[data-price-list] .pr-model:visible, [data-price-list] .pr-items > .pr-row:visible').count();
   if (!shown) throw new Error('searching «دنا» hid everything');
   const others = await page.locator('[data-price-list] .pr-row:visible').evaluateAll((els) =>
     els.filter((el) => !el.closest('.pr-model') && !el.dataset.q.includes('دنا')).length);
   if (others) throw new Error(`${others} rows without «دنا» stayed visible`);
   await page.fill('[data-price-search]', '');
   await page.waitForTimeout(200);
+});
+
+await step('picking a car fills the panel beside the list, without a reload', async () => {
+  await page.locator('.pr-model').first().click();
+  const trim = page.locator('.pr-model[open] .pr-trims .pr-row').first();
+  const name = (await trim.locator('.pr-nm b').textContent()).trim();
+  if (!name) throw new Error('the trim had no name');
+
+  await trim.click();
+  await page.waitForSelector('[data-price-panel] .pr-d', { timeout: 5000 });
+  const panel = (await page.textContent('[data-price-panel]')).replace(/\s+/g, ' ');
+  if (!panel.includes('قیمت بازار')) throw new Error('the panel has no market price');
+  if (!panel.includes('فاصله‌ی بازار')) throw new Error('the panel does not carry the gap over the factory price');
+  // Nothing on the page may hint that the figures are somebody else's.
+  if (panel.includes('منبع')) throw new Error('the panel names a source');
+  if (!(await page.locator('.pr-row.on').count())) throw new Error('the picked row is not marked');
+  // Picking must not navigate — a re-render would shut the model the reader
+  // opened, and empty the search box with it.
+  if (!(await page.locator('.pr-model[open]').count())) throw new Error('picking closed the open model');
 });
 
 await step('a star makes «فهرست من» appear, and unstarring removes it', async () => {

@@ -12,27 +12,35 @@ import { go } from '../../router.js';
  *
  * Read from our own hourly snapshot, never from the source: the page is a
  * database read, and however many agencies open it at once, the source sees
- * two requests an hour. The whole list (both groups, ~250 rows, a few tens of
- * kilobytes) comes in one request and is kept for five minutes, so switching
- * tab, brand or sort re-renders from memory and costs nothing.
+ * two requests an hour. The whole list (both groups, ~250 rows) comes in one
+ * request and is kept for five minutes, so switching tab, brand or sort
+ * re-renders from memory and costs nothing.
  *
- * Two layers, because 115 rows is a wall and a dealer thinks in models:
+ * The shape is a list beside a panel, because 115 rows read as a spreadsheet
+ * when every fact is a column:
  *
  *   «فهرست من» — the cars this agency starred, always on top, and simply not
  *   rendered while it is empty (the stars on the rows are the invitation).
  *
- *   the list — one brand at a time (chips), and within it one row per MODEL
- *   with the price range across its trims; the trims open under it. «دنا
- *   پلاس» is three rows on the source and one here until it is opened.
+ *   the list — one row per MODEL with the price range across its trims, which
+ *   open under it. «دنا پلاس» is three rows on the source and one here until
+ *   it is opened. Only two numbers on a line: what it costs and what it did
+ *   today.
+ *
+ *   the panel — everything else about the car you clicked: the exact figure,
+ *   the factory price, how far the market has run from it, when it last
+ *   moved. It is where the thirty-day trend will go once there are thirty
+ *   days of it. On a phone it is a sheet that rises from the bottom.
  *
  * Search is live and client-side: rows carry a normalised copy of their name
  * and the handler hides what does not match, across every brand. Filters and
- * sort go through the address bar like every other list here, so a search
- * can be sent as a link.
+ * sort go through the address bar like every other list here, so a search can
+ * be sent as a link — but picking a car does NOT, because a re-render would
+ * empty the search box and shut every open model.
  *
  * Everything printed here came from somebody else's website. It goes through
- * the `html` tag like all other text, and nothing from it is ever used as a
- * selector or an attribute without escaping.
+ * the `html` tag like all other text, and nothing from it reaches a selector
+ * without escaping.
  */
 
 const TTL_MS = 5 * 60 * 1000;
@@ -40,12 +48,12 @@ let cache = null;
 
 const GROUP_FA = { DOMESTIC: 'تولید داخل', IMPORTED: 'وارداتی' };
 const SORTS = [
-  ['src', 'ترتیب منبع'],
+  ['src', 'پیش‌فرض'],
   ['change', 'بیشترین تغییر'],
   ['expensive', 'گران‌ترین'],
   ['cheap', 'ارزان‌ترین'],
 ];
-const FILTER_KEYS = ['priceFrom', 'priceTo', 'changed', 'mine'];
+const FILTER_KEYS = ['brands', 'priceFrom', 'priceTo', 'changed', 'mine'];
 
 export async function loadCarPrices() {
   if (!cache || Date.now() - cache.at > TTL_MS) {
@@ -59,7 +67,7 @@ export function forgetCarPrices() {
   cache = null;
 }
 
-// ── text ─────────────────────────────────────────────────────────────────────
+// ── text and numbers ─────────────────────────────────────────────────────────
 
 /** The same folding the catalogue search uses: ی/ک, digits, ZWNJ, case. */
 function norm(text) {
@@ -74,27 +82,45 @@ function norm(text) {
     .trim();
 }
 
-/** «۳٫۳۳۰ میلیارد» / «۸۲۶ میلیون» — for a row that is read, not copied. */
-function compact(value) {
-  if (value === null || value === undefined) return '—';
-  if (value >= 1e9) return `${faDigits((value / 1e9).toFixed(3).replace(/\.?0+$/, ''))} میلیارد`;
-  return `${faDigits(Math.round(value / 1e6))} میلیون`;
-}
-
 /**
  * To the nearest million toman, for the eye only.
  *
- * The source prints «۱,۱۵۹,۶۵۰,۹۹۹» and a dealer reads «یک میلیارد و صد و
- * شصت». The stored value stays exactly what the source said — this is a
- * display choice, not a data one — and the exact figure is on the tooltip.
+ * «۱,۱۵۹,۶۵۰,۹۹۹» is read as «یک میلیارد و صد و شصت»; the trailing digits are
+ * noise a dealer has to look past. The stored value is untouched — this is a
+ * display choice, not a data one.
  */
 function rounded(value) {
   if (value === null || value === undefined) return null;
   return Math.round(value / 1e6) * 1e6;
 }
 
+/** «۳٫۳۳ میلیارد» / «۸۲۶ میلیون» — for a range, which is read not compared. */
+function compact(value) {
+  if (value === null || value === undefined) return '—';
+  if (value >= 1e9) return `${faDigits((value / 1e9).toFixed(2).replace(/\.?0+$/, ''))} میلیارد`;
+  return `${faDigits(Math.round(value / 1e6))} میلیون`;
+}
+
+/**
+ * «از ۱٫۶۵ تا ۱٫۶۷ میلیارد» — the unit said once.
+ *
+ * Repeating it («از ۱٫۶۵ میلیارد تا ۱٫۶۷ میلیارد») wrapped the line in two on
+ * a desktop column, which made every multi-trim model twice as tall as the
+ * single ones and the list lost its rhythm.
+ */
+function priceRange(min, max) {
+  if (min === null) return '—';
+  if (min === max) return compact(min);
+  const unit = min >= 1e9 && max >= 1e9 ? 'میلیارد' : null;
+  const n = (v) => (unit ? faDigits((v / 1e9).toFixed(2).replace(/\.?0+$/, '')) : compact(v));
+  return { from: n(min), to: n(max), unit };
+}
+
 /** The Persian half of «ولوو - Volvo». */
 const brandFa = (brand) => String(brand || '').split(' - ')[0].trim();
+
+/** «قیمت کارخانه (تومان)» → «قیمت کارخانه». */
+const shortLabel = (label) => (label || 'قیمت دوم').replace(/\(تومان\)/, '').trim();
 
 // ── grouping rows into models ────────────────────────────────────────────────
 
@@ -150,7 +176,6 @@ function groupModels(items) {
       rows,
       min: prices.length ? Math.min(...prices) : null,
       max: prices.length ? Math.max(...prices) : null,
-      maxPct: top ? top.changePct || 0 : 0,
       top,
       order: Math.min(...rows.map((r) => r.sortOrder)),
     };
@@ -172,8 +197,9 @@ function applyFilters(items, params, watching) {
 }
 
 function sortModels(models, sort) {
+  const pct = (m) => (m.top ? m.top.changePct || 0 : 0);
   const by = {
-    change: (a, b) => b.maxPct - a.maxPct || a.order - b.order,
+    change: (a, b) => pct(b) - pct(a) || a.order - b.order,
     expensive: (a, b) => (b.max ?? -1) - (a.max ?? -1) || a.order - b.order,
     cheap: (a, b) => (a.min ?? Infinity) - (b.min ?? Infinity) || a.order - b.order,
   }[sort];
@@ -192,7 +218,7 @@ function link(params, patch) {
 function changeCell(it, { upTo = false } = {}) {
   if (it.change === null || it.change === undefined) return html`<span class="pr-chg flat">—</span>`;
   if (!it.change || it.direction === 'FLAT') return html`<span class="pr-chg flat">بدون تغییر</span>`;
-  const tone = it.direction === 'DOWN' ? 'down' : it.direction === 'UP' ? 'up' : 'flat';
+  const tone = it.direction === 'DOWN' ? 'down' : 'up';
   const arrow = tone === 'down' ? 'M12 5v14M5 12l7 7 7-7' : 'M12 19V5M5 12l7-7 7 7';
   return html`<span class="pr-chg ${tone}">
     ${upTo ? html`<small>تا</small>` : ''}
@@ -202,40 +228,47 @@ function changeCell(it, { upTo = false } = {}) {
   </span>`;
 }
 
-function star(it, watching) {
+function star(it, watching, { big = false } = {}) {
   const on = watching.has(it.id);
+  const glyph = raw(`<svg width="${big ? 15 : 16}" height="${big ? 15 : 16}" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.4 6.3 20.5l1.2-6.4L2.8 9.7l6.4-.8z"></path></svg>`);
+  if (big) {
+    return html`<button type="button" class="btn ${on ? 'starred' : ''}" data-price-watch="${it.id}">
+      ${glyph}${on ? 'در فهرست من' : 'افزودن به فهرست من'}
+    </button>`;
+  }
   return html`<button type="button" class="pr-star ${on ? 'on' : ''}" data-price-watch="${it.id}"
     title="${on ? 'برداشتن از فهرست من' : 'افزودن به فهرست من'}" aria-pressed="${on ? 'true' : 'false'}">
-    ${raw(`<svg width="16" height="16" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.4 6.3 20.5l1.2-6.4L2.8 9.7l6.4-.8z"></path></svg>`)}
+    ${glyph}
   </button>`;
 }
 
-/** One car: the full numbers, the change, the star. */
-function row(it, watching, { name = it.name, sub = '', second = 'قیمت دوم' } = {}) {
-  return html`<div class="pr-row" data-q="${norm(it.name)}">
-    <div class="pr-nm"><b>${name}</b>${sub ? html`<small>${sub}</small>` : ''}</div>
-    <div class="pr-c"><span class="pr-k">قیمت بازار</span><span class="pr-price num" title="دقیق: ${it.priceText}">${it.price === null ? it.priceText || '—' : num(rounded(it.price))}</span></div>
-    <div class="pr-c"><span class="pr-k">${second}</span><span class="pr-second num" title="دقیق: ${it.secondText}">${it.second === null ? it.secondText || '—' : num(rounded(it.second))}</span></div>
-    <div class="pr-c"><span class="pr-k">تغییر</span>${changeCell(it)}</div>
-    <div class="pr-act">${star(it, watching)}</div>
+/**
+ * One car on a line: what it costs and what it did today. Everything else is
+ * one click away in the panel, which is what keeps this from being a table.
+ */
+function row(it, watching, { name = it.name, sub = '' } = {}) {
+  return html`<div class="pr-row" data-q="${norm(it.name)}" data-price-pick="${it.id}" role="button" tabindex="0">
+    <span class="pr-nm"><b>${name}</b>${sub ? html`<small>${sub}</small>` : ''}</span>
+    <span class="pr-price num">${it.price === null ? it.priceText || '—' : num(rounded(it.price))}</span>
+    ${changeCell(it)}
+    <span class="pr-act">${star(it, watching)}</span>
   </div>`;
 }
 
 /** A model with several trims: one line, opens to its rows. */
-function modelBox(model, watching, second) {
+function modelBox(model, watching) {
+  const r = priceRange(model.min, model.max);
   const range =
-    model.min === null
-      ? '—'
-      : model.min === model.max
-        ? compact(model.min)
-        : html`<small>از</small> ${compact(model.min)} <small>تا</small> ${compact(model.max)}`;
-  // Each row is named by what is left after the model's name: «دنا پلاس
-  // MT6 (رینگ فولادی)» under «دنا پلاس» is «MT6 (رینگ فولادی)»; the row
-  // that is the bare model is «پایه»; a lone parenthesis loses its brackets.
+    typeof r === 'string'
+      ? r
+      : html`<small>از</small> ${r.from} <small>تا</small> ${r.to}${r.unit ? ` ${r.unit}` : ''}`;
+  // Each row is named by what is left after the model's name: «دنا پلاس MT6
+  // (رینگ فولادی)» under «دنا پلاس» is «MT6 (رینگ فولادی)»; the row that is
+  // the bare model is «پایه»; a lone parenthesis loses its brackets.
   const trims = model.rows.map((r) => {
     const rest = norm(r.name).startsWith(norm(model.label)) ? r.name.slice(model.label.length).trim() : r.name;
     const trim = rest.replace(/^\(([^)]*)\)$/, '$1').trim();
-    return row(r, watching, { name: trim || 'پایه', second });
+    return row(r, watching, { name: trim || 'پایه' });
   });
   return html`<details class="pr-model" data-q="${model.rows.map((r) => norm(r.name)).join(' | ')}">
     <summary>
@@ -244,8 +277,53 @@ function modelBox(model, watching, second) {
       ${model.top ? changeCell(model.top, { upTo: true }) : html`<span class="pr-chg flat">بدون تغییر</span>`}
       <span class="pr-chev">${icon('chevron', 16)}</span>
     </summary>
-    <div class="pr-trims">${trims}</div>
+    <div class="pr-trims"><span class="pr-tlbl">تیپ‌ها</span>${trims}</div>
   </details>`;
+}
+
+/**
+ * The panel: one car, spelled out.
+ *
+ * The exact figure is here rather than in the list because the list is read
+ * down a column and the panel is read once. «فاصله از کارخانه» is the number
+ * a dealer actually talks about and neither of the two prices states it.
+ */
+function detailPanel(it, watching, secondLabel) {
+  if (!it) {
+    return html`<div class="pr-empty">
+      ${icon('tag', 22)}
+      <p>روی هر خودرو بزنید تا جزئیات قیمتش این‌جا بیاید.</p>
+    </div>`;
+  }
+  const gap = it.price !== null && it.second !== null && it.second > 0 ? it.price - it.second : null;
+  const gapPct = gap === null ? null : Math.round((gap / it.second) * 100);
+  return html`<div class="pr-d">
+    <div class="pr-dh">
+      <div>
+        <h3>${it.name}</h3>
+        <div class="pr-dsub">${brandFa(it.brand)} · ${GROUP_FA[it.group] || ''}</div>
+      </div>
+      <button type="button" class="pr-dx" data-price-close aria-label="بستن">${icon('close', 16)}</button>
+    </div>
+
+    <div class="pr-big">
+      <span class="pr-k">قیمت بازار</span>
+      <b class="num">${it.price === null ? it.priceText || '—' : num(rounded(it.price))}</b>
+      ${it.price === null ? '' : html`<small>تومان</small>`}
+    </div>
+
+    <dl class="pr-facts">
+      <div><dt>${secondLabel}</dt><dd class="num">${it.second === null ? it.secondText || '—' : num(rounded(it.second))}</dd></div>
+      ${gap === null
+        ? ''
+        : html`<div><dt>فاصله‌ی بازار از ${secondLabel.replace('قیمت ', '')}</dt>
+            <dd class="num ${gap > 0 ? 'up' : 'down'}">${gap > 0 ? '+' : '−'}${compact(Math.abs(gap))} (${faDigits(Math.abs(gapPct))}٪)</dd></div>`}
+      <div><dt>تغییر امروز</dt><dd>${changeCell(it)}</dd></div>
+      <div><dt>آخرین جابه‌جایی قیمت</dt><dd class="num">${it.changedAt ? dateTime(it.changedAt) : 'از زمان ثبت، تغییری نکرده'}</dd></div>
+    </dl>
+
+    <div class="pr-dact">${star(it, watching, { big: true })}</div>
+  </div>`;
 }
 
 /** «فهرست من»: nothing at all while it is empty. */
@@ -253,7 +331,7 @@ export function mineCard(prices) {
   const watching = new Set(prices.watching || []);
   if (!watching.size) return html``;
   const all = Object.entries(prices.groups).flatMap(([group, g]) =>
-    g.items.filter((it) => watching.has(it.id)).map((it) => ({ ...it, secondLabel: shortLabel(g.secondLabel), group }))
+    g.items.filter((it) => watching.has(it.id)).map((it) => ({ ...it, group }))
   );
   if (!all.length) return html``;
   return html`<div class="card pr-mine" data-price-mine>
@@ -261,19 +339,44 @@ export function mineCard(prices) {
       <h2>فهرست من ${qtip('خودروهایی که ستاره زده‌اید. برای همه‌ی حساب‌های نمایندگی شما یکی است و همیشه بالای این صفحه می‌ماند.')}</h2>
       <span class="tag n">${faDigits(all.length)} خودرو</span>
     </div>
-    <div class="pr-list">
-      ${all.map((it) => row(it, watching, { sub: `${brandFa(it.brand)} · ${GROUP_FA[it.group]}`, second: it.secondLabel }))}
-    </div>
+    <div class="pr-list"><div class="pr-items">
+      ${all.map((it) => row(it, watching, { sub: `${brandFa(it.brand)} · ${GROUP_FA[it.group]}` }))}
+    </div></div>
   </div>`;
 }
-
-/** «قیمت کارخانه (تومان)» → «قیمت کارخانه». */
-const shortLabel = (label) => (label || 'قیمت دوم').replace(/\(تومان\)/, '').trim();
 
 function stampTag(prices) {
   if (!prices.updatedAt) return html`<span class="tag o">${icon('clock', 13)} هنوز به‌روزرسانی نشده</span>`;
   if (prices.stale) return html`<span class="tag o">${icon('clock', 13)} به‌روزرسانی با تأخیر — ${dateTime(prices.updatedAt)}</span>`;
   return html`<span class="tag g">${icon('clock', 13)} آخرین به‌روزرسانی: ${dateTime(prices.updatedAt)}</span>`;
+}
+
+/**
+ * The companies, as tick boxes inside the filter panel.
+ *
+ * Twenty-one of them in a row across the top of the page was a wall of chips
+ * before a single price. And the count has to say its own unit: «بی‌ام‌و ۷»
+ * is a car — the 7 Series — not seven cars.
+ *
+ * The markup matches ui/checkChips so the shared change handler drives it;
+ * only the label is richer than that component can express.
+ */
+function brandChips(items, selected) {
+  const on = new Set(String(selected || '').split(',').filter(Boolean));
+  const counts = new Map();
+  for (const it of items) {
+    const key = brandFa(it.brand);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return html`<div class="fchips pr-brands" data-chipbox>
+    <input type="hidden" name="brands" value="${[...on].join(',')}">
+    ${[...counts].map(
+      ([name, n]) => html`<label class="fchip ${on.has(name) ? 'on' : ''}">
+        <input type="checkbox" data-chip="${name}" ${raw(on.has(name) ? 'checked' : '')}>
+        <span>${name}</span><small class="num">${faDigits(n)} خودرو</small>
+      </label>`
+    )}
+  </div>`;
 }
 
 // ── the page ─────────────────────────────────────────────────────────────────
@@ -287,6 +390,7 @@ export function carPricesPage() {
   const current = prices.groups[group];
   const watching = new Set(prices.watching || []);
   const sort = SORTS.some(([k]) => k === params.sort) ? params.sort : 'src';
+  const secondLabel = shortLabel(current.secondLabel);
 
   const total = Object.values(prices.groups).reduce((n, g) => n + g.items.length, 0);
   if (!total) {
@@ -296,90 +400,93 @@ export function carPricesPage() {
     </div>`;
   }
 
-  // Brands of this group, in the source's order, with what each has left
-  // after the filters — the chip says how many, and a brand with nothing
-  // left is still a chip, so the reader can see it was the filter's doing.
+  const picked = new Set(String(params.brands || '').split(',').filter(Boolean));
   const filtered = applyFilters(current.items, params, watching);
   const brands = [];
   for (const it of current.items) if (!brands.includes(it.brand)) brands.push(it.brand);
-  const brand = brands.includes(params.brand) ? params.brand : '';
-  const secondLabel = shortLabel(current.secondLabel);
+  const shown = brands.filter((b) => !picked.size || picked.has(brandFa(b)));
 
-  const sections = brands.map((b) => {
+  const sections = shown.map((b) => {
     const rows = filtered.filter((it) => it.brand === b);
     const models = sortModels(groupModels(rows), sort);
-    return html`<section class="pr-brand" data-brand="${b}" ${raw(brand && brand !== b ? 'hidden' : '')}>
+    return html`<section class="pr-brand" data-brand="${brandFa(b)}">
       <div class="pr-bh"><b>${brandFa(b)}</b><small class="num">${faDigits(rows.length)} خودرو</small></div>
-      ${models.length
-        ? models.map((m) => (m.rows.length > 1 ? modelBox(m, watching, secondLabel) : row(m.rows[0], watching, { second: secondLabel })))
-        : html`<p class="pr-none">با این فیلترها چیزی از ${brandFa(b)} نمانده.</p>`}
+      <div class="pr-items">
+        ${models.length
+          ? models.map((m) => (m.rows.length > 1 ? modelBox(m, watching) : row(m.rows[0], watching)))
+          : html`<p class="pr-none">با این فیلترها چیزی از ${brandFa(b)} نمانده.</p>`}
+      </div>
     </section>`;
   });
+
+  const filters = countFilters(params, FILTER_KEYS);
 
   return html`<div data-price-page>
     ${mineCard(prices)}
 
-    <div class="card">
-      <div class="card-h">
-        <h2>قیمت روز خودروها ${qtip('قیمت بازار خودروهای صفر کیلومتر، هر ساعت به‌طور خودکار به‌روز می‌شود. ستاره‌ی کنار هر خودرو آن را به «فهرست من» می‌برد تا همیشه بالای این صفحه باشد.')}</h2>
-        ${stampTag(prices)}
+    <div class="pr-wrap">
+      <div class="card">
+        <div class="card-h">
+          <h2>قیمت روز خودروها ${qtip('قیمت بازار خودروهای صفر کیلومتر، هر ساعت به‌طور خودکار به‌روز می‌شود. روی هر خودرو بزنید تا جزئیاتش را ببینید، و ستاره را بزنید تا به «فهرست من» برود.')}</h2>
+          ${stampTag(prices)}
+        </div>
+
+        <div class="pr-bar">
+          <div class="tabs">
+            ${Object.keys(prices.groups).map(
+              (g) => html`<a class="tab ${g === group ? 'on' : ''}" href="${link(params, { group: g, brands: '' })}">${GROUP_FA[g]}</a>`
+            )}
+          </div>
+          <label class="pr-search">
+            ${icon('search', 15)}
+            <input type="search" data-price-search placeholder="جستجوی نام خودرو در همه‌ی برندها…" autocomplete="off">
+          </label>
+        </div>
+
+        ${filterBox(filters, html`
+        <form class="filters" data-form="price-filters">
+          <div class="field wide">
+            <label>شرکت</label>
+            ${brandChips(current.items, params.brands)}
+          </div>
+          <div class="field">
+            <label for="priceFrom">قیمت بازار از (میلیون تومان)</label>
+            <input class="in num" id="priceFrom" name="priceFrom" inputmode="numeric" placeholder="۱٬۰۰۰" value="${params.priceFrom || ''}">
+          </div>
+          <div class="field">
+            <label for="priceTo">تا (میلیون تومان)</label>
+            <input class="in num" id="priceTo" name="priceTo" inputmode="numeric" placeholder="۳٬۰۰۰" value="${params.priceTo || ''}">
+          </div>
+          <div class="field wide">
+            <div class="fchips">
+              <label class="fchip ${params.changed ? 'on' : ''}"><input type="checkbox" name="changed" ${raw(params.changed ? 'checked' : '')}><span>فقط تغییرکرده‌های امروز</span></label>
+              <label class="fchip ${params.mine ? 'on' : ''}"><input type="checkbox" name="mine" ${raw(params.mine ? 'checked' : '')}><span>فقط فهرست من</span></label>
+            </div>
+          </div>
+          <div class="field wide btnrow">
+            <button class="btn primary" type="submit">اعمال فیلتر</button>
+            ${filters ? html`<a class="btn ghost" href="${link(params, { brands: '', priceFrom: '', priceTo: '', changed: '', mine: '' })}">حذف فیلترها</a>` : ''}
+          </div>
+        </form>`)}
+
+        <div class="pr-sort">
+          <span>مرتب‌سازی:</span>
+          ${SORTS.map(([k, fa]) => html`<a class="sort ${k === sort ? 'on' : ''}" href="${link(params, { sort: k === 'src' ? '' : k })}">${fa}</a>`)}
+        </div>
+
+        <div class="pr-head"><span>خودرو</span><span>قیمت بازار (تومان)</span><span>تغییر امروز</span><span></span></div>
+
+        <div class="pr-list" data-price-list>
+          ${sections}
+          <p class="pr-none" data-price-nomatch hidden>چیزی با این نام پیدا نشد.</p>
+        </div>
+
+        <div class="pr-foot">قیمت‌ها برای خودروی صفر کیلومتر، آخرین مدل و ارزان‌ترین رنگ بازار است و به میلیون گرد شده‌اند.</div>
       </div>
 
-      <div class="pr-bar">
-        <div class="tabs">
-          ${Object.keys(prices.groups).map(
-            (g) => html`<a class="tab ${g === group ? 'on' : ''}" href="${link(params, { group: g, brand: '' })}">${GROUP_FA[g]}</a>`
-          )}
-        </div>
-        <label class="pr-search">
-          ${icon('search', 15)}
-          <input type="search" data-price-search placeholder="جستجوی نام خودرو در همه‌ی برندها…" autocomplete="off">
-        </label>
-      </div>
-
-      <div class="pr-chips">
-        <a class="bchip ${brand ? '' : 'on'}" href="${link(params, { brand: '' })}">همه <small class="num">${faDigits(current.items.length)}</small></a>
-        ${brands.map(
-          (b) => html`<a class="bchip ${b === brand ? 'on' : ''}" href="${link(params, { brand: b })}">${brandFa(b)} <small class="num">${faDigits(current.items.filter((it) => it.brand === b).length)}</small></a>`
-        )}
-      </div>
-
-      ${filterBox(countFilters(params, FILTER_KEYS), html`
-      <form class="filters" data-form="price-filters">
-        <div class="field">
-          <label for="priceFrom">قیمت بازار از (میلیون تومان)</label>
-          <input class="in num" id="priceFrom" name="priceFrom" inputmode="numeric" placeholder="۱٬۰۰۰" value="${params.priceFrom || ''}">
-        </div>
-        <div class="field">
-          <label for="priceTo">تا (میلیون تومان)</label>
-          <input class="in num" id="priceTo" name="priceTo" inputmode="numeric" placeholder="۳٬۰۰۰" value="${params.priceTo || ''}">
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <label class="fchip ${params.changed ? 'on' : ''}"><input type="checkbox" name="changed" ${raw(params.changed ? 'checked' : '')}><span>فقط تغییرکرده‌های امروز</span></label>
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <label class="fchip ${params.mine ? 'on' : ''}"><input type="checkbox" name="mine" ${raw(params.mine ? 'checked' : '')}><span>فقط فهرست من</span></label>
-        </div>
-        <div class="field" style="align-self:end">
-          <button class="btn primary" type="submit">اعمال فیلتر</button>
-          ${countFilters(params, FILTER_KEYS) ? html`<a class="btn ghost" href="${link(params, { priceFrom: '', priceTo: '', changed: '', mine: '' })}">حذف فیلترها</a>` : ''}
-        </div>
-      </form>`)}
-
-      <div class="pr-sort">
-        <span>مرتب‌سازی:</span>
-        ${SORTS.map(([k, fa]) => html`<a class="sort ${k === sort ? 'on' : ''}" href="${link(params, { sort: k === 'src' ? '' : k })}">${fa}</a>`)}
-        <span class="pr-cols"><span>قیمت بازار</span><span>${secondLabel}</span><span>تغییر</span></span>
-      </div>
-
-      <div class="pr-list" data-price-list>
-        ${sections}
-        <p class="pr-none" data-price-nomatch hidden>چیزی با این نام پیدا نشد.</p>
-      </div>
-
-      <div class="pr-foot">قیمت‌ها برای خودروی صفر کیلومتر، آخرین مدل و ارزان‌ترین رنگ بازار است و به میلیون تومان گرد شده‌اند؛ عدد دقیق با نگه‌داشتن نشانگر روی هر قیمت دیده می‌شود.</div>
+      <aside class="pr-panel" data-price-panel data-second="${secondLabel}">
+        ${detailPanel(null)}
+      </aside>
     </div>
   </div>`;
 }
@@ -389,7 +496,9 @@ export function carPricesPage() {
 /** The filter form → the address bar; the page re-renders from memory. */
 export function applyPriceFilters(form) {
   const { params } = getState();
-  const next = { group: params.group, brand: params.brand, sort: params.sort };
+  const next = { group: params.group, sort: params.sort };
+  const brands = form.elements.brands?.value;
+  if (brands) next.brands = brands;
   for (const name of ['priceFrom', 'priceTo']) {
     const value = enDigits(form.elements[name]?.value || '').replace(/[^\d]/g, '');
     if (value) next[name] = value;
@@ -402,7 +511,7 @@ export function applyPriceFilters(form) {
 
 /**
  * Typing in the search box. Hides in place, across every brand; a query
- * overrides the brand chip (all sections come back while it is typed) and
+ * overrides the brand filter (every section comes back while it is typed) and
  * opens every model that matched, so the trim that matched is visible.
  */
 export function handlePriceSearch(input) {
@@ -410,12 +519,11 @@ export function handlePriceSearch(input) {
   const q = norm(input.value);
   const list = document.querySelector('[data-price-list]');
   if (!list) return true;
-  const { params } = getState();
   let shown = 0;
 
   list.querySelectorAll('.pr-brand').forEach((section) => {
     let visible = 0;
-    section.querySelectorAll('.pr-model, :scope > .pr-row').forEach((node) => {
+    section.querySelectorAll('.pr-model, .pr-items > .pr-row').forEach((node) => {
       const hit = !q || (node.dataset.q || '').includes(q);
       node.hidden = !hit;
       if (hit) visible += 1;
@@ -424,8 +532,7 @@ export function handlePriceSearch(input) {
         else if (!q) node.open = false;
       }
     });
-    // With a query, every brand is searched; without one, the chip rules.
-    section.hidden = q ? visible === 0 : Boolean(params.brand && params.brand !== section.dataset.brand);
+    section.hidden = q ? visible === 0 : false;
     if (!section.hidden) shown += visible;
   });
   const none = list.querySelector('[data-price-nomatch]');
@@ -433,20 +540,62 @@ export function handlePriceSearch(input) {
   return true;
 }
 
+/** The car in the snapshot, whichever group it is in. */
+function findItem(id) {
+  if (!cache) return null;
+  for (const [group, g] of Object.entries(cache.data.groups)) {
+    const hit = g.items.find((it) => it.id === id);
+    if (hit) return { ...hit, group, secondLabel: shortLabel(g.secondLabel) };
+  }
+  return null;
+}
+
+function paintPanel(it) {
+  const panel = document.querySelector('[data-price-panel]');
+  if (!panel) return;
+  const watching = new Set(cache?.data.watching || []);
+  panel.innerHTML = String(detailPanel(it, watching, it?.secondLabel || panel.dataset.second || 'قیمت دوم'));
+  panel.classList.toggle('open', Boolean(it));
+}
+
+/**
+ * Clicking a row fills the panel — no navigation, so the page keeps its
+ * state. Below 1100px the panel is a sheet that rises over the list, so
+ * nothing has to scroll for it to be seen.
+ */
+export function pickPrice(el) {
+  const id = el.dataset.pricePick;
+  const it = findItem(id);
+  if (!it) return;
+  document.querySelectorAll('.pr-row.on').forEach((node) => node.classList.remove('on'));
+  el.classList.add('on');
+  paintPanel(it);
+}
+
+export function closePriceDetail() {
+  document.querySelectorAll('.pr-row.on').forEach((node) => node.classList.remove('on'));
+  paintPanel(null);
+}
+
 /** A star: add to or drop from «فهرست من», and patch the page in place. */
 export async function togglePriceWatch(el) {
   const id = el.dataset.priceWatch;
-  const on = el.classList.contains('on');
+  const on = el.classList.contains('on') || el.classList.contains('starred');
   try {
     const { watching } = on ? await carPrices.unwatch(id) : await carPrices.watch(id);
     if (cache) cache.data.watching = watching;
     const set = new Set(watching);
+    const now = set.has(id);
 
     document.querySelectorAll(`[data-price-watch="${CSS.escape(id)}"]`).forEach((button) => {
-      const now = set.has(id);
-      button.classList.toggle('on', now);
-      button.setAttribute('aria-pressed', now ? 'true' : 'false');
-      button.title = now ? 'برداشتن از فهرست من' : 'افزودن به فهرست من';
+      button.classList.toggle('on', now && button.matches('.pr-star'));
+      button.classList.toggle('starred', now && !button.matches('.pr-star'));
+      if (button.matches('.pr-star')) {
+        button.setAttribute('aria-pressed', now ? 'true' : 'false');
+        button.title = now ? 'برداشتن از فهرست من' : 'افزودن به فهرست من';
+      } else {
+        button.lastChild.textContent = now ? 'در فهرست من' : 'افزودن به فهرست من';
+      }
       button.querySelector('svg')?.setAttribute('fill', now ? 'currentColor' : 'none');
     });
 
@@ -457,7 +606,7 @@ export async function togglePriceWatch(el) {
     const mine = page?.querySelector('[data-price-mine]');
     if (mine) mine.outerHTML = fresh;
     else if (page) page.insertAdjacentHTML('afterbegin', fresh);
-    toast(on ? 'از فهرست من برداشته شد' : 'به فهرست من اضافه شد');
+    toast(now ? 'به فهرست من اضافه شد' : 'از فهرست من برداشته شد');
   } catch (err) {
     toast(err.message || 'انجام نشد', 'danger');
   }

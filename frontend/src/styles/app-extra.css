@@ -2385,8 +2385,17 @@ form.card[data-form="car"] { overflow: clip; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   قیمت روز خودروها
+   قیمت روز خودروها — فهرست کنار پنل جزئیات
    ───────────────────────────────────────────────────────────────────────────── */
+
+/* روی دسکتاپ فهرست و پنل کنار هم؛ پنل می‌چسبد تا با اسکرول فهرست بماند. */
+.pr-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+.pr-wrap > .card { margin-bottom: 0; }
+.pr-panel {
+  position: sticky; top: 78px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r); box-shadow: var(--shadow-1); overflow: hidden;
+}
 
 /* نوار بالای فهرست: تب‌ها و جستجو */
 .pr-bar {
@@ -2395,7 +2404,7 @@ form.card[data-form="car"] { overflow: clip; }
 }
 .pr-bar .tabs .tab { text-decoration: none; }
 .pr-search {
-  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px;
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;
   margin-inline-start: auto;
   border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff;
   padding: 0 12px; color: var(--ink-3);
@@ -2405,57 +2414,56 @@ form.card[data-form="car"] { overflow: clip; }
 }
 .pr-search input:focus { outline: none; }
 .pr-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3.5px var(--primary-08); }
-.pr-search input::-webkit-search-cancel-button { cursor: pointer; }
 
-/* چیپ‌های شرکت — یکی در هر لحظه، و «همه» */
-.pr-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--line-2); }
-.bchip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 12px; border-radius: 999px;
-  font-size: 13px; font-weight: 600; color: var(--ink-2);
-  background: var(--paper-2); border: 1px solid var(--line);
-  text-decoration: none; white-space: nowrap;
-}
-.bchip small { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
-.bchip:hover { border-color: #b3a88e; }
-.bchip.on { background: var(--primary); border-color: var(--primary-2); color: #fff; font-weight: 700; }
-.bchip.on small { color: #ffffffb3; }
+/* چیپ شرکت‌ها داخل پنل فیلتر — عدد واحد خودش را می‌گوید، وگرنه «بی‌ام‌و ۷»
+   یک خودرو خوانده می‌شود نه هفت خودرو. */
+.pr-brands .fchip small { color: var(--ink-3); font-weight: 600; font-size: 11.5px; }
+.pr-brands .fchip.on small { color: var(--primary); }
+.filters .field.wide.btnrow { display: flex; gap: 8px; align-items: center; }
 
-/* مرتب‌سازی و سرستون‌ها روی یک خط */
 .pr-sort {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  padding: 8px 18px; font-size: 12.5px; color: var(--ink-3);
-  border-bottom: 1px solid var(--line);
-  background: #f6f3ea;
+  padding: 9px 18px; font-size: 12.5px; color: var(--ink-3);
 }
 .pr-sort .sort { text-decoration: none; }
-.pr-cols {
-  margin-inline-start: auto; display: grid; grid-template-columns: 150px 150px 150px; gap: 12px;
-  font-size: 12px; font-weight: 700; letter-spacing: .03em; padding-inline-end: 42px;
+
+/* سرستون‌ها — همان شبکه‌ی ردیف، تا عنوان دقیقاً بالای ستون خودش بیفتد */
+.pr-head, .pr-row, .pr-model > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 185px 165px 40px;
+  align-items: center; gap: 12px;
+}
+.pr-head {
+  padding: 8px 28px; background: #f6f3ea;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  font-size: 11.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .03em;
 }
 
 /* سرفصل هر شرکت */
 .pr-bh {
   display: flex; align-items: baseline; gap: 8px;
-  padding: 9px 18px; background: var(--paper-2); border-bottom: 1px solid var(--line-2);
-  font-size: 14px; color: var(--primary-2);
+  padding: 9px 18px; background: var(--paper-2);
+  border-bottom: 1px solid var(--line-2);
+  font-size: 14px; font-weight: 800; color: var(--primary-2);
 }
 .pr-bh small { font-size: 12px; color: var(--ink-3); font-weight: 600; }
 .pr-brand + .pr-brand .pr-bh { border-top: 1px solid var(--line-2); }
 
-/* یک ردیف: نام | قیمت بازار | قیمت دوم | تغییر | ستاره */
-.pr-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 150px 42px; align-items: center; gap: 12px;
-  padding: 9px 18px; border-bottom: 1px solid var(--line-2); font-size: 14px;
+/* هر خودرو و هر مدل، کادر خودش را دارد.
+   ردیف‌های چسبیده با یک خط جداکننده، فهرستِ اکسل می‌شد و چشم نمی‌فهمید کجا
+   باید بزند؛ حالا هر چیزِ قابل‌کلیک یک جعبه‌ی جدا با فاصله است. */
+.pr-items { padding: 10px 14px; display: grid; gap: 7px; }
+.pr-items > .pr-row, .pr-model {
+  border: 1px solid var(--line); border-radius: 11px;
+  background: var(--card); overflow: hidden;
 }
-.pr-row:hover { background: #faf8f1; }
+.pr-row { padding: 10px 14px; font-size: 14px; cursor: pointer; }
+.pr-row:hover { background: #faf8f1; border-color: #bfb6a0; }
+.pr-row.on { background: var(--primary-08); border-color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
 .pr-nm { display: flex; flex-direction: column; min-width: 0; line-height: 1.5; }
 .pr-nm b { font-weight: 700; overflow-wrap: anywhere; }
 .pr-nm small { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
-.pr-c { display: flex; flex-direction: column; min-width: 0; }
-.pr-k { display: none; font-size: 11px; color: var(--ink-3); font-weight: 600; line-height: 1.4; }
 .pr-price { font-weight: 800; color: var(--primary-2); }
-.pr-second { color: var(--ink-2); font-weight: 600; }
 .pr-chg { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; white-space: nowrap; }
 .pr-chg small { font-weight: 600; font-size: 11.5px; opacity: .85; }
 .pr-chg.up { color: var(--ok); }
@@ -2469,49 +2477,96 @@ form.card[data-form="car"] { overflow: clip; }
 .pr-star:hover { color: var(--copper); background: var(--copper-08); }
 .pr-star.on { color: var(--copper); background: var(--copper-08); border-color: #a85a2433; }
 
-/* یک مدل با چند تیپ: خطِ خلاصه که باز می‌شود */
-.pr-model { border-bottom: 1px solid var(--line-2); }
-.pr-model > summary {
-  display: grid; grid-template-columns: minmax(0, 1fr) 312px 150px 42px; align-items: center; gap: 12px;
-  padding: 10px 18px; cursor: pointer; list-style: none; font-size: 14px;
-}
+/* مدلی با چند تیپ: یک جعبه که باز می‌شود و تیپ‌هایش را داخل خودش نشان
+   می‌دهد — نه ردیف‌هایی که در فهرستِ بیرون رها شده باشند. */
+.pr-model > summary { padding: 11px 14px; cursor: pointer; list-style: none; font-size: 14px; }
 .pr-model > summary::-webkit-details-marker { display: none; }
 .pr-model > summary:hover { background: #faf8f1; }
-.pr-model[open] > summary { background: var(--paper-2); }
-.pr-range { font-weight: 700; color: var(--primary-2); }
+.pr-model[open] { border-color: #cfc3a8; box-shadow: var(--shadow-1); }
+.pr-model[open] > summary { background: var(--paper-2); border-bottom: 1px solid var(--line); }
+.pr-range { font-weight: 700; color: var(--primary-2); white-space: nowrap; }
 .pr-range small { font-weight: 500; color: var(--ink-3); font-size: 12px; margin: 0 2px; }
 .pr-chev { display: flex; justify-content: flex-end; color: var(--ink-3); transition: transform .15s; }
 .pr-model[open] > summary .pr-chev { transform: rotate(180deg); }
-.pr-trims { background: #fdfcf9; border-top: 1px dotted var(--line-2); }
-.pr-trims .pr-row { padding-inline-start: 34px; }
-.pr-trims .pr-row:last-child { border-bottom: 0; }
+.pr-trims { background: #f7f5ef; padding: 8px 9px 10px; display: grid; gap: 6px; }
+.pr-tlbl {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: var(--ink-3);
+  padding: 0 5px 1px;
+}
+.pr-trims .pr-row {
+  background: var(--card); border: 1px solid var(--line-2); border-radius: 9px;
+  padding: 9px 13px;
+}
+.pr-trims .pr-row:hover { border-color: var(--line); }
 
 .pr-none { padding: 14px 18px; font-size: 13px; color: var(--ink-3); margin: 0; }
 .pr-foot { padding: 9px 18px; font-size: 12px; color: var(--ink-3); background: #fbfaf6; border-top: 1px solid var(--line-2); }
-.pr-mine .pr-row:last-child { border-bottom: 0; }
+.pr-mine .pr-items { padding-top: 12px; }
 
-/* روی گوشی: هر ردیف یک کارت با «عنوان: پاسخ»، همان زبان بقیه‌ی سایت */
+/* ---- پنل جزئیات ---- */
+.pr-empty { padding: 34px 20px; text-align: center; color: var(--ink-3); }
+.pr-empty p { font-size: 13px; margin: 8px 0 0; line-height: 1.9; }
+.pr-empty .svgi { opacity: .4; }
+.pr-dh {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px 12px; border-bottom: 1px solid var(--line-2);
+  background: linear-gradient(180deg, #fff, #fbfaf6);
+}
+.pr-dh h3 { font-size: 16.5px; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+.pr-dsub { font-size: 12px; color: var(--ink-3); }
+.pr-dx { margin-inline-start: auto; color: var(--ink-3); background: none; border: 0; cursor: pointer; padding: 2px; flex: none; }
+.pr-dx:hover { color: var(--ink); }
+.pr-big { padding: 14px 16px 12px; border-bottom: 1px solid var(--line-2); }
+.pr-big .pr-k { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.pr-big b { display: block; font-size: 25px; font-weight: 800; color: var(--primary-2); letter-spacing: -.02em; line-height: 1.5; }
+.pr-big small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.pr-facts { padding: 6px 16px 10px; font-size: 13.5px; }
+.pr-facts > div { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px dotted var(--line-2); }
+.pr-facts > div:last-child { border-bottom: 0; }
+.pr-facts dt { color: var(--ink-3); flex: none; }
+.pr-facts dd { margin-inline-start: auto; text-align: end; font-weight: 700; }
+.pr-facts dd.up { color: var(--copper); }
+.pr-facts dd.down { color: var(--ok); }
+.pr-dact { padding: 0 16px 14px; }
+.pr-dact .btn { width: 100%; justify-content: center; }
+.pr-dact .btn.starred { color: var(--copper); border-color: #a85a2433; background: var(--copper-08); }
+
+/* زیر ۱۱۰۰ پیکسل جا برای دو ستون نیست، پس پنل از پایین بالا می‌آید و روی
+   فهرست می‌نشیند. نسخه‌ی اول همین‌جا را ساده گرفت و پنل را ته صفحه — بعد از
+   صدوپانزده ردیف — گذاشت: انتخاب یک خودرو یعنی پریدن به انتهای فهرست و
+   برگشتن با اسکرول. */
+@media (max-width: 1100px) {
+  .pr-wrap { grid-template-columns: 1fr; }
+  .pr-panel {
+    /* `top` from the sticky rule above must go, or a fixed box with both
+       edges pinned stretches to fill the gap instead of hugging its text. */
+    position: fixed; top: auto; inset-inline: 0; bottom: 0; z-index: 55;
+    border-radius: 14px 14px 0 0; border-bottom: 0;
+    box-shadow: var(--shadow-pop);
+    max-height: 76vh; overflow-y: auto;
+    transform: translateY(101%); transition: transform .2s ease-out;
+  }
+  .pr-panel.open { transform: none; }
+  .pr-panel:not(.open) { pointer-events: none; visibility: hidden; }
+  /* فهرست پشت شیت تمام نشود — آخرین ردیف باید بالای شیت دیده شود. */
+  .pr-panel.open ~ * { padding-bottom: 0; }
+  [data-price-page]:has(.pr-panel.open) .pr-wrap > .card { margin-bottom: 46vh; }
+}
 @media (max-width: 760px) {
-  .pr-cols { display: none; }
-  .pr-search { max-width: none; }
-  .pr-row { grid-template-columns: minmax(0, 1fr) 42px; grid-template-areas: 'nm act' 'p act' 's act' 'c act'; gap: 2px 8px; padding: 10px 14px; }
-  .pr-row .pr-nm { grid-area: nm; margin-bottom: 3px; }
-  .pr-row .pr-c:nth-of-type(1) { grid-area: p; }
-  .pr-row .pr-c:nth-of-type(2) { grid-area: s; }
-  .pr-row .pr-c:nth-of-type(3) { grid-area: c; }
-  .pr-row .pr-act { grid-area: act; align-self: start; }
-  .pr-c { flex-direction: row; align-items: baseline; gap: 8px; font-size: 13.5px; }
-  .pr-k { display: inline; flex: none; }
-  .pr-c > :last-child { margin-inline-start: auto; }
-  .pr-model > summary { grid-template-columns: minmax(0, 1fr) 24px; grid-template-areas: 'nm chev' 'range chev' 'chg chev'; gap: 2px 8px; padding: 10px 14px; }
+  .pr-search { margin-inline-start: 0; }
+  .pr-head { display: none; }
+  .pr-row { grid-template-columns: minmax(0, 1fr) auto 40px; grid-template-areas: 'nm price act' 'nm chg act'; gap: 2px 10px; padding: 10px 14px; }
+  .pr-row .pr-nm { grid-area: nm; }
+  .pr-row .pr-price { grid-area: price; text-align: end; }
+  .pr-row .pr-chg { grid-area: chg; justify-self: end; }
+  .pr-row .pr-act { grid-area: act; }
+  .pr-model > summary { grid-template-columns: minmax(0, 1fr) auto 22px; grid-template-areas: 'nm range chev' 'nm chg chev'; gap: 2px 10px; padding: 10px 14px; }
   .pr-model > summary .pr-nm { grid-area: nm; }
-  .pr-model > summary .pr-range { grid-area: range; }
-  .pr-model > summary .pr-chg { grid-area: chg; }
+  .pr-model > summary .pr-range { grid-area: range; text-align: end; }
+  .pr-model > summary .pr-chg { grid-area: chg; justify-self: end; }
   .pr-model > summary .pr-chev { grid-area: chev; }
-  .pr-trims .pr-row { padding-inline-start: 22px; }
-  .pr-bar, .pr-chips, .pr-sort, .pr-bh, .pr-foot { padding-left: 14px; padding-right: 14px; }
-  .pr-chips { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
-  .pr-chips::-webkit-scrollbar { display: none; }
+  .pr-items { padding: 9px 10px; }
+  .pr-bar, .pr-sort, .pr-bh, .pr-foot { padding-left: 14px; padding-right: 14px; }
 }
 
 /* `hidden` must win over the grid rules above — the search hides rows in
