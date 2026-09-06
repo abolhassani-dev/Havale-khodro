@@ -45,6 +45,60 @@ describe('the maker guard', () => {
     // It holds cars from a dozen makers, so a match under it means nothing.
     expect(brandAgrees('سایر شرکت ها', 'پژو')).toBe(false);
   });
+
+  it('follows the source when it files a car under the assembler', () => {
+    // هایما is «ایران خودرو» on their list and a marque of its own on ours.
+    // Getting this table wrong is what left nine هایما models with no price.
+    expect(brandAgrees(IKCO, 'هایما')).toBe(true);
+    expect(brandAgrees(SAIPA, 'چانگان')).toBe(true);
+    expect(brandAgrees('گریت وال - Great Wall', 'تانک')).toBe(true);
+  });
+});
+
+describe('the miscellany drawer', () => {
+  const MISC = 'سایر شرکت ها';
+
+  it('accepts a line that opens with the marque’s own name', () => {
+    const fams = rows([MISC, 'لوکانو L7'], [MISC, 'فردا SX5']);
+    const m = bestMatch({ name: 'لوکانو L7 1.6 لیتر توربو', brand: 'لوکانو' }, fams);
+    expect(m.name).toBe('لوکانو L7');
+  });
+
+  it('refuses a line that only mentions the marque later', () => {
+    // «تیگارد تیسان S05» is ours for a car the source calls «تیسان S05». The
+    // opening word is the only maker evidence the drawer offers, so a line that
+    // opens with another name is not this marque's.
+    const fams = rows([MISC, 'تیسان S05']);
+    expect(bestMatch({ name: 'تیگارد تیسان S05 1.5 لیتر توربو', brand: 'تیگارد' }, fams)).toBeNull();
+  });
+
+  it('still refuses a marque the line never names', () => {
+    const fams = rows([MISC, 'لوکانو L7']);
+    expect(bestMatch({ name: 'پژو L7', brand: 'پژو' }, fams)).toBeNull();
+  });
+});
+
+describe('the body shape a line announces', () => {
+  const pickup = rows([IKCO, 'پیکاپ فوتون (اتوماتیک)']);
+  const foton = { name: 'فوتون ساوانا اتوماتیک', brand: 'فوتون' };
+
+  it('refuses a car of the wrong shape', () => {
+    // Stripping «پیکاپ» left «فوتون اتوماتیک», which an automatic ساوانا — an
+    // SUV — satisfied, and a van would have been shown a pickup's price.
+    expect(bestMatch({ ...foton, bodyType: 'SUV' }, pickup)).toBeNull();
+  });
+
+  it('accepts one of the right shape', () => {
+    const arisan = rows([IKCO, 'وانت آریسان']);
+    const m = bestMatch({ name: 'آریسان بنزینی 1.7 لیتر', brand: 'آریسان', bodyType: 'PICKUP_SINGLE' }, arisan);
+    expect(m.name).toBe('وانت آریسان');
+  });
+
+  it('does not treat an unclassified car as the wrong shape', () => {
+    // Two thirds of the catalogue has no body type set; refusing all of them
+    // would cost far more true links than the one false link this guard stops.
+    expect(bestMatch({ ...foton, bodyType: null }, pickup)).not.toBeNull();
+  });
 });
 
 describe('choosing the line that covers a car', () => {
@@ -106,6 +160,21 @@ describe('choosing the line that covers a car', () => {
     // «آرتابان (ای ام جی)» contains the words «ام جی» and passed as MG.
     expect(brandAgrees('ام جی - MG', 'آرتابان (ای ام جی)')).toBe(false);
     expect(brandAgrees('ام جی - MG', 'ام جی')).toBe(true);
+  });
+
+  it('reads a trim word written in Latin on one list and Persian on the other', () => {
+    const venucia = rows(['ونوسیا - Venucia', 'ونوسیا STAR'], ['ونوسیا - Venucia', 'ونوسیا D60 Plus']);
+    expect(bestMatch({ name: 'ونوسیا استار 1.5 لیتر توربو', brand: 'ونوسیا' }, venucia).name).toBe('ونوسیا STAR');
+    expect(bestMatch({ name: 'ونوسیا D60 پلاس 1.6 لیتر', brand: 'ونوسیا' }, venucia).name).toBe('ونوسیا D60 Plus');
+  });
+
+  it('reads a car the source files under its assembler', () => {
+    // «هایما اس 5 ( S5 ) پرو» writes the letter twice, spelled and abbreviated.
+    const haima = rows([IKCO, 'هایما اس 5 ( S5 ) پرو'], [IKCO, 'هایما 8 اس ( 8S )']);
+    expect(bestMatch({ name: 'هایما S5 پرو 1.5 لیتر توربو', brand: 'هایما' }, haima).name).toBe(
+      'هایما اس 5 ( S5 ) پرو'
+    );
+    expect(bestMatch({ name: 'هایما 8S', brand: 'هایما' }, haima).name).toBe('هایما 8 اس ( 8S )');
   });
 
   it('does not cross makers on a shared word', () => {

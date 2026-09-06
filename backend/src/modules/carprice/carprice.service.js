@@ -225,7 +225,10 @@ const carPriceService = {
 
     const wanted = new Map();
     for (const m of models) {
-      const match = bestMatch({ name: m.name, brand: m.brand?.name || '' }, families);
+      const match = bestMatch(
+        { name: m.name, brand: m.brand?.name || '', bodyType: m.bodyType },
+        families
+      );
       wanted.set(m.id, match ? match.key : null);
     }
 

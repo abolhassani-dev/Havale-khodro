@@ -12,10 +12,10 @@
  * which has no answer. Reading catalogue model → price line asks «which line
  * covers this car?», which usually does: the model's own name carries the
  * words that pick the line out. Measured on the real data, the first
- * direction linked 53 cars and got several of them wrong; this one links 142
+ * direction linked 53 cars and got several of them wrong; this one links 173
  * and the domestic ones check out by hand.
  *
- * Two rules keep it honest.
+ * Three rules keep it honest.
  *
  *   Every word of the price line has to appear in the model's name. The line
  *   is the shorter, vaguer side, so this is the only containment that can
@@ -26,11 +26,24 @@
  *   اتوماتیک» and «پژو 207 اتوماتیک پانوراما»; the second says more and is
  *   right. A tie links nothing.
  *
+ *   The maker has to agree, and where the line announces a body shape, the
+ *   shape has to agree too. Both are guards rather than matchers: their job is
+ *   to stop a lone survivor being mistaken for a confident answer.
+ *
  * Both sides are folded the same way first, because the same car is spelled
  * two ways: «جک J4» against «جک جی 4», «راناپلاس» against «رانا پلاس»,
- * «7 نفره» against «هفت نفره», «وانت آریسان» against «آریسان». Each of those
- * was found by taking a marque that got no price at all and asking why; none
- * of them guesses which car is which.
+ * «7 نفره» against «هفت نفره», «وانت آریسان» against «آریسان», «ونوسیا STAR»
+ * against «ونوسیا استار». Each of those was found by taking a marque that got
+ * no price at all and asking why; none of them guesses which car is which.
+ *
+ * The makers differ more than the spellings do, and that is the larger half of
+ * the work. The source files a car under whoever assembles it — هایما under
+ * ایران خودرو, چانگان under سایپا, تانک under گریت وال — where our catalogue
+ * files it under its own marque. BRAND_ALIASES is that translation, and filling
+ * it in took the link from 142 models to 173. Worth reading the number the
+ * right way round: the cars that showed no price were almost never missing from
+ * our catalogue, they were filed under a name this table had not been told
+ * about. The catalogue is the richer of the two lists, not the poorer.
  *
  * Whatever is left over shows no price at all, and that is the point. A
  * missing line costs a reader nothing; a wrong one costs the reference we are
@@ -122,12 +135,41 @@ const NUMBER_SAID = {
 };
 
 /**
+ * A trim word written in Latin on one list and Persian on the other.
+ *
+ * «ونوسیا STAR» is our «ونوسیا استار», «D60 Plus» our «D60 پلاس». Both lists go
+ * through this, so the side it normalises to does not matter — only that no two
+ * different words are allowed to land on the same one. Kept to words that were
+ * seen spelled both ways in the live lists; a bigger table would be guessing.
+ */
+const WORD_SAID = {
+  star: 'استار',
+  plus: 'پلاس',
+  pro: 'پرو',
+  online: 'آنلاین',
+};
+
+/**
  * A body shape the source puts in front of the name, which is not part of it.
  *
  * «وانت آریسان» is an آریسان. Only stripped from the front, because in the
  * middle of a name the same word can be the model — «نیسان ترا پیکاپ».
+ *
+ * The value is the catalogue body types the word allows, and it is not
+ * decoration. Stripping the word can leave a line whose only remaining word is
+ * the maker's own name: «پیکاپ فوتون (اتوماتیک)» became «فوتون اتوماتیک», which
+ * an automatic فوتون ساوانا — an SUV — then satisfied, and a van would have
+ * been shown a pickup's price. Putting the shape back as a condition is what
+ * keeps that line meaning what it says.
+ *
+ * null means «we cannot check this one»: our catalogue has no van category, so
+ * «ون» constrains nothing rather than pretending to.
  */
-const SHAPE_PREFIX = new Set(['وانت', 'پیکاپ', 'ون']);
+const SHAPE_PREFIX = new Map([
+  ['وانت', ['PICKUP', 'PICKUP_SINGLE']],
+  ['پیکاپ', ['PICKUP', 'PICKUP_SINGLE']],
+  ['ون', null],
+]);
 
 /**
  * The words of a name, in the one spelling both sides can be compared in.
@@ -141,7 +183,7 @@ function words(text) {
   const out = [];
   for (let i = 0; i < raw.length; i += 1) {
     const w = raw[i];
-    if (!out.length && SHAPE_PREFIX.has(w) && raw.length > 1) continue;
+    if (!out.length && SHAPE_PREFIX.has(w) && raw.length > 1) continue; // kept as `shape`, see buildFamilies
     const letter = LETTER_SAID[w];
     const next = raw[i + 1];
     // «جی 4» → «g4»: a spoken letter glued to the number that follows it.
@@ -156,13 +198,20 @@ function words(text) {
       i += 1;
       continue;
     }
-    out.push(NUMBER_SAID[w] || w);
+    out.push(NUMBER_SAID[w] || WORD_SAID[w] || w);
   }
   return out;
 }
 
 /** The name with every space closed up: «رانا پلاس» and «راناپلاس» meet here. */
 const squeeze = (text) => words(text).join('');
+
+/** The body shape this name is announced with, if any — see SHAPE_PREFIX. */
+function shapeOf(text) {
+  const raw = fold(text).split(' ').filter(Boolean);
+  if (raw.length < 2 || !SHAPE_PREFIX.has(raw[0])) return null;
+  return SHAPE_PREFIX.get(raw[0]);
+}
 
 /**
  * Every run of neighbouring words in a name, run together.
@@ -186,13 +235,39 @@ function joinedRuns(list) {
   return out;
 }
 
+/**
+ * The drawer the source puts every small importer in.
+ *
+ * It is not a maker, so it cannot say who made a car — but each of its lines
+ * opens with the marque anyway: «لوکانو L7», «فردا SX5», «لاماری ایما». That
+ * word is the only maker evidence there is, and it is enough on its own.
+ */
+const MISCELLANY = 'سایر شرکت ها';
+
 /* Every catalogue name below was read out of the brand table, not guessed. */
 const BRAND_ALIASES = {
-  'ایران خودرو': ['پژو', 'سمند', 'دنا', 'رانا', 'تارا', 'آریسان', 'پیکان'],
-  سایپا: ['پراید', 'تیبا', 'ساینا', 'کوییک', 'شاهین', 'اطلس', 'سهند', 'زامیاد'],
+  // هایما is filed here because that is where the source files it, and the
+  // source is the side being read. Ours agrees: the cars are built by IKCO.
+  'ایران خودرو': ['پژو', 'سمند', 'دنا', 'رانا', 'تارا', 'آریسان', 'پیکان', 'هایما', 'ری را', 'فوتون'],
+  سایپا: ['پراید', 'تیبا', 'ساینا', 'کوییک', 'شاهین', 'اطلس', 'سهند', 'زامیاد', 'چانگان', 'سیتروئن'],
   'مدیران خودرو': ['ام وی ام', 'چری', 'فونیکس', 'اکستریم'],
-  'کرمان موتور': ['کی ام سی', 'جک', 'لیفان', 'هایما'],
-  'بهمن موتور': ['دیگنیتی', 'فیدلیتی', 'ریسپکت', 'کاپرا', 'مزدا'],
+  'کرمان موتور': ['کی ام سی', 'جک', 'لیفان'],
+  'بهمن موتور': [
+    'دیگنیتی',
+    'فیدلیتی',
+    'ریسپکت',
+    'کاپرا',
+    'مزدا',
+    'هونگچی',
+    'شوال',
+    'اوتار',
+    'اینوی',
+    'اینرودز',
+    'هاوال',
+  ],
+  // The source's «گریت وال» drawer holds the Tank and the Haval, which our
+  // catalogue gives marques of their own.
+  'گریت وال': ['گریت وال', 'تانک', 'هاوال'],
   'بی‌ام‌و': ['ب ام و'],
   'کیا موتورز': ['کیا'],
   'فولکس‌واگن': ['فولکس'],
@@ -202,8 +277,8 @@ const BRAND_ALIASES = {
   'تویوتا': ['تویوتا', 'لکسوس'],
   // The source's own miscellany drawer. It holds cars from a dozen different
   // makers, so it can vouch for none of them and links nothing — deliberately,
-  // not as a side effect of having no alias.
-  'سایر شرکت ها': [],
+  // not as a side effect of having no alias. See MISCELLANY for the one way in.
+  [MISCELLANY]: [],
 };
 
 /**
@@ -264,6 +339,7 @@ function buildFamilies(items) {
         name: item.name,
         words: words(item.name),
         squeezed: squeeze(item.name),
+        shape: shapeOf(item.name),
       });
     }
   }
@@ -271,10 +347,43 @@ function buildFamilies(items) {
 }
 
 /**
+ * Does this line's own name open with this catalogue marque?
+ *
+ * Only asked of the miscellany drawer, and it has to be the opening words
+ * rather than any occurrence: «تیگارد تیسان S05» is our name for a car the
+ * source calls «تیسان S05», and a line naming one marque must not be handed to
+ * another that merely mentions it.
+ */
+function leadsWithBrand(familyWords, catalogueBrandName) {
+  const brand = words(catalogueBrandName || '');
+  if (!brand.length) return false;
+  return brand.every((w, i) => familyWords[i] === w);
+}
+
+/** Who the source says makes this car, or — for the drawer — what its name says. */
+function makerAgrees(family, model) {
+  if (brandAgrees(family.brand, model.brand)) return true;
+  const fa = String(family.brand || '').split(' - ')[0].trim();
+  return fa === MISCELLANY && leadsWithBrand(family.words, model.brand);
+}
+
+/**
+ * Does a line that announces a body shape describe a car of that shape?
+ *
+ * An unclassified model is not evidence either way and passes: two thirds of
+ * the catalogue has no body type set, and refusing all of them would throw away
+ * far more true links than the false one this guard exists to stop.
+ */
+function shapeAgrees(family, bodyType) {
+  if (!family.shape || !bodyType) return true;
+  return family.shape.includes(bodyType);
+}
+
+/**
  * The one price line that covers this catalogue model, or null.
  *
- * @param {{name: string, brand: string}} model    brand as its plain name
- * @param {Array} families                          from `buildFamilies`
+ * @param {{name: string, brand: string, bodyType?: string}} model  brand as its plain name
+ * @param {Array} families                                          from `buildFamilies`
  */
 function bestMatch(model, families) {
   const mine = words(model.name);
@@ -283,7 +392,8 @@ function bestMatch(model, families) {
   const fits = families.filter(
     (f) =>
       f.words.length &&
-      brandAgrees(f.brand, model.brand) &&
+      makerAgrees(f, model) &&
+      shapeAgrees(f, model.bodyType) &&
       (f.words.every((w) => has.has(w)) || runs.has(f.squeezed))
   );
   if (!fits.length) return null;
@@ -299,7 +409,9 @@ module.exports = {
   fold,
   priceKey,
   words,
+  shapeOf,
   brandAgrees,
+  makerAgrees,
   brandCandidates,
   buildFamilies,
   bestMatch,
