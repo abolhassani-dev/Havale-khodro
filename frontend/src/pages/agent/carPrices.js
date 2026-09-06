@@ -142,12 +142,16 @@ function groupModels(items) {
   return [...map.values()].map((rows) => {
     const label = rows.length > 1 ? commonPrefix(rows.map((r) => r.name)) || rows[0].name : rows[0].name;
     const prices = rows.map((r) => r.price).filter((p) => p !== null);
+    // The trim that moved the most today speaks for the model on its line.
+    const moved = rows.filter((r) => r.change && r.direction !== 'FLAT');
+    const top = moved.length ? moved.reduce((a, b) => ((b.changePct || 0) > (a.changePct || 0) ? b : a)) : null;
     return {
       label,
       rows,
       min: prices.length ? Math.min(...prices) : null,
       max: prices.length ? Math.max(...prices) : null,
-      maxPct: Math.max(0, ...rows.map((r) => r.changePct || 0)),
+      maxPct: top ? top.changePct || 0 : 0,
+      top,
       order: Math.min(...rows.map((r) => r.sortOrder)),
     };
   });
@@ -184,12 +188,14 @@ function link(params, patch) {
 
 // ── pieces ───────────────────────────────────────────────────────────────────
 
-function changeCell(it) {
+/** «↑ ۹۴ میلیون (۵٫۲۱٪)» — with «تا» in front when it speaks for several trims. */
+function changeCell(it, { upTo = false } = {}) {
   if (it.change === null || it.change === undefined) return html`<span class="pr-chg flat">—</span>`;
   if (!it.change || it.direction === 'FLAT') return html`<span class="pr-chg flat">بدون تغییر</span>`;
   const tone = it.direction === 'DOWN' ? 'down' : it.direction === 'UP' ? 'up' : 'flat';
   const arrow = tone === 'down' ? 'M12 5v14M5 12l7 7 7-7' : 'M12 19V5M5 12l7-7 7 7';
   return html`<span class="pr-chg ${tone}">
+    ${upTo ? html`<small>تا</small>` : ''}
     ${raw(`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${arrow}"></path></svg>`)}
     <span class="num">${compact(it.change)}</span>
     ${it.changePct !== null ? html`<small class="num">(${faDigits(it.changePct)}٪)</small>` : ''}
@@ -235,7 +241,7 @@ function modelBox(model, watching, second) {
     <summary>
       <span class="pr-nm"><b>${model.label}</b><small>${faDigits(model.rows.length)} تیپ</small></span>
       <span class="pr-range num">${range}</span>
-      ${model.maxPct ? html`<span class="pr-chg up"><small class="num">تا ${faDigits(model.maxPct)}٪ امروز</small></span>` : html`<span class="pr-chg flat">بدون تغییر</span>`}
+      ${model.top ? changeCell(model.top, { upTo: true }) : html`<span class="pr-chg flat">بدون تغییر</span>`}
       <span class="pr-chev">${icon('chevron', 16)}</span>
     </summary>
     <div class="pr-trims">${trims}</div>
