@@ -2665,14 +2665,36 @@ form.card[data-form="car"] { overflow: clip; }
 }
 .help-link { color: var(--primary); }
 
+/* The folded chapter picker is the phone's; the open list is the desk's. */
+.guide-phone { display: none; }
+.guide-pick { list-style: none; cursor: pointer; }
+.guide-pick::-webkit-details-marker { display: none; }
+
 @media (max-width: 900px) {
   .guide { grid-template-columns: 1fr; }
   .guide-nav { position: static; }
-  .guide-list { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-  .guide-list a { padding: 5px 10px; font-size: 12.5px; }
-  .guide-list .gn { width: 20px; height: 20px; font-size: 10.5px; }
+  .guide-pick {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; font-size: 14px; font-weight: 800; color: var(--primary);
+  }
+  .guide-pick .gn {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 12px;
+  }
+  .guide-pick .gt { flex: 1; min-width: 0; line-height: 1.5; }
+  .guide-pick .gc { flex: none; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+  .guide-desk { display: none; }
+  .guide-phone { display: block; }
+  .guide-nav[open] .guide-pick { border-bottom: 1px solid var(--line-2); }
+  .guide-nav[open] .guide-pick .gc { color: var(--primary); }
+  .guide-list { padding: 6px; }
+  .guide-list a { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--line-2); border-radius: 0; }
+  .guide-list a:last-child { border-bottom: 0; }
   .guide-text { padding: 14px 14px 6px; font-size: 14px; }
   .guide-foot { padding: 12px 14px; }
   .guide-foot .btn { white-space: normal; text-align: start; }
-  .help-link { display: none; }
+  /* On a phone the bar is tight, so the link shrinks to its «؟» — still there,
+     still opening the chapter for this page. */
+  .help-link { padding: 6px 10px; font-size: 15px; font-weight: 900; }
+  .help-link .hl-t { display: none; }
 }

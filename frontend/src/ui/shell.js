@@ -330,7 +330,7 @@ export function topbar(title, crumb) {
       // be a promise the page cannot keep.
       agent && PAGE_CHAPTER[s.page]
         ? html`<a class="btn sm ghost help-link" data-go="guide"
-                  data-go-params="ch=${PAGE_CHAPTER[s.page]}">؟ راهنمای این بخش</a>`
+                  data-go-params="ch=${PAGE_CHAPTER[s.page]}">؟ <span class="hl-t">راهنمای این بخش</span></a>`
         : ''
     }
     <div class="spacer"></div>

@@ -102,7 +102,7 @@ await step('first sign-in lands on the guide, and stays there until confirmed', 
     throw new Error('typing #dash escaped the guide');
   }
   // Chapters are reachable while gated — reading is the point.
-  await page.click('[data-go="guide"][data-go-params="ch=car-post"]');
+  await page.click('.guide-desk [data-go="guide"][data-go-params="ch=car-post"]');
   await page.waitForTimeout(400);
   const title = await page.textContent('.guide-body .card-h h2');
   if (!title.includes('وضعیت بدنه')) throw new Error('chapter link did not open its chapter: ' + title);

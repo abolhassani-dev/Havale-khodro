@@ -57,10 +57,24 @@ export function guidePage() {
       : ''
   }
   <div class="guide">
-    <nav class="guide-nav card">
+    <!-- Two copies of the same list, one per screen. On a desk an always-open
+         list beside the text; on a phone the list folds behind the current
+         chapter's name, and picking one re-renders the page, which closes it
+         again. A closed <details> hides its children whatever the stylesheet
+         says, so one element cannot be both — hence two, each shown at one
+         breakpoint. No script, no state to keep. -->
+    <nav class="guide-nav card guide-desk">
       <div class="card-h"><h2>فصل‌ها</h2></div>
       <div class="guide-list">${CHAPTERS.map((c) => chapterLink(c, chapter.id))}</div>
     </nav>
+    <details class="guide-nav card guide-phone">
+      <summary class="guide-pick">
+        <span class="gn">${chapter.num ? faDigits(chapter.num) : '★'}</span>
+        <span class="gt">${chapter.title}</span>
+        <span class="gc">فصل‌ها ▾</span>
+      </summary>
+      <div class="guide-list">${CHAPTERS.map((c) => chapterLink(c, chapter.id))}</div>
+    </details>
     <article class="guide-body card">
       <div class="card-h">
         <h2>${chapter.num ? `فصل ${faDigits(chapter.num)} — ` : ''}${chapter.title}</h2>
