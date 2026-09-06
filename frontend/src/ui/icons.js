@@ -37,6 +37,7 @@ const PATHS = {
   tag: '<path d="M20.6 13.4L13.4 20.6a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   // Points down; the stylesheet rotates it a quarter turn when the group is
   // closed, so one icon covers both states and they can never disagree.
+  book: '<path d="M4 4.5A1.5 1.5 0 015.5 3H12v16H5.5A1.5 1.5 0 004 20.5z"/><path d="M20 4.5A1.5 1.5 0 0018.5 3H12v16h6.5a1.5 1.5 0 011.5 1.5z"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
 };

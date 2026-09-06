@@ -67,4 +67,19 @@ router.post(
  */
 router.get('/me', authenticate, controller.me);
 
+/**
+ * @openapi
+ * /auth/guide-seen:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Record that the signed-in user has read the guide
+ *     description: >
+ *       Until this is recorded, the panel shows an agency the guide before
+ *       anything else. No subscription guard on purpose — reading how the
+ *       system works is not something the subscription pays for.
+ *     responses:
+ *       200: { description: The updated user }
+ */
+router.post('/guide-seen', authenticate, controller.guideSeen);
+
 module.exports = router;

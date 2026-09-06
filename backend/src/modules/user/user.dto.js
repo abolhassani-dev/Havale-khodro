@@ -43,6 +43,9 @@ function toPublicUser(user) {
     isReseller: user.isReseller,
     parentId: user.parentId,
     mustChangePassword: user.mustChangePassword,
+    // A flag rather than the date: the panel only ever asks «has this account
+    // confirmed the guide», and a date invites somebody to show it.
+    guideSeen: Boolean(user.guideSeenAt),
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
   };

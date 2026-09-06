@@ -1,0 +1,47 @@
+  @font-face { font-family: 'Vazirmatn'; src: url('../../frontend/assets/vazirmatn.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  * { box-sizing: border-box; }
+  html { font-size: 11.5pt; }
+  body { margin: 0; font-family: 'Vazirmatn', Tahoma, sans-serif; color: #1f2a28; line-height: 1.8; background: #fff; }
+  h1, h2, h3 { color: #0d4f47; margin: 0; line-height: 1.5; break-after: avoid; }
+  h1 { font-size: 26pt; font-weight: 800; }
+  h2 { font-size: 18pt; font-weight: 800; padding-bottom: 6px; border-bottom: 3px solid #0d4f47; margin-bottom: 10px; }
+  h3 { font-size: 13.5pt; font-weight: 700; margin-top: 14px; margin-bottom: 4px; }
+  p { margin: 0 0 8px; orphans: 3; widows: 3; }
+  .chapter > :last-child { break-before: avoid; }
+  h3 + p, h3 + ul, h3 + ol, h3 + figure { break-before: avoid; }
+  ol, ul { margin: 0 0 8px; padding-right: 22px; }
+  li { margin-bottom: 3px; }
+  li::marker { color: #0d4f47; font-weight: 700; }
+  .chapter { break-before: page; }
+  .lead { font-size: 12pt; color: #3d4a47; margin-bottom: 10px; }
+  .kicker { display: inline-block; font-size: 10pt; color: #6b7a76; letter-spacing: .2px; margin-bottom: 2px; }
+  figure { margin: 8px 0 10px; break-inside: avoid; }
+  figure img { display: block; max-width: 100%; max-height: 100mm; width: auto; margin: 0 auto; border: 1px solid #d8ddda; border-radius: 8px; }
+  figure.phone .row { display: flex; gap: 12px; justify-content: center; }
+  figure.phone img { max-height: 62mm; width: auto; margin: 0; }
+  figcaption { font-size: 10.5pt; color: #5d6a67; margin-top: 5px; text-align: center; }
+  .rules { background: #f2f7f5; border: 1px solid #cfe0db; border-right: 5px solid #0d4f47; border-radius: 8px; padding: 8px 14px 6px; margin: 10px 0 12px; break-inside: avoid; }
+  .rules .t { font-weight: 800; color: #0d4f47; margin-bottom: 2px; }
+  .rules ul { margin-bottom: 2px; }
+  .warn { background: #fdf3ee; border-color: #f0cdbb; border-right-color: #b7461e; }
+  .warn .t { color: #b7461e; }
+  .tip { background: #fbf7ec; border-color: #ead9a6; border-right-color: #a67c00; }
+  .tip .t { color: #7a5a00; }
+  .steps li { padding-right: 2px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5pt; margin: 8px 0 12px; break-inside: auto; }
+  th, td { border: 1px solid #d5dcd9; padding: 5px 9px; text-align: right; vertical-align: top; }
+  th { background: #e9f1ee; color: #0d4f47; font-weight: 700; }
+  tr { break-inside: avoid; }
+  .cover { height: 258mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .brand { font-size: 44pt; font-weight: 900; color: #0d4f47; line-height: 1.2; }
+  .cover .sub { font-size: 20pt; color: #3d4a47; font-weight: 600; }
+  .cover .box { background: #0d4f47; color: #fff; border-radius: 14px; padding: 22px 26px; }
+  .cover .box p { margin: 0; font-size: 13pt; line-height: 2.1; }
+  .cover .meta { color: #6b7a76; font-size: 11pt; }
+  .toc { columns: 2; column-gap: 24px; font-size: 12.5pt; }
+  .toc div { break-inside: avoid; padding: 3px 0; border-bottom: 1px dashed #d5dcd9; display: flex; justify-content: space-between; }
+  .toc .n { color: #0d4f47; font-weight: 800; margin-left: 8px; }
+  .pill { display: inline-block; background: #e9f1ee; color: #0d4f47; border-radius: 999px; padding: 0 9px; font-size: 10.5pt; font-weight: 700; }
+  .muted { color: #6b7a76; }

@@ -1,7 +1,7 @@
 // Static server that also proxies /api to the backend, mimicking nginx.
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = '/home/user/Havale-khodro/frontend';
-const TYPES = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.woff2':'font/woff2' };
+const TYPES = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.woff2':'font/woff2','.jpg':'image/jpeg','.png':'image/png' };
 http.createServer((req, res) => {
   if (req.url.startsWith('/api/')) {
     const p = http.request({ host:'127.0.0.1', port:3000, path:req.url, method:req.method, headers:req.headers }, r => {

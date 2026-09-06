@@ -166,6 +166,10 @@ const authRepository = {
     });
   },
 
+  markGuideSeen(userId) {
+    return prisma.user.update({ where: { id: userId }, data: { guideSeenAt: new Date() } });
+  },
+
   touchLogin(userId) {
     return prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
   },

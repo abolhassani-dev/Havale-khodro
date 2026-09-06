@@ -3,6 +3,7 @@ import { icon } from './icons.js';
 import { getState, isAdmin, isAgent, can } from '../state/store.js';
 import { date, faDigits } from './format.js';
 import { BRAND } from '../constants.js';
+import { PAGE_CHAPTER } from '../content/guide.js';
 
 /**
  * The frame every page sits in: sidebar, top bar, and the expired-subscription
@@ -96,6 +97,9 @@ const AGENT_NAV = [
       { page: 'tickets', icon: 'mail', label: 'پشتیبانی' },
     ],
   },
+  // Last, and top-level: the one entry that is about the panel itself rather
+  // than about the business. It is also where a new account starts.
+  { page: 'guide', icon: 'book', label: 'راهنما' },
 ];
 
 /** Every page that lives under a section, so the section can open itself. */
@@ -320,6 +324,15 @@ export function topbar(title, crumb) {
       <h1>${title}</h1>
       ${crumb ? html`<div class="crumb">${crumb}</div>` : ''}
     </div>
+    ${
+      // The chapter that explains the page on screen, one click away. Only
+      // for pages the guide actually covers; a link to a missing chapter would
+      // be a promise the page cannot keep.
+      agent && PAGE_CHAPTER[s.page]
+        ? html`<a class="btn sm ghost help-link" data-go="guide"
+                  data-go-params="ch=${PAGE_CHAPTER[s.page]}">؟ راهنمای این بخش</a>`
+        : ''
+    }
     <div class="spacer"></div>
     ${
       // A sub-agency is not told subscription dates — its access follows the

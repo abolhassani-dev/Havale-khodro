@@ -64,6 +64,30 @@ maybe('authentication', () => {
 
   const cookieFrom = (res) => res.headers['set-cookie'];
 
+  /**
+   * The guide gate. A new account has not read the guide; reading it is
+   * recorded once and reported as a flag, never as a date. No subscription is
+   * needed — this account has none.
+   */
+  it('reports the guide as unread until it is confirmed, then as read', async () => {
+    const cookie = cookieFrom(await login(agent.username, PASSWORD));
+
+    const before = await request(app).get(api('/auth/me')).set('Cookie', cookie);
+    expect(before.body.data.guideSeen).toBe(false);
+    expect(before.body.data.guideSeenAt).toBeUndefined();
+
+    const ack = await request(app).post(api('/auth/guide-seen')).set('Cookie', cookie);
+    expect(ack.status).toBe(200);
+    expect(ack.body.data.guideSeen).toBe(true);
+
+    // A second confirmation changes nothing and refuses nothing.
+    const again = await request(app).post(api('/auth/guide-seen')).set('Cookie', cookie);
+    expect(again.status).toBe(200);
+
+    const after = await request(app).get(api('/auth/me')).set('Cookie', cookie);
+    expect(after.body.data.guideSeen).toBe(true);
+  });
+
   it('signs in and sets an httpOnly session cookie', async () => {
     const res = await login(agent.username, PASSWORD);
 

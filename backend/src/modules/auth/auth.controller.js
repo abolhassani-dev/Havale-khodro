@@ -90,6 +90,11 @@ const authController = {
     const user = await authService.me(req.user.id);
     return success(res, user);
   }),
+
+  guideSeen: asyncHandler(async (req, res) => {
+    const user = await authService.markGuideSeen(req.user.id);
+    return success(res, user, MESSAGES.AUTH.GUIDE_SEEN);
+  }),
 };
 
 module.exports = authController;

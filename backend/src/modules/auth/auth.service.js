@@ -195,6 +195,18 @@ const authService = {
     if (!user) throw new UnauthorizedError();
     return toPublicUser(user);
   },
+
+  /**
+   * The agency has read the guide.
+   *
+   * Recorded once and never cleared: the guide stays a page in the menu, but
+   * the panel stops putting it in front of everything else. Idempotent, so a
+   * double click or a retried request changes nothing.
+   */
+  async markGuideSeen(userId) {
+    const user = await authRepository.markGuideSeen(userId);
+    return toPublicUser(user);
+  },
 };
 
 module.exports = authService;

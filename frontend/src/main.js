@@ -29,6 +29,7 @@ import {
 } from './pages/agent/account.js';
 import { soonPage } from './pages/agent/soon.js';
 import { profilePage, submitProfilePassword } from './pages/agent/profile.js';
+import { loadGuide, guidePage, ackGuide } from './pages/agent/guide.js';
 import {
   registerAdminRoutes, renderAdminPage, handleAdminClick, handleAdminSubmit, onStaffFormChange,
   setCatalogQuery,
@@ -79,6 +80,7 @@ const TITLES = {
   ticket: ['گفتگو', ''],
   notices: ['اطلاعیه‌ها', 'تصمیم‌هایی که درباره‌ی حساب و آگهی‌های شما گرفته شده'],
   profile: ['تنظیمات حساب', 'مشخصات نمایندگی و رمز عبور'],
+  guide: ['راهنمای سامانه', 'هر بخش، یک فصل — با تصویر و قانون‌هایش'],
   'no-access': ['دسترسی تعیین نشده', ''],
 };
 
@@ -115,6 +117,7 @@ function registerRoutes() {
   route('ticket', loadTicket);
   route('notices', loadNotices);
   route('profile', async () => ({}));
+  route('guide', loadGuide);
   // Registered so the router recognises them: an unknown page silently
   // redirects home, which would make every one of these menu items look like
   // a dead click rather than a section that is on its way.
@@ -170,6 +173,7 @@ function pageBody() {
     case 'ticket': return ticketPage();
     case 'notices': return noticesPage();
     case 'profile': return profilePage();
+    case 'guide': return guidePage();
     case 'no-access': return noAccessPage();
     default:
       if (SOON_PAGES.has(page)) return soonPage();
@@ -330,7 +334,7 @@ function adminTitle(page) {
  * string somewhere else.
  */
 const CLICK_KEYS = new Set([
-  'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection',
+  'go', 'logout', 'toggleSidebar', 'closeModal', 'confirm', 'nextCursor', 'navSection', 'guideAck',
   'reveal', 'report', 'renew', 'fulfill', 'deleteHavale', 'openHavale', 'editHavale',
   'regReveal', 'regRenew', 'regFulfill', 'regDelete', 'regEdit',
   'orderSeats', 'newSubagent', 'subagentStatus', 'subagentPassword', 'subagentBrands',
@@ -385,6 +389,7 @@ function onClick(event) {
   if (d.closeModal !== undefined || el.hasAttribute('data-overlay')) return closeModal();
   if (d.confirm !== undefined) return runModalAction(null);
   if (d.logout !== undefined) return doLogout();
+  if (d.guideAck !== undefined) return ackGuide();
 
   // The body matrix keeps its state in the DOM (rule 3.4) — these never
   // touch the store, so nothing typed elsewhere in the form is lost.

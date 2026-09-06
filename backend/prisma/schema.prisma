@@ -230,6 +230,11 @@ model User {
   // اطلاعیه‌ای که تاریخش از این تازه‌تر است. یک ستون به‌جای یک جدول.
   noticesSeenAt DateTime?
 
+  /// اولین باری که راهنمای سامانه را خوانده و تأیید کرده. تا وقتی null است،
+  /// پنل بعد از تغییر رمزِ اول، فقط راهنما را نشان می‌دهد. یک ستون، نه یک
+  /// جدول — همان الگوی noticesSeenAt.
+  guideSeenAt DateTime?
+
   lastLoginAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -14,6 +14,7 @@ export const auth = {
   me: () => api.get('/auth/me'),
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
+  guideSeen: () => api.post('/auth/guide-seen'),
 };
 
 export const catalog = {

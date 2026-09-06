@@ -9,6 +9,7 @@ const MESSAGES = {
     SESSION_KICKED: 'از دستگاه دیگری وارد حساب شده‌اید',
     PASSWORD_CHANGED: 'رمز عبور تغییر کرد',
     MUST_CHANGE_PASSWORD: 'برای ادامه باید رمز عبور را تغییر دهید',
+    GUIDE_SEEN: 'راهنما تأیید شد',
   },
   SUBSCRIPTION: {
     // Market-neutral on purpose: this banner shows on the خودرو and ثبت‌نامی

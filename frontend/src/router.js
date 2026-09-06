@@ -65,6 +65,14 @@ export async function resolve() {
     return;
   }
 
+  // One step after the password: an agency that has not confirmed the guide
+  // is shown it before anything else, whatever the address bar says. The
+  // guide's own chapter links keep working, because the target is the guide.
+  if (isAgent() && !state.user.guideSeen && page !== 'guide') {
+    window.location.hash = '#guide';
+    return;
+  }
+
   const home = homeFor();
   // An account with nothing open to it stays on the explanation, whatever is in
   // the address bar. Otherwise a leftover #dash from a previous sign-in sends it

@@ -82,12 +82,66 @@ await step('agent can sign in', async () => {
   await page.waitForSelector('.sidebar', { timeout: 8000 });
 });
 
+/**
+ * The guide gate.
+ *
+ * An account that has not confirmed the guide is shown it before anything
+ * else — the address bar included — and only the confirm button lets it out.
+ * The demo accounts start unconfirmed, so a fresh database exercises the
+ * gate; a database where this agent already confirmed simply skips it.
+ */
+await step('first sign-in lands on the guide, and stays there until confirmed', async () => {
+  const gated = await page.locator('[data-guide-ack]').count();
+  if (!gated) return; // already confirmed on this database
+  if (!(await page.evaluate(() => location.hash)).startsWith('#guide')) {
+    throw new Error('unconfirmed account did not land on the guide');
+  }
+  await page.evaluate(() => { location.hash = '#dash'; });
+  await page.waitForTimeout(500);
+  if (!(await page.evaluate(() => location.hash)).startsWith('#guide')) {
+    throw new Error('typing #dash escaped the guide');
+  }
+  // Chapters are reachable while gated — reading is the point.
+  await page.click('[data-go="guide"][data-go-params="ch=car-post"]');
+  await page.waitForTimeout(400);
+  const title = await page.textContent('.guide-body .card-h h2');
+  if (!title.includes('وضعیت بدنه')) throw new Error('chapter link did not open its chapter: ' + title);
+  await page.click('[data-guide-ack]');
+  await page.waitForSelector('.stats .s-v', { timeout: 8000 });
+  if (await page.locator('[data-guide-ack]').count()) throw new Error('the confirm bar survived confirming');
+});
+
 await step('dashboard shows real figures', async () => {
   await page.waitForSelector('.stats .s-v', { timeout: 5000 });
   const t = await page.textContent('.stats');
   if (!/[۰-۹]/.test(t)) throw new Error('no Persian numerals: ' + t.slice(0, 60));
 });
 
+
+await step('the guide stays one click away: menu item and «راهنمای این بخش»', async () => {
+  await page.click('[data-go="car-sell"]').catch(async () => {
+    await page.evaluate(() => { location.hash = '#car-sell'; });
+  });
+  await page.waitForSelector('form[data-form="car"]', { timeout: 8000 });
+  const link = page.locator('.help-link');
+  if (!(await link.count())) throw new Error('no «راهنمای این بخش» link on the car form');
+  if ((await link.getAttribute('data-go-params')) !== 'ch=car-post') {
+    throw new Error('the help link points at the wrong chapter');
+  }
+  await link.click();
+  await page.waitForSelector('.guide-body', { timeout: 8000 });
+  const title = await page.textContent('.guide-body .card-h h2');
+  if (!title.includes('وضعیت بدنه')) throw new Error('help link opened the wrong chapter: ' + title);
+  // Every image the chapter shows actually loads — a broken screenshot in a
+  // guide is worse than none.
+  const broken = await page.evaluate(() =>
+    [...document.querySelectorAll('.guide-text img')].filter((i) => !i.complete || !i.naturalWidth).map((i) => i.getAttribute('src'))
+  );
+  if (broken.length) throw new Error('broken guide images: ' + broken.join(', '));
+  if (!(await page.locator('.nav [data-go="guide"]').count())) throw new Error('no «راهنما» in the menu');
+  await page.click('[data-go="dash"]');
+  await page.waitForSelector('.stats .s-v', { timeout: 8000 });
+});
 
 /**
  * A listing this agent has certainly not revealed.
@@ -708,8 +762,11 @@ await step('the price list opens, groups by model, searches in place', async () 
   const rows = await page.locator('[data-price-list] .pr-row').count();
   if (rows < 50) throw new Error(`only ${rows} rows — is the snapshot loaded?`);
   if (!(await page.locator('.pr-model').count())) throw new Error('no model grouped its trims');
-  const stamp = await page.textContent('.card-h .tag');
-  if (!stamp.includes('به‌روزرسانی')) throw new Error('no update stamp on the page');
+  // The stamp by its words, not by position: when a car is starred, «فهرست
+  // من» sits above the list and its count chip is the first `.card-h .tag`.
+  if (!(await page.locator('.card-h .tag', { hasText: 'به‌روزرسانی' }).count())) {
+    throw new Error('no update stamp on the page');
+  }
 
   await page.fill('[data-price-search]', 'دنا');
   await page.waitForTimeout(300);
