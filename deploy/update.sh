@@ -237,9 +237,21 @@ fi
 # with the site. Weekly, four kept, compressed: about a month of history in a
 # couple of megabytes. `missingok` because a fresh server has none of these
 # yet, and `notifempty` so a quiet week does not rotate an empty file.
+#
+# The `su` line is not optional here, and its absence fails silently in the
+# worst way: logrotate refuses to touch any file whose parent directory is
+# writable by a group other than root, and /var/log on Debian and Ubuntu is
+# root:syslog 775 by design. Without it every one of these files is skipped
+# with an error only somebody running `logrotate -d` by hand would ever see —
+# so the config would look installed while nothing rotated at all. The group
+# is read off the directory rather than written in, because it is syslog on
+# some distributions and adm on others, and guessing wrong brings the silent
+# skip straight back.
 if [ -d /etc/logrotate.d ]; then
-  cat > /etc/logrotate.d/feranocar <<'ROTATE'
+  log_group=$(stat -c %G /var/log 2>/dev/null || echo root)
+  cat > /etc/logrotate.d/feranocar <<ROTATE
 /var/log/feranocar-*.log {
+    su root $log_group
     weekly
     rotate 4
     compress
@@ -250,7 +262,7 @@ if [ -d /etc/logrotate.d ]; then
 }
 ROTATE
   chmod 644 /etc/logrotate.d/feranocar
-  echo "→ cron logs set to rotate weekly (4 kept)"
+  echo "→ cron logs set to rotate weekly (4 kept, su root:$log_group)"
 fi
 
 # ---- 4. rebuild and restart ----
