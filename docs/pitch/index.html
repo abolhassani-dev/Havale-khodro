@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>فرانوکار — معرفی سامانه</title>
+<style>
+  @font-face { font-family: 'Vazirmatn'; src: url('../../frontend/assets/vazirmatn.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @page { size: 338.67mm 190.5mm; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Vazirmatn', Tahoma, sans-serif; color: #1b2422; line-height: 1.7; }
+
+  .slide { width: 338.67mm; height: 190.5mm; overflow: hidden; position: relative; break-after: page; padding: 16mm 20mm 14mm; background: #f7f5ef; }
+  .slide.dark { background: linear-gradient(135deg, #0a423c 0%, #0e5a51 60%, #178a7b 100%); color: #fff; }
+  .slide.paper { background: #ebe6d9; }
+
+  .num { position: absolute; bottom: 8mm; left: 12mm; font-size: 10pt; color: #6f7b76; direction: ltr; }
+  .dark .num { color: #ffffff99; }
+  .brandmark { position: absolute; bottom: 7mm; right: 12mm; display: flex; align-items: center; gap: 6px; font-size: 10.5pt; font-weight: 800; color: #0e5a51; }
+  .dark .brandmark { color: #fff; }
+  .brandmark svg { width: 20px; height: 20px; }
+
+  .kicker { font-size: 12.5pt; font-weight: 700; color: #a85a24; letter-spacing: .2px; margin-bottom: 2mm; }
+  .dark .kicker { color: #eec27f; }
+  h1 { font-size: 46pt; font-weight: 900; line-height: 1.25; margin: 0; }
+  h2 { font-size: 30pt; font-weight: 900; line-height: 1.3; margin: 0 0 6mm; color: #0e5a51; }
+  .dark h2 { color: #fff; }
+  p { margin: 0 0 4mm; font-size: 15pt; }
+  .big { font-size: 19pt; line-height: 1.75; }
+  .muted { color: #46524e; }
+  .dark .muted { color: #ffffffcc; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; align-items: center; height: calc(100% - 26mm); }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8mm; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7mm; }
+
+  .card { background: #fff; border: 1px solid #d5cdba; border-radius: 14px; padding: 8mm 8mm 6mm; box-shadow: 0 6px 20px #1b242214; }
+  .card h3 { margin: 0 0 2mm; font-size: 17pt; font-weight: 800; color: #0e5a51; }
+  .card p { font-size: 13pt; margin: 0; color: #46524e; }
+  .card .ic { width: 14mm; height: 14mm; border-radius: 10px; background: #0e5a5114; color: #0e5a51; display: flex; align-items: center; justify-content: center; font-size: 20pt; font-weight: 900; margin-bottom: 4mm; }
+  .card.accent { border-top: 5px solid #a85a24; }
+
+  .shot { border: 1px solid #d5cdba; border-radius: 12px; box-shadow: 0 14px 40px #1b242222; display: block; max-width: 100%; }
+
+  ul.clean { list-style: none; padding: 0; margin: 0; }
+  ul.clean li { position: relative; padding-right: 11mm; margin-bottom: 4.5mm; font-size: 15.5pt; line-height: 1.6; }
+  ul.clean li::before { content: ''; position: absolute; right: 0; top: 5.5mm; width: 6mm; height: 6mm; border-radius: 50%; background: #0e5a51; }
+  .dark ul.clean li::before { background: #eec27f; }
+  .dark .grid2 ul.clean li { font-size: 17.5pt; margin-bottom: 7mm; }
+  ul.clean li b { color: #0e5a51; }
+  .dark ul.clean li b { color: #eec27f; }
+
+  .step { display: flex; gap: 6mm; align-items: flex-start; margin-bottom: 7mm; }
+  .step .n { flex: none; width: 16mm; height: 16mm; border-radius: 50%; background: #0e5a51; color: #fff; font-size: 20pt; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+  .step h3 { margin: 0; font-size: 18pt; font-weight: 800; color: #0e5a51; }
+  .step p { font-size: 13.5pt; color: #46524e; margin: 0; }
+
+  .stat { text-align: center; }
+  .stat .v { font-size: 42pt; font-weight: 900; color: #0e5a51; line-height: 1.2; }
+  .stat .l { font-size: 13pt; color: #46524e; }
+
+  .pill { display: inline-block; background: #eec27f; color: #0a423c; border-radius: 999px; padding: 1mm 6mm; font-weight: 800; font-size: 13pt; }
+  .quote { border-right: 6px solid #eec27f; padding-right: 8mm; font-size: 22pt; font-weight: 700; line-height: 1.6; }
+  .tag { display: inline-block; background: #0e5a5114; color: #0e5a51; border-radius: 8px; padding: 0 4mm; font-weight: 700; font-size: 12.5pt; margin: 0 0 2mm 2mm; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+  .vs .col { border-radius: 14px; padding: 8mm 9mm; }
+  .vs .bad { background: #9d2b2114; border: 1px solid #9d2b2133; }
+  .vs .good { background: #2c6b4114; border: 1px solid #2c6b4133; }
+  .vs h3 { margin: 0 0 3mm; font-size: 18pt; }
+  .vs .bad h3 { color: #9d2b21; } .vs .good h3 { color: #2c6b41; }
+  .vs li { font-size: 14pt; margin-bottom: 2.5mm; }
+</style>
+</head>
+<body>
+
+<!-- ۱ جلد -->
+<section class="slide dark">
+  <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%">
+    <div style="display:flex;align-items:center;gap:8mm">
+      <svg viewBox="0 0 64 64" width="90" height="90"><rect width="64" height="64" rx="15" fill="#ffffff22"/><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5"><path stroke="#ffffff" d="M45.5 24.5 H24 M30.5 17.5 L23.5 24.5 L30.5 31.5"/><path stroke="#eec27f" d="M18.5 41.5 H40 M33.5 34.5 L40.5 41.5 L33.5 48.5"/></g></svg>
+      <div style="font-size:20pt;font-weight:800;color:#ffffffcc">فرانوکار</div>
+    </div>
+    <div>
+      <h1>بازار بسته‌ی نمایندگی‌های خودرو</h1>
+      <p class="big" style="color:#ffffffdd;max-width:250mm;margin-top:6mm">حواله، خودرو و ثبت‌نامی را با نمایندگی‌های دیگر معامله کنید — بدون اینکه شماره‌تان دست هر کسی بیفتد.</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <span class="pill">معرفی سامانه · ویژه‌ی نمایندگی‌ها</span>
+      <span style="color:#ffffff99;font-size:12pt">شهریور ۱۴۰۵</span>
+    </div>
+  </div>
+</section>
+
+<!-- ۲ مشکل -->
+<section class="slide">
+  <div class="kicker">امروز چطور معامله می‌کنیم؟</div>
+  <h2>حواله‌ای که برای فروش دارید، الان کجاست؟</h2>
+  <div class="vs" style="margin-top:6mm">
+    <div class="col bad">
+      <h3>گروه‌های تلگرام و تماس تلفنی</h3>
+      <ul class="clean" style="padding-right:0">
+        <li style="font-size:14pt">شماره‌ی شما جلوی چشم همه است — رقیب، واسطه، هر کسی.</li>
+        <li style="font-size:14pt">پیام‌ها زیر هم گم می‌شود؛ هیچ‌کس نمی‌داند کدام هنوز معتبر است.</li>
+        <li style="font-size:14pt">قیمت اعلام‌شده با قیمت پشت تلفن یکی نیست و کسی پاسخگو نیست.</li>
+        <li style="font-size:14pt">جست‌وجو ندارد. فیلتر ندارد. سابقه ندارد.</li>
+      </ul>
+    </div>
+    <div class="col good">
+      <h3>یک بازار بسته، فقط برای نمایندگی‌ها</h3>
+      <ul class="clean" style="padding-right:0">
+        <li style="font-size:14pt">هر عضو، یک نمایندگی احراز‌شده است. غریبه‌ای در بازار نیست.</li>
+        <li style="font-size:14pt">شماره‌ی شما پنهان است و فقط با تصمیم طرف مقابل باز می‌شود — و هر بار ثبت می‌شود.</li>
+        <li style="font-size:14pt">هر آگهی تاریخ انقضا دارد؛ چیزی که می‌بینید، الان معتبر است.</li>
+        <li style="font-size:14pt">قیمت اشتباه، آگهی جعلی و بدقولی، پیگرد دارد.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">۲</div>
+</section>
+
+<!-- ۳ سه بازار -->
+<section class="slide paper">
+  <div class="kicker">چه چیزی داخل سامانه است</div>
+  <h2>سه بازار، یک حساب</h2>
+  <div class="grid3" style="margin-top:4mm">
+    <div class="card">
+      <div class="ic">۱</div>
+      <h3>حواله</h3>
+      <p>حواله‌های فروش و درخواست‌های خرید. مبلغ حواله، واریزی، قیمت خودرو، نحوه پرداخت، تحویل و مدت واریز — همه روی کارت، همه قابل فیلتر.</p>
+    </div>
+    <div class="card">
+      <div class="ic">۲</div>
+      <h3>خودرو</h3>
+      <p>خودروی آماده‌ی فروش، با نقشه‌ی بدنه‌ی قطعه‌به‌قطعه، کارکرد، گارانتی و عکس. درخواست خرید با بازه‌ی سال، قیمت و بدنه‌ی قابل قبول.</p>
+    </div>
+    <div class="card">
+      <div class="ic">۳</div>
+      <h3>ثبت‌نامی</h3>
+      <p>ظرفیت طرح‌های ثبت‌نام کارخانه: قرعه‌کشی یا اولویت زمانی، نوع فروش، قیمت خودرو و مبلغ امتیاز — جدا و شفاف.</p>
+    </div>
+  </div>
+  <div class="card accent" style="margin-top:8mm;display:flex;gap:8mm;align-items:center">
+    <div style="flex:1">
+      <h3>+ قیمت روز خودروها</h3>
+      <p>قیمت بازار و کارخانه‌ی خودروهای صفر، داخلی و وارداتی، هر ۱۵ دقیقه به‌روز. خودروهای خودتان را ستاره بزنید تا همیشه بالای فهرست باشند.</p>
+    </div>
+    <div style="flex:none;font-size:13pt;color:#46524e"><span class="tag">قطعات</span> به‌زودی</div>
+  </div>
+  <div class="num">۳</div>
+</section>
+
+<!-- ۴ سه قدم -->
+<section class="slide">
+  <div class="grid2">
+    <div>
+      <div class="kicker">چطور کار می‌کند</div>
+      <h2>سه قدم، همین.</h2>
+      <div class="step"><div class="n">۱</div><div><h3>آگهی بزنید</h3><p>مدل را از کاتالوگ انتخاب کنید، ارقام را بنویسید، ثبت. شماره‌تان از پروفایل می‌آید و روی آگهی نوشته نمی‌شود.</p></div></div>
+      <div class="step"><div class="n">۲</div><div><h3>استعلام بگیرید</h3><p>در هر بازار با برند، مدل، قیمت، رنگ، سال و ده‌ها فیلتر دیگر بگردید. کارت‌ها همه‌چیز را نشان می‌دهند جز طرف مقابل.</p></div></div>
+      <div class="step"><div class="n">۳</div><div><h3>«نمایش مشخصات» را بزنید</h3><p>وقتی تصمیم گرفتید، با یک کلیک نام نمایندگی، شهر و شماره‌ی هماهنگی باز می‌شود. یک واحد از سهمیه‌ی روزانه — و همان‌جا تمام.</p></div></div>
+    </div>
+    <img class="shot" src="../guide/img/search.jpg" alt="">
+  </div>
+  <div class="num">۴</div>
+</section>
+
+<!-- ۵ اعتماد -->
+<section class="slide dark">
+  <div class="kicker">چرا می‌شود به این بازار اعتماد کرد</div>
+  <h2>طراحی‌شده برای اینکه سوءاستفاده به‌صرفه نباشد</h2>
+  <div class="grid2" style="height:auto;margin-top:8mm;align-items:start;font-size:18pt">
+    <ul class="clean">
+      <li><b>شماره پنهان است.</b> نه روی کارت، نه در متن. سامانه شماره، آیدی، لینک و نام نمایندگی را در متن آگهی نمی‌پذیرد.</li>
+      <li><b>هر «نمایش مشخصات» ثبت می‌شود.</b> چه کسی، کدام آگهی، چه ساعتی. صاحب آگهی تعداد بازدید را می‌بیند.</li>
+      <li><b>سهمیه دارد.</b> نمایش مشخصات روزانه و دوره‌ای سقف دارد؛ نمی‌شود کل بازار را یک‌شبه جمع کرد.</li>
+    </ul>
+    <ul class="clean">
+      <li><b>گزارش تخلف، دو طرفه.</b> آگهی جعلی و قیمت نادرست اخطار می‌گیرد؛ گزارش بی‌مورد هم برای گزارش‌دهنده اخطار دارد.</li>
+      <li><b>سه اخطار، تعلیق.</b> حساب متخلف از بازار حذف می‌شود، با دلیل مکتوب و امکان اعتراض.</li>
+      <li><b>هر حساب یک نشست فعال.</b> رمز دست به دست نمی‌چرخد.</li>
+    </ul>
+  </div>
+  <div class="num">۵</div>
+</section>
+
+<!-- ۶ حواله -->
+<section class="slide">
+  <div class="grid2">
+    <img class="shot" src="../guide/img/search-revealed.jpg" alt="">
+    <div>
+      <div class="kicker">بازار حواله</div>
+      <h2>کارتی که همه‌چیز را می‌گوید، جز اینکه از کیست</h2>
+      <ul class="clean">
+        <li>مبلغ حواله، مبلغ واریزشده و قیمت خودرو <b>سه عدد جدا</b> — دیگر کسی این‌ها را قاطی نمی‌کند.</li>
+        <li>صلح یا وکالتی، نقد یا اقساط، چند روز تا تحویل، چند روز مهلت واریز.</li>
+        <li>آگهی به اندازه‌ی <b>مهلت واریز</b> زنده می‌ماند و بعد خودش می‌رود؛ با یک کلیک برمی‌گردد.</li>
+        <li>بعد از باز کردن مشخصات: نام نمایندگی، شهر، مسئول هماهنگی و دکمه‌ی گزارش تخلف.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">۶</div>
+</section>
+
+<!-- ۷ خودرو: نقشه بدنه -->
+<section class="slide paper">
+  <div class="grid2">
+    <div>
+      <div class="kicker">بازار خودرو</div>
+      <h2>وضعیت بدنه، قطعه به قطعه — نه «کمی رنگ دارد»</h2>
+      <ul class="clean">
+        <li><b>۲۲ قطعه</b> در پنج گروه: گلگیرها، درب‌ها، کاپوت و صندوق و سقف، شاسی و سرشاسی، پالونی و سینی.</li>
+        <li>برای هر قطعه: رنگ جزئی، رنگ، پاشش، تعویض، آسیب. روی نقشه‌ی خودرو رنگی می‌شود.</li>
+        <li><b>درجه‌ی بدنه را سامانه حساب می‌کند</b> — بدون رنگ، رنگ جزئی، رنگ‌شده، تعویض‌دار، شاسی‌خورده. فروشنده نمی‌تواند خوش‌بینانه بنویسد.</li>
+        <li>خریدار روی همین درجه فیلتر می‌کند: «فقط بدون رنگ» یعنی فقط بدون رنگ.</li>
+      </ul>
+    </div>
+    <img class="shot" src="../guide/img/car-sell-body.jpg" alt="" style="max-height:150mm;justify-self:center">
+  </div>
+  <div class="num">۷</div>
+</section>
+
+<!-- ۸ خودرو: استعلام -->
+<section class="slide">
+  <div class="grid2">
+    <img class="shot" src="../guide/img/car-search.jpg" alt="">
+    <div>
+      <div class="kicker">بازار خودرو</div>
+      <h2>خریدار دقیقاً همان چیزی را می‌بیند که لازم دارد</h2>
+      <ul class="clean">
+        <li>مرتب‌سازی: جدیدترین، ارزان‌ترین، گران‌ترین، کم‌کارکردترین.</li>
+        <li>فیلتر روی سال، قیمت، کارکرد، نوع بدنه، درجه‌ی بدنه، گارانتی.</li>
+        <li><b>عکس‌ها فقط بعد از نمایش مشخصات باز می‌شوند</b> — روی شیشه می‌شود شماره نوشت.</li>
+        <li>درخواست خرید هم دارد: «پژو ۲۰۷، از ۱۴۰۰ به بالا، تا ۵۰ هزار کیلومتر، فقط بدون رنگ».</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">۸</div>
+</section>
+
+<!-- ۹ ثبت‌نامی + قیمت روز -->
+<section class="slide paper">
+  <div class="grid2" style="align-items:start">
+    <div>
+      <div class="kicker">بازار ثبت‌نامی</div>
+      <h2 style="font-size:24pt">ظرفیت ثبت‌نام، با ارقام جدا</h2>
+      <ul class="clean">
+        <li>نام طرح، قرعه‌کشی یا اولویت زمانی، نوع فروش، تعداد ظرفیت.</li>
+        <li><b>قیمت خودرو</b> (پول کارخانه) و <b>مبلغ امتیاز</b> (پول واگذاری) دو خانه‌ی جدا هستند.</li>
+        <li>آگهی تا مهلت خود طرح زنده است؛ بعد از آن خودش بسته می‌شود.</li>
+      </ul>
+      <img class="shot" src="../guide/img/reg-search.jpg" alt="" style="margin-top:4mm;max-height:62mm">
+    </div>
+    <div>
+      <div class="kicker">قیمت روز خودروها</div>
+      <h2 style="font-size:24pt">مرجع قیمت، همیشه جلوی دست</h2>
+      <ul class="clean">
+        <li>قیمت بازار و کارخانه، فاصله‌ی این دو، و تغییر امروز — برای هر تیپ.</li>
+        <li>هر ۱۵ دقیقه به‌روز؛ اگر منبع از کار بیفتد، تاریخِ آخرین قیمت معتبر را می‌بینید، نه عدد غلط.</li>
+        <li>«فهرست من»: خودروهای خودتان همیشه بالای صفحه.</li>
+      </ul>
+      <img class="shot" src="../guide/img/car-prices-pick.jpg" alt="" style="margin-top:4mm;max-height:62mm">
+    </div>
+  </div>
+  <div class="num">۹</div>
+</section>
+
+<!-- ۱۰ نمایندگی مرکزی -->
+<section class="slide">
+  <div class="grid2">
+    <div>
+      <div class="kicker">برای نمایندگی‌های مرکزی</div>
+      <h2>شعبه‌ها زیر چتر شما، با حساب خودشان</h2>
+      <ul class="clean">
+        <li>برای هر شعبه حساب جدا می‌سازید؛ کد شعبه از کد شما مشتق می‌شود (G-1001 → G-1001-01).</li>
+        <li><b>یک اشتراک برای همه.</b> تمدید شما همان لحظه شعبه‌ها را هم پوشش می‌دهد.</li>
+        <li>هر شعبه سهمیه‌ی نمایش مشخصاتِ خودش را دارد.</li>
+        <li>تعیین می‌کنید هر شعبه روی کدام برندها آگهی بزند. آگهی‌های شعبه‌ها را می‌بینید؛ می‌توانید شعبه را همان لحظه تعلیق کنید.</li>
+      </ul>
+    </div>
+    <img class="shot" src="../guide/img/sub-agents.jpg" alt="">
+  </div>
+  <div class="num">۱۰</div>
+</section>
+
+<!-- ۱۱ گوشی + پشتیبانی -->
+<section class="slide paper">
+  <div class="grid2" style="grid-template-columns: 1.3fr 1fr">
+    <div>
+      <div class="kicker">در عمل</div>
+      <h2>روی گوشی، بدون نصب</h2>
+      <ul class="clean">
+        <li>در مرورگر گوشی و کامپیوتر یکسان کار می‌کند. چیزی نصب نمی‌شود، چیزی به‌روز نمی‌خواهد.</li>
+        <li><b>داشبورد</b> می‌گوید کدام آگهی‌ها دارند تمام می‌شوند و از سهمیه‌ی امروز چقدر مانده.</li>
+        <li><b>اطلاعیه‌ها</b> هر تصمیمی درباره‌ی حساب شما را با دلیل می‌نویسد — و دکمه‌ی اعتراض همان‌جاست.</li>
+        <li><b>پشتیبانی</b> داخل خود سامانه است: موضوع را انتخاب می‌کنید، پاسخ در همان صفحه می‌آید. با اشتراک منقضی هم باز است.</li>
+        <li>یک راهنمای تصویری کامل همراه سامانه است؛ هر بخش، یک فصل.</li>
+      </ul>
+    </div>
+    <div style="display:flex;gap:6mm;justify-content:center">
+      <img class="shot" src="../guide/img/phone-menu.jpg" alt="" style="max-height:140mm">
+      <img class="shot" src="../guide/img/phone-search.jpg" alt="" style="max-height:140mm">
+    </div>
+  </div>
+  <div class="num">۱۱</div>
+</section>
+
+<!-- ۱۲ اشتراک -->
+<section class="slide">
+  <div class="kicker">عضویت</div>
+  <h2>اشتراک ماهانه، بدون سقف آگهی</h2>
+  <div class="grid3" style="margin-top:10mm;font-size:15pt">
+    <div class="card"><div class="ic">∞</div><h3>آگهی نامحدود</h3><p>در هر سه بازار، هر تعداد که بخواهید. آگهی‌ها تاریخ انقضا دارند، سقف تعداد ندارند.</p></div>
+    <div class="card"><div class="ic">۳۰</div><h3>نمایش مشخصات در روز</h3><p>و ۳۰۰ در هر دوره. مشترک بین سه بازار. باز کردن دوباره‌ی همان آگهی رایگان است.</p></div>
+    <div class="card"><div class="ic">✓</div><h3>همه‌ی ابزارها</h3><p>قیمت روز، اطلاعیه‌ها، پشتیبانی و مدیریت شعبه‌ها. حساب شعبه با ظرفیت جداگانه اضافه می‌شود.</p></div>
+  </div>
+  <p class="muted" style="margin-top:14mm;font-size:15.5pt;max-width:280mm">وقتی اشتراک تمام شود، حساب بسته نمی‌شود: بازار را می‌بینید، فقط مشخصات تماس پنهان می‌ماند و ثبت آگهی بسته است. تمدید از روز ثبت شروع می‌شود، نه از تاریخ انقضا.</p>
+  <div class="num">۱۲</div>
+</section>
+
+<!-- ۱۳ پایان -->
+<section class="slide dark">
+  <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%">
+    <div>
+      <div class="kicker">شروع</div>
+      <h1 style="font-size:40pt">هر نمایندگی که وارد می‌شود، بازار را برای همه بزرگ‌تر می‌کند.</h1>
+    </div>
+    <div class="grid3" style="gap:10mm">
+      <div><div style="font-size:30pt;font-weight:900;color:#eec27f">۱</div><p style="color:#ffffffdd">حساب نمایندگی شما ساخته می‌شود و نام کاربری را می‌گیرید.</p></div>
+      <div><div style="font-size:30pt;font-weight:900;color:#eec27f">۲</div><p style="color:#ffffffdd">در اولین ورود رمز خودتان را می‌گذارید و برندهای مجازتان تعیین می‌شود.</p></div>
+      <div><div style="font-size:30pt;font-weight:900;color:#eec27f">۳</div><p style="color:#ffffffdd">اولین حواله را ثبت می‌کنید. از همان لحظه در استعلام بقیه دیده می‌شود.</p></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="pill">فرانوکار · feranocar.com</span>
+      <span style="color:#ffffff99;font-size:12pt">برای عضویت با ما تماس بگیرید</span>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
