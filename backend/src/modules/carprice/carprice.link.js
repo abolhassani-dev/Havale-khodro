@@ -12,7 +12,7 @@
  * which has no answer. Reading catalogue model → price line asks «which line
  * covers this car?», which usually does: the model's own name carries the
  * words that pick the line out. Measured on the real data, the first
- * direction linked 53 cars and got several of them wrong; this one links 202
+ * direction linked 53 cars and got several of them wrong; this one links 142
  * and the domestic ones check out by hand.
  *
  * Two rules keep it honest.
@@ -25,6 +25,12 @@
  *   alone. «پژو 207 پانوراما اتوماتیک TU5» is covered by both «پژو 207
  *   اتوماتیک» and «پژو 207 اتوماتیک پانوراما»; the second says more and is
  *   right. A tie links nothing.
+ *
+ * Both sides are folded the same way first, because the same car is spelled
+ * two ways: «جک J4» against «جک جی 4», «راناپلاس» against «رانا پلاس»,
+ * «7 نفره» against «هفت نفره», «وانت آریسان» against «آریسان». Each of those
+ * was found by taking a marque that got no price at all and asking why; none
+ * of them guesses which car is which.
  *
  * Whatever is left over shows no price at all, and that is the point. A
  * missing line costs a reader nothing; a wrong one costs the reference we are
@@ -68,7 +74,117 @@ function priceKey(name) {
   return fold(name);
 }
 
-const words = (text) => fold(text).split(' ').filter(Boolean);
+/**
+ * Spellings that mean the same car and are written differently on each side.
+ *
+ * Every entry below was found by looking at a brand that got no price at all
+ * and asking why. None of them is a guess about which car is which — they are
+ * all the same name typed two ways.
+ */
+
+/**
+ * «جک جی 4» on our side, «جک J4» on theirs. The letter said aloud, or written.
+ *
+ * Only ever glued to a digit beside it, and both lists go through the same
+ * function, so the letter chosen matters far less than choosing it
+ * consistently: «ام جی 5» folds the same way on either side either way.
+ */
+const LETTER_SAID = {
+  جی: 'j',
+  اس: 's',
+  ایکس: 'x',
+  اچ: 'h',
+  ای: 'e',
+  کیو: 'q',
+  زد: 'z',
+  آر: 'r',
+  تی: 't',
+  وی: 'v',
+  دی: 'd',
+  ال: 'l',
+  ام: 'm',
+  ان: 'n',
+  اف: 'f',
+};
+
+/** «هفت نفره» here, «7 نفره» there. */
+const NUMBER_SAID = {
+  یک: '1',
+  دو: '2',
+  سه: '3',
+  چهار: '4',
+  پنج: '5',
+  شش: '6',
+  هفت: '7',
+  هشت: '8',
+  نه: '9',
+  ده: '10',
+};
+
+/**
+ * A body shape the source puts in front of the name, which is not part of it.
+ *
+ * «وانت آریسان» is an آریسان. Only stripped from the front, because in the
+ * middle of a name the same word can be the model — «نیسان ترا پیکاپ».
+ */
+const SHAPE_PREFIX = new Set(['وانت', 'پیکاپ', 'ون']);
+
+/**
+ * The words of a name, in the one spelling both sides can be compared in.
+ *
+ * «جی» followed by «4» becomes «j4», because the source writes the letter and
+ * we spell it out. Same for «هفت» before «نفره». A leading body shape is
+ * dropped.
+ */
+function words(text) {
+  const raw = fold(text).split(' ').filter(Boolean);
+  const out = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const w = raw[i];
+    if (!out.length && SHAPE_PREFIX.has(w) && raw.length > 1) continue;
+    const letter = LETTER_SAID[w];
+    const next = raw[i + 1];
+    // «جی 4» → «g4»: a spoken letter glued to the number that follows it.
+    if (letter && next && /^\d+$/.test(next)) {
+      out.push(`${letter}${next}`);
+      i += 1;
+      continue;
+    }
+    // «8 اس» → «8s», the same thing the other way round.
+    if (/^\d+$/.test(w) && next && LETTER_SAID[next]) {
+      out.push(`${w}${LETTER_SAID[next]}`);
+      i += 1;
+      continue;
+    }
+    out.push(NUMBER_SAID[w] || w);
+  }
+  return out;
+}
+
+/** The name with every space closed up: «رانا پلاس» and «راناپلاس» meet here. */
+const squeeze = (text) => words(text).join('');
+
+/**
+ * Every run of neighbouring words in a name, run together.
+ *
+ * «رانا پلاس موتور TU5» yields «رانا», «راناپلاس», «راناپلاسموتور» and so on,
+ * so a source that wrote «راناپلاس» without the space still finds its car.
+ *
+ * Runs rather than a plain substring search, because a substring cannot see
+ * where a word ends: «آریزو5» sits inside «چریآریزو5tie», and an آریزو 5T is
+ * not an آریزو 5. Testing whole runs puts the boundary back.
+ */
+function joinedRuns(list) {
+  const out = new Set();
+  for (let i = 0; i < list.length; i += 1) {
+    let run = '';
+    for (let j = i; j < list.length; j += 1) {
+      run += list[j];
+      out.add(run);
+    }
+  }
+  return out;
+}
 
 /* Every catalogue name below was read out of the brand table, not guessed. */
 const BRAND_ALIASES = {
@@ -142,7 +258,13 @@ function buildFamilies(items) {
     const key = priceKey(item.name);
     if (!key) continue;
     if (!map.has(key)) {
-      map.set(key, { key, brand: item.brand, name: item.name, words: words(item.name) });
+      map.set(key, {
+        key,
+        brand: item.brand,
+        name: item.name,
+        words: words(item.name),
+        squeezed: squeeze(item.name),
+      });
     }
   }
   return [...map.values()];
@@ -155,9 +277,14 @@ function buildFamilies(items) {
  * @param {Array} families                          from `buildFamilies`
  */
 function bestMatch(model, families) {
-  const has = new Set(words(model.name));
+  const mine = words(model.name);
+  const has = new Set(mine);
+  const runs = joinedRuns(mine);
   const fits = families.filter(
-    (f) => f.words.length && f.words.every((w) => has.has(w)) && brandAgrees(f.brand, model.brand)
+    (f) =>
+      f.words.length &&
+      brandAgrees(f.brand, model.brand) &&
+      (f.words.every((w) => has.has(w)) || runs.has(f.squeezed))
   );
   if (!fits.length) return null;
   const longest = Math.max(...fits.map((f) => f.words.length));
@@ -168,6 +295,7 @@ function bestMatch(model, families) {
 }
 
 module.exports = {
+  squeeze,
   fold,
   priceKey,
   words,
