@@ -169,15 +169,30 @@ function groupModels(items) {
   return [...map.values()].map((rows) => {
     const label = rows.length > 1 ? commonPrefix(rows.map((r) => r.name)) || rows[0].name : rows[0].name;
     const prices = rows.map((r) => r.price).filter((p) => p !== null);
-    // The trim that moved the most today speaks for the model on its line.
+    // The trim that moved the most today speaks for the model on its line —
+    // and «most» is the largest amount, because the line reads «تا ۹۰۰ میلیون»:
+    // a reader takes that as the biggest move among the trims, and a کمری
+    // 2.0 up 700 million at 7.8% must not outrank a لومیر up 900 million at
+    // 5.4% on a line that promises an amount. The percentage picks the trim
+    // only when the amounts tie.
     const moved = rows.filter((r) => r.change && r.direction !== 'FLAT');
-    const top = moved.length ? moved.reduce((a, b) => ((b.changePct || 0) > (a.changePct || 0) ? b : a)) : null;
+    const amount = (r) => Math.abs(Number(r.change) || 0);
+    const top = moved.length
+      ? moved.reduce((a, b) =>
+          amount(b) > amount(a) || (amount(b) === amount(a) && (b.changePct || 0) > (a.changePct || 0)) ? b : a
+        )
+      : null;
+    // Ranking models against each other is a different question, and there
+    // the percentage is the fair measure: a car at two billion moves more
+    // toman than one at four hundred million on the same news.
+    const topPct = moved.length ? Math.max(...moved.map((r) => r.changePct || 0)) : 0;
     return {
       label,
       rows,
       min: prices.length ? Math.min(...prices) : null,
       max: prices.length ? Math.max(...prices) : null,
       top,
+      topPct,
       order: Math.min(...rows.map((r) => r.sortOrder)),
     };
   });
@@ -198,7 +213,7 @@ function applyFilters(items, params, watching) {
 }
 
 function sortModels(models, sort) {
-  const pct = (m) => (m.top ? m.top.changePct || 0 : 0);
+  const pct = (m) => m.topPct || 0;
   const by = {
     change: (a, b) => pct(b) - pct(a) || a.order - b.order,
     expensive: (a, b) => (b.max ?? -1) - (a.max ?? -1) || a.order - b.order,

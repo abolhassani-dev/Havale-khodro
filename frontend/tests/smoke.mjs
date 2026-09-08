@@ -134,9 +134,13 @@ await step('the guide stays one click away: menu item and «راهنمای ای�
   if (!title.includes('وضعیت بدنه')) throw new Error('help link opened the wrong chapter: ' + title);
   // Every image the chapter shows actually loads — a broken screenshot in a
   // guide is worse than none.
-  const broken = await page.evaluate(() =>
-    [...document.querySelectorAll('.guide-text img')].filter((i) => !i.complete || !i.naturalWidth).map((i) => i.getAttribute('src'))
-  );
+  const broken = await page.evaluate(async () => {
+    const imgs = [...document.querySelectorAll('.guide-text img')];
+    // Wait for every picture to finish loading first; the chapter has only just
+    // opened, and a picture still on its way is not a broken one.
+    await Promise.all(imgs.map((i) => (i.complete ? null : new Promise((r) => { i.onload = r; i.onerror = r; }))));
+    return imgs.filter((i) => !i.naturalWidth).map((i) => i.getAttribute('src'));
+  });
   if (broken.length) throw new Error('broken guide images: ' + broken.join(', '));
   if (!(await page.locator('.nav [data-go="guide"]').count())) throw new Error('no «راهنما» in the menu');
   await page.click('[data-go="dash"]');
@@ -767,6 +771,27 @@ await step('the price list opens, groups by model, searches in place', async () 
   if (!(await page.locator('.card-h .tag', { hasText: 'به‌روزرسانی' }).count())) {
     throw new Error('no update stamp on the page');
   }
+  // The model line says «تا N میلیون»: N has to be the largest move among its
+  // trims, not the largest percentage. A کمری line said «تا ۷۰۰» over a trim
+  // that had moved ۹۰۰.
+  const wrong = await page.evaluate(() => {
+    const digits = (t) => Number(String(t).replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d.]/g, ''));
+    const amount = (el) => {
+      const chg = el.querySelector('.pr-chg .num');
+      if (!chg) return null;
+      const n = digits(chg.textContent);
+      return /میلیارد/.test(chg.textContent) ? n * 1000 : n;
+    };
+    const bad = [];
+    for (const model of document.querySelectorAll('[data-price-list] .pr-model')) {
+      const head = amount(model);
+      const trims = [...model.querySelectorAll('.pr-row')].map(amount).filter((n) => n !== null && n > 0);
+      if (head === null || !trims.length) continue;
+      if (Math.max(...trims) !== head) bad.push(`${model.querySelector('.pr-name, b')?.textContent?.trim()}: تا ${head} ولی بیشترین ${Math.max(...trims)}`);
+    }
+    return bad;
+  });
+  if (wrong.length) throw new Error('model line understates the biggest move: ' + wrong.slice(0, 3).join(' | '));
 
   await page.fill('[data-price-search]', 'دنا');
   await page.waitForTimeout(300);
