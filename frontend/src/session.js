@@ -13,7 +13,11 @@ import { toast } from './ui/feedback.js';
  */
 export async function boot() {
   try {
-    const user = await auth.me();
+    const { user } = await auth.session();
+    if (!user) {
+      setState({ user: null, access: null });
+      return null;
+    }
     // Only an agency has a subscription. This used to ask for one on behalf of
     // anybody who was not an administrator, which was the same thing until the
     // DEVELOPER role existed — a role that is neither. The 403 that came back

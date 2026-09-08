@@ -78,21 +78,21 @@ export function jalaliDate(
   <div class="jdt" data-jdt>
     <input type="hidden" name="${name}" value="${value}">
     <div class="jdt-row">
-      <select class="in" id="${labelId}" data-jdt-part="day" aria-label="روز">
+      <select class="in" id="${labelId}" data-jdt-part="day" aria-label="روز" autocomplete="off">
         <option value="">روز</option>
         ${Array.from({ length: days }, (_, i) => i + 1).map(
           (d) => html`<option value="${d}" ${chosen(d, set?.jd)}>${faDigits(d)}</option>`
         )}
       </select>
 
-      <select class="in" data-jdt-part="month" aria-label="ماه">
+      <select class="in" id="${labelId}-month" data-jdt-part="month" aria-label="ماه" autocomplete="off">
         <option value="">ماه</option>
         ${JALALI_MONTHS.map(
           (label, i) => html`<option value="${i + 1}" ${chosen(i + 1, set?.jm)}>${label}</option>`
         )}
       </select>
 
-      <select class="in" data-jdt-part="year" aria-label="سال">
+      <select class="in" id="${labelId}-year" data-jdt-part="year" aria-label="سال" autocomplete="off">
         <option value="">سال</option>
         ${list.map((jy) => html`<option value="${jy}" ${chosen(jy, set?.jy)}>${faDigits(jy)}</option>`)}
       </select>

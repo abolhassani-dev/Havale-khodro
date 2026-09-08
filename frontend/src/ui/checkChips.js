@@ -23,7 +23,7 @@ export function checkChips(name, options, selected) {
     <input type="hidden" name="${name}" value="${[...on].join(',')}">
     ${options.map(
       ([value, label]) => html`<label class="fchip ${on.has(value) ? 'on' : ''}">
-        <input type="checkbox" data-chip="${value}" ${raw(on.has(value) ? 'checked' : '')}>
+        <input type="checkbox" id="chip-${name}-${value}" data-chip="${value}" ${raw(on.has(value) ? 'checked' : '')}>
         <span>${label}</span>
       </label>`
     )}

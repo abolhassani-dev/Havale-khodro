@@ -69,6 +69,22 @@ router.get('/me', authenticate, controller.me);
 
 /**
  * @openapi
+ * /auth/session:
+ *   get:
+ *     tags: [Auth]
+ *     summary: The signed-in user, or null — never 401
+ *     description: >
+ *       For the panel's first request on every load. A visitor with no session
+ *       gets `{ user: null }` with 200, so the login page does not open with a
+ *       failed request in the console.
+ *     security: []
+ *     responses:
+ *       200: { description: The user, or null }
+ */
+router.get('/session', controller.session);
+
+/**
+ * @openapi
  * /auth/guide-seen:
  *   post:
  *     tags: [Auth]

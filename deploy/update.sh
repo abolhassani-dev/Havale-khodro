@@ -271,13 +271,31 @@ echo "→ rebuilding"
 # the previous image. The usual reason for one here is the route to the npm
 # registry dropping mid-install; the Dockerfile keeps npm's cache between
 # builds, so simply running this script again resumes rather than restarts.
-if ! docker compose up -d --build; then
+build_log=$(mktemp)
+if ! docker compose up -d --build 2>&1 | tee "$build_log"; then
   echo
   echo "✗ ساخت ایمیج تمام نشد — سایت با نسخه‌ی قبلی بالا مانده است." >&2
-  echo "  اگر خطا network/ETIMEDOUT بود، همین دستور را دوباره اجرا کنید:" >&2
-  echo "  دانلودهای انجام‌شده در کش می‌مانند و ادامه از همان‌جا گرفته می‌شود." >&2
+  # Docker Hub answers 403 to many Iranian addresses. The build then dies on
+  # the very first line — resolving node:20-slim — before a byte of our own
+  # code is touched, and the message reads like a broken Dockerfile. The cure
+  # is a registry mirror, set once on the daemon.
+  if grep -q "registry-1.docker.io.*403\|403 Forbidden" "$build_log"; then
+    echo "  Docker Hub به این سرور جواب ۴۰۳ می‌دهد (مسدود است). یک آینه‌ی داخلی به داکر بدهید — یک بار:" >&2
+    echo >&2
+    echo "    cat > /etc/docker/daemon.json <<'JSON'" >&2
+    echo "    { \"registry-mirrors\": [\"https://docker.arvancloud.ir\", \"https://registry.docker.ir\"] }" >&2
+    echo "    JSON" >&2
+    echo "    systemctl restart docker && cd $ROOT && ./deploy/update.sh" >&2
+    echo >&2
+    echo "  (اگر قبلاً daemon.json با کلید dns دارید، همین کلید را کنار آن اضافه کنید؛ فایل باید یک JSON معتبر بماند.)" >&2
+  else
+    echo "  اگر خطا network/ETIMEDOUT بود، همین دستور را دوباره اجرا کنید:" >&2
+    echo "  دانلودهای انجام‌شده در کش می‌مانند و ادامه از همان‌جا گرفته می‌شود." >&2
+  fi
+  rm -f "$build_log"
   exit 1
 fi
+rm -f "$build_log"
 
 # `web` is an unchanged stock nginx image, so compose leaves it running and it
 # keeps both its old mounts and its old configuration. Recreating it explicitly

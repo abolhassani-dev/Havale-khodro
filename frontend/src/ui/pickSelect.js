@@ -66,8 +66,8 @@ export function pickSelect(name, options, {
     </button>
 
     <div class="pk-pop" hidden data-pk-pop>
-      <input class="in pk-q" type="search" data-pk-search placeholder="${searchLabel}"
-             aria-label="${searchLabel}">
+      <input class="in pk-q" type="search" id="${name}-q" data-pk-search placeholder="${searchLabel}"
+             aria-label="${searchLabel}" autocomplete="off">
       <div class="pk-list" data-pk-list role="listbox">
         ${options.map(
           (o) => html`<button type="button" class="pk-opt ${o.value === value ? 'on' : ''}"

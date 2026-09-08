@@ -411,7 +411,7 @@ function brandChips(items, selected) {
     <input type="hidden" name="brands" value="${[...on].join(',')}">
     ${[...counts].map(
       ([name, n]) => html`<label class="fchip ${on.has(name) ? 'on' : ''}">
-        <input type="checkbox" data-chip="${name}" ${raw(on.has(name) ? 'checked' : '')}>
+        <input type="checkbox" id="pb-${name}" data-chip="${name}" ${raw(on.has(name) ? 'checked' : '')}>
         <span>${name}</span><small class="num">${faDigits(n)} خودرو</small>
       </label>`
     )}
@@ -478,7 +478,7 @@ export function carPricesPage() {
           </div>
           <label class="pr-search">
             ${icon('search', 15)}
-            <input type="search" data-price-search placeholder="جستجوی نام خودرو در همه‌ی برندها…" autocomplete="off">
+            <input type="search" id="price-search" data-price-search placeholder="جستجوی نام خودرو در همه‌ی برندها…" autocomplete="off">
           </label>
         </div>
 

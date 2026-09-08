@@ -226,6 +226,25 @@ function paintBusy(busy) {
   return true;
 }
 
+/**
+ * Every field says what the browser may autofill into it.
+ *
+ * Chrome lists each text field without an `autocomplete` attribute as an
+ * issue, and a panel with a hundred filter boxes is a hundred issues. Fields
+ * that mean something to autofill — username, password, telephone — carry
+ * their own value in the markup; everything else is a search box, a filter or
+ * a figure, and «off» is the honest answer. Done here, once, after the page is
+ * in the document, so a field added next month is covered without anybody
+ * remembering.
+ */
+const NO_AUTOFILL = new Set(['hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'reset', 'range', 'color']);
+function settleAutocomplete(scope) {
+  for (const el of scope.querySelectorAll('input, select, textarea')) {
+    if (NO_AUTOFILL.has(el.type) || el.hasAttribute('autocomplete')) continue;
+    el.setAttribute('autocomplete', 'off');
+  }
+}
+
 function render() {
   const state = getState();
   const root = document.getElementById('root');
@@ -237,6 +256,7 @@ function render() {
   if (signed && drawn && Object.keys(sig).every((k) => sig[k] === drawn[k])) {
     if (paintBusy(Boolean(state.navigating))) {
       document.getElementById('layer').innerHTML = String(html`${renderModal()}${renderToast()}`);
+      settleAutocomplete(document.getElementById('layer'));
       return;
     }
   }
@@ -267,6 +287,8 @@ function render() {
   }
 
   document.getElementById('layer').innerHTML = String(html`${renderModal()}${renderToast()}`);
+  settleAutocomplete(root);
+  settleAutocomplete(document.getElementById('layer'));
   labelTables();
 }
 

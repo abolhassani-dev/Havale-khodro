@@ -88,6 +88,23 @@ maybe('authentication', () => {
     expect(after.body.data.guideSeen).toBe(true);
   });
 
+  /**
+   * The panel's first request on every load. A visitor is not an error.
+   */
+  it('answers the session probe with 200 and null when nobody is signed in', async () => {
+    const res = await request(app).get(api('/auth/session'));
+    expect(res.status).toBe(200);
+    expect(res.body.data.user).toBeNull();
+  });
+
+  it('answers the session probe with the user once signed in', async () => {
+    const cookie = cookieFrom(await login(agent.username, PASSWORD));
+    const res = await request(app).get(api('/auth/session')).set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.username).toBe(agent.username);
+    expect(res.body.data.user.passwordHash).toBeUndefined();
+  });
+
   it('signs in and sets an httpOnly session cookie', async () => {
     const res = await login(agent.username, PASSWORD);
 

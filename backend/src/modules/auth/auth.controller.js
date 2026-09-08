@@ -2,6 +2,7 @@ const authService = require('./auth.service');
 const asyncHandler = require('../../utils/asyncHandler');
 const { success } = require('../../responses/apiResponse');
 const { MESSAGES } = require('../../constants/messages');
+const { toPublicUser } = require('../user/user.dto');
 const config = require('../../config');
 const logger = require('../../utils/logger');
 
@@ -89,6 +90,26 @@ const authController = {
   me: asyncHandler(async (req, res) => {
     const user = await authService.me(req.user.id);
     return success(res, user);
+  }),
+
+  /**
+   * «Is anybody signed in?» — answered with 200 either way.
+   *
+   * The panel asks this on every page load, before it knows whether there is
+   * a session. Asking /auth/me instead answered 401 to a visitor who simply
+   * had not signed in yet, and the browser printed that as an error on the
+   * login page. Not signed in is not an error; it is the usual state of a
+   * login page.
+   */
+  session: asyncHandler(async (req, res) => {
+    const token = req.cookies[config.session.cookieName];
+    if (!token) return success(res, { user: null });
+    try {
+      const { user } = await authService.resolveSession(token);
+      return success(res, { user: toPublicUser(user) });
+    } catch {
+      return success(res, { user: null });
+    }
   }),
 
   guideSeen: asyncHandler(async (req, res) => {

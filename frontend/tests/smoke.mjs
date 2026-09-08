@@ -148,6 +148,40 @@ await step('the guide stays one click away: menu item and «راهنمای ای�
 });
 
 /**
+ * Chrome's two form-field complaints, kept at zero.
+ *
+ * «A form field element should have an id or name attribute» and «An element
+ * doesn't have an autocomplete attribute» — a hundred of them on one page,
+ * from filter chips and brand tick-boxes. Counted the way DevTools counts
+ * them, on the pages with the most fields, with the filters open.
+ */
+const fieldIssues = () =>
+  page.evaluate(() => {
+    const skip = new Set(['hidden', 'submit', 'button', 'reset', 'image']);
+    const fields = [...document.querySelectorAll('input,select,textarea')].filter((el) => !skip.has(el.type));
+    const textLike = new Set(['text', 'password', 'email', 'tel', 'search', 'number', 'url', 'textarea', 'select-one', 'select-multiple']);
+    const noIdName = fields.filter((el) => !el.id && !el.name).length;
+    const noAuto = fields.filter((el) => textLike.has(el.type) && !el.hasAttribute('autocomplete')).length;
+    return { noIdName, noAuto, fields: fields.length };
+  });
+
+await step('no form field is missing an id/name or an autocomplete', async () => {
+  const bad = [];
+  for (const route of ['search', 'car-search', 'car-sell', 'car-prices', 'reg-offer', 'new-offer', 'profile']) {
+    await page.evaluate((r) => { location.hash = '#' + r; }, route);
+    await page.waitForTimeout(500);
+    const f = page.locator('.filters-box > summary');
+    if (await f.count()) { await f.click(); await page.waitForTimeout(150); }
+    const r = await fieldIssues();
+    if (!r.fields) throw new Error(`${route}: no fields found — did the page render?`);
+    if (r.noIdName || r.noAuto) bad.push(`${route}: ${r.noIdName} without id/name, ${r.noAuto} without autocomplete`);
+  }
+  if (bad.length) throw new Error(bad.join(' | '));
+  await page.evaluate(() => { location.hash = '#dash'; });
+  await page.waitForSelector('.stats .s-v', { timeout: 8000 });
+});
+
+/**
  * A listing this agent has certainly not revealed.
  *
  * The masking checks below are the most important in the suite, and they can

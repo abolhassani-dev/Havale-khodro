@@ -12,6 +12,9 @@ export const auth = {
   login: (username, password) => api.post('/auth/login', { username, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  // The first question on every load. Answers 200 with a null user when
+  // nobody is signed in, so the login page opens clean.
+  session: () => api.get('/auth/session'),
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
   guideSeen: () => api.post('/auth/guide-seen'),

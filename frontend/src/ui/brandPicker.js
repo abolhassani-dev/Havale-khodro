@@ -81,7 +81,7 @@ export function brandPicker(
 
     ${note ? html`<div class="hint bpick-note">${note}</div>` : ''}
 
-    <input class="in bpick-q" type="search" data-brand-search
+    <input class="in bpick-q" type="search" id="bpick-q" data-brand-search autocomplete="off"
            placeholder="جستجوی برند — مثلاً پژو یا peugeot" aria-label="جستجوی برند">
 
     <div class="bpick-body">
@@ -95,7 +95,7 @@ export function brandPicker(
                            data-grants="${grants.join(',')}">
             <div class="bpick-row">
               <label class="bpick-item">
-                <input type="checkbox" data-brand="${b.id}" ${raw(on.has(b.id) ? 'checked' : '')}>
+                <input type="checkbox" id="bpick-${b.id}" data-brand="${b.id}" ${raw(on.has(b.id) ? 'checked' : '')}>
                 ${
                   b.logo
                     ? html`<img src="/assets/brands/${b.logo}" alt="" loading="lazy">`
