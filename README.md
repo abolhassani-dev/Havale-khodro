@@ -95,7 +95,7 @@ frontend/         پنل — ES module خام، بدون build
   src/ui/         html.js (escape پیش‌فرض)، format.js (شمسی)، اجزای مشترک
 deploy/           اسکریپت‌های سرور — update، backup، nightly، preflight، nginx
 docs/             ⬅ از handover.md شروع کنید؛ توسعه‌دهنده‌ی جدید: docs/onboarding/
-mockup/           طرح تأییدشده‌ی اولیه. مرجع تاریخی، نه کد زنده
+archive/          هرچه تاریخی یا اسکلت اولیه است — اجرا و سرو نمی‌شود (archive/README.md)
 security/         ارزیابی امنیتی
 ```
 
@@ -110,7 +110,6 @@ security/         ارزیابی امنیتی
 | [`deploy/README.md`](deploy/README.md) | کدام اسکریپت سرور را کِی بزنیم |
 | [`docs/blueprint.md`](docs/blueprint.md) | نیازمندی‌های اولیه‌ی محصول |
 | [`docs/deployment.md`](docs/deployment.md) | نصب سرور از صفر، TLS، بکاپ |
-| [`docs/monitoring-design.md`](docs/monitoring-design.md) | طراحی لاگ‌گیری و لاگ امنیتی |
 | [`docs/launch-checklist.md`](docs/launch-checklist.md) | کارهای پیش از اولین نمایندگی واقعی |
 | [`backend/README.md`](backend/README.md) | جزئیات API |
 | [`frontend/README.md`](frontend/README.md) | قاعده‌های پنل |

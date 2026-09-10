@@ -45,7 +45,7 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
 /** Files worth reading: the source we wrote, not what npm installed. */
 function walk(dir, out = []) {
-  const skip = new Set(['node_modules', '.git', 'coverage', 'dist', '.cache', 'pw-browsers']);
+  const skip = new Set(['node_modules', '.git', 'coverage', 'dist', '.cache', 'pw-browsers', 'archive']);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (skip.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
@@ -80,11 +80,11 @@ function stripComments(text) {
     .replace(/(^|[^:])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
 }
 
-// `mockup/` is the approved design mockup: never built, never served (nginx's
+// `archive/` holds the phase-one mockup and other retired files: never built, never served (nginx's
 // root is `frontend/`). Auditing it buries the real findings under sixty
 // inline onclick handlers that no user can reach.
 const code = ALL.filter(
-  (f) => /\.(js|mjs|cjs)$/.test(f) && !/\/(tests?|security|mockup)\//.test(f)
+  (f) => /\.(js|mjs|cjs)$/.test(f) && !/\/(tests?|security|archive)\//.test(f)
 );
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,13 +1,13 @@
 # سامانه حواله خودرو — فاز ۱
 
-سند کامل طراحی: **`docs/blueprint.pdf`** (نسخه ۵ — تصمیم‌ها + ۳۰ اصلاح در سه دور بازبینی).
-منبع تولید آن PDF: `docs/blueprint.html`. مدل داده: `prisma/schema.prisma`.
+سند کامل طراحی: **`archive/docs/blueprint.pdf`** (نسخه ۵ — تصمیم‌ها + ۳۰ اصلاح در سه دور بازبینی).
+منبع تولید آن PDF: `archive/docs/blueprint.html`. مدل داده: `prisma/schema.prisma`.
 
 بازتولید PDF بعد از ویرایش HTML:
 
 ```bash
 chromium --headless --no-pdf-header-footer \
-  --print-to-pdf=docs/blueprint.pdf docs/blueprint.html
+  --print-to-pdf=archive/docs/blueprint.pdf archive/docs/blueprint.html
 ```
 
 ---

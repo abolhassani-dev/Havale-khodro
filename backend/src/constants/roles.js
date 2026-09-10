@@ -3,7 +3,7 @@
  *
  * The three admin roles exist so that hiring a support person does not hand them
  * the contact data the business rests on — see the access table in
- * docs/blueprint.pdf, clause 11.12.
+ * docs/blueprint.md, clause 11.12.
  *
  * Above them sit two roles that the rest of the system cannot see at all. That
  * is the point of them: the owner needs an account that Mahdi, Erfan, and any

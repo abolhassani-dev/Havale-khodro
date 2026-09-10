@@ -67,14 +67,14 @@
   چهار تفاوت خودش: **«وضعیت بدنه»** — جدول ۲۲ قطعه با گزینه‌های مخصوص هر
   کلاس قطعه که روی آگهی به شکل نقشه‌ی سه‌نمایی با نقطه‌های رنگی دیده می‌شود
   (`ui/bodyMap.js`؛ برگه‌های اصلی مالک در `assets/body/sheets/`، مرز برش‌ها از
-  روی پیکسل‌ها اندازه‌گیری شده و `scripts/crop-body-sheets.py` از همان مرزها
+  روی پیکسل‌ها اندازه‌گیری شده و `archive/tools/body-map/crop-body-sheets.py` از همان مرزها
   فایل‌های کوچک webp هر نما را می‌سازد — صفحه فقط همین‌ها را بار می‌کند، نه
   برگه‌ی ۹۰۰ کیلوبایتی؛ اگر برگه یا مرزی عوض شد اسکریپت را دوباره بزنید.
   مختصات نقطه‌ها **درصدِ همان عکسِ برش‌خورده** است، نه درصد برگه — یعنی همان
   چیزی که روی صفحه دیده می‌شود؛ برای هر پنج بدنه قطعه‌به‌قطعه از روی خود نقشه
   درآمده‌اند: گلگیر وسط ورقِ **بالای** قوس چرخ می‌نشیند نه روی لاستیک، درب وسط
   قابِ خودش زیر خط شیشه، و شاسی و سرشاسی روی یک خط در هر طرف چون یک رِیل‌اند.
-  برای جابه‌جا کردن یکی، `scripts/body-dots.py` نقطه‌ها را در همان اندازه‌ی
+  برای جابه‌جا کردن یکی، `archive/tools/body-map/body-dots.py` نقطه‌ها را در همان اندازه‌ی
   واقعی روی عکس‌ها می‌کشد)؛ خلاصه‌ی
   یک‌کلمه‌ای (بدون رنگ/رنگ جزئی/رنگ‌شده/تعویض‌دار/شاسی‌خورده) از روی جدول
   **مشتق** می‌شود و فیلتر جستجوست — فیلترهای «وضعیت بدنه» و «نوع بدنه»
@@ -177,7 +177,7 @@
   `sameOrigin` (CSRF)؛ `Cache-Control: no-store` روی API؛ `SmsMessage.to` رمز و
   ۹۰ روز نگه‌داری؛ نشست‌ها و OTP پاک می‌شوند؛ `safeUrl()` سیم‌کشی و سخت شد؛
   `frontend/` دیگر `tests/ scripts/ *.mjs package.json` را سرو نمی‌کند
-  (اسکرین‌شات‌ها به `docs/screens/`)؛ بدنه‌ی nginx در `site.inc` مشترک بین HTTP و
+  (اسکرین‌شات‌های قدیمی به `archive/docs/screens/`)؛ بدنه‌ی nginx در `site.inc` مشترک بین HTTP و
   HTTPS و `write-ssl.sh` که `update.sh` هر دیپلوی می‌زند؛ سربرگ‌های
   Permissions/COOP/CORP/HSTS؛ `no-new-privileges` و `cap_drop` در compose؛
   preflight به `ALERT_API_BASE` می‌زند نه تلگرام؛ پین `qs` معوق (security-audit.md §۱)؛ `security/audit.js`
@@ -186,7 +186,11 @@
   کسی که فردا استخدام می‌شود؛ نقشه‌ی پوشه‌ها، راه‌اندازی، بک‌اند، پنل، دیتابیس،
   دیپلوی، تست، امنیت، قراردادها، نقشه‌ی راه، واژه‌نامه. `CLAUDE.md` در ریشه
   همان را برای دستیار هوش مصنوعی خلاصه می‌کند. ۲۷ پوشه‌ی خالی اسکلت اولیه حذف
-  شد؛ `frontend/package-lock.json` اضافه شد تا `npm ci` کار کند.
+  شد؛ `frontend/package-lock.json` اضافه شد تا `npm ci` کار کند. **هرچه تاریخی
+  یا اسکلت بود به `archive/` رفت** (ماکاپ، اسکرین‌شات‌های قدیمی، PDF/HTML اسناد
+  اولیه، `staging`, `monitoring-design`, اسکلت `.claude/skills`, READMEهای
+  ده‌خطی، اسکریپت‌های نقشه‌ی بدنه، `pentest.js`) — به خواست مالک حذف نشد؛
+  فهرست و دلیل در `archive/README.md`. هیچ‌چیز آن‌جا اجرا یا سرو نمی‌شود.
 - **پرونده‌ی نمایندگی بخش‌بندی شده** — «مرور کلی / اشتراک / دسترسی و سقف‌ها /
   زیرنمایندگی‌ها». بخشِ باز در آدرس است (`#adm-agent?id=…&tab=sub`)، پس پرونده
   را می‌شود همان‌جایی که لازم است برای کسی فرستاد و هر رندر دوباره سر جایش
@@ -404,7 +408,7 @@ registerMarket('REGISTRATION', { label, include, summarise, describe });
 
 هر فایل آن قابل دانلود از اینترنت است (nginx برای `tests/ scripts/ node_modules/
 *.mjs package.json README.md` ۴۰۴ می‌دهد، ولی قاعده این است که چیز غیرسایتی
-آن‌جا نباشد). اسکرین‌شات‌ها در `docs/screens/`.
+آن‌جا نباشد). اسکرین‌شات‌های قدیمی در `archive/docs/screens/`.
 
 ---
 
@@ -453,7 +457,7 @@ registerMarket('REGISTRATION', { label, include, summarise, describe });
 | چرا این‌طوری نوشته شده؟ | توضیح بالای همان فایل. تقریباً همیشه هست |
 | نیازمندی اصلی محصول؟ | [`blueprint.md`](blueprint.md) |
 | سرور را از صفر بالا بیاورم؟ | [`deployment.md`](deployment.md) |
-| لاگ‌ها چطور طراحی شده‌اند؟ | [`monitoring-design.md`](monitoring-design.md) |
+| لاگ‌ها چطور طراحی شده‌اند؟ | `onboarding/07-database.md` §۷.۵ و بالای `retention.service.js`؛ سند اولیه در `archive/docs/monitoring-design.md` |
 | قبل از لانچ چه کنم؟ | [`launch-checklist.md`](launch-checklist.md) |
 | توسعه‌دهنده‌ی جدید از کجا شروع کند؟ | [`onboarding/`](onboarding/README.md) |
 | چه آسیب‌پذیری‌ای بررسی و بسته شده؟ | [`security-audit.md`](security-audit.md) + `tests/e2e/hardening.test.js` |
@@ -471,7 +475,7 @@ registerMarket('REGISTRATION', { label, include, summarise, describe });
 
 - **۵۵۷ تست بک‌اند** (`RUN_E2E=1 npm test`، ۲۹ فایل) — سبز
 - **۶۲ مرحله اسموک مرورگری** — سبز، بدون خطای کنسول
-- **lint** — تمیز؛ `npm audit` — صفر؛ `security/audit.js` — ۰ بحرانی، ۰ مهم (جز TLS که فقط روی سرور معنی دارد)
+- **lint** — تمیز؛ `security/audit.js` — ۰ بحرانی، ۲ مهم که هر دو شناخته‌اند: TLS (فقط روی سرور معنی دارد) و شش هشدار `npm audit` که رفعشان منتظر دسترسی سرور به مخزن npm است (`security-audit.md` §۱)
 - زمان پاسخ سرور تولید: ۳ تا ۲۳ میلی‌ثانیه در هر صفحه‌ی پنل
 - دیتابیس: ۱۰۰٪ اصابت حافظه، بدون کوئری کند
 

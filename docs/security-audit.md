@@ -23,19 +23,33 @@
 هیچ راز، رمز یا کلیدی در مخزن یا تاریخچه‌ی گیت نیست (`git ls-files` فقط
 `.env.example`ها را دارد؛ تاریخچه هم گشته شد).
 
-**وابستگی‌ها — یک مورد معوق:** `npm audit` دو هشدار *متوسط* روی `qs` (وابستگی
-express) می‌دهد؛ رفعش یک override به `qs >= 6.16.0` در `backend/package.json`
-است. این پین یک بار اعمال شد و در همان روز برداشته شد، چون تغییر
-`package-lock.json` باعث می‌شود Docker همه‌ی بسته‌ها را دوباره دانلود کند و
-مخزن‌های npm از سرور در دسترس نبودند. **کار باز:** روزی که
-`curl https://registry.npmmirror.com/express` از سرور `200` داد، این را اضافه
-کنید و دیپلوی کنید:
+**وابستگی‌ها — کار معوق، وابسته به شبکه‌ی سرور:** `npm audit` روی lockfile
+فعلی شش هشدار می‌دهد (چهار *مهم*: `fast-uri`, `joi`, `js-yaml`, `multer`؛ دو
+*متوسط*: `morgan`, `qs`). همه با `npm audit fix` + یک override برای `qs` رفع
+می‌شوند و در همین بازبینی یک بار رفع **شدند** — ولی همان روز برگردانده شد، چون
+هر تغییر `package-lock.json` باعث می‌شود Docker همه‌ی بسته‌ها را دوباره دانلود
+کند و مخزن‌های npm از سرور در دسترس نبودند. هیچ‌کدام از این شش مورد از بیرون
+قابل بهره‌برداری مستقیم نیست (چند تایشان فقط با ورودی خاص در مسیرهایی که این
+پروژه استفاده نمی‌کند)؛ با این حال باید بسته شوند. **کار باز:** روزی که این از
+سرور `200` داد:
 
-```json
-"overrides": { "qs": ">=6.16.0" }
+```
+curl -sS --max-time 15 -o /dev/null -w '%{http_code}\n' https://registry.npmmirror.com/express
 ```
 
-و بعد `npm install --package-lock-only` تا lockfile به‌روز شود.
+روی ماشین توسعه:
+
+```bash
+cd backend
+npm audit fix
+node -e 'const f="package.json",p=require("./"+f);p.overrides={...p.overrides,qs:">=6.16.0"};require("fs").writeFileSync(f,JSON.stringify(p,null,2)+"\n")'
+npm install --package-lock-only && npm audit      # باید صفر بدهد
+RUN_E2E=1 npm test                                # سبز
+```
+
+کامیت، push، و روی سرور `./deploy/update.sh` (این بار build چند دقیقه دانلود
+دارد). `security/audit.js` تا آن روز این را به عنوان یک مورد «مهم» گزارش
+می‌کند — درست است، نادیده نگیرید.
 
 ---
 

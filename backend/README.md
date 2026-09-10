@@ -190,7 +190,7 @@ Every domain is a module under `src/modules/<name>/` — routes, controller, ser
 repository, validator and DTO side by side, one folder per subject. The markets
 (`havale`, `registration`, `car`) sit on a shared kernel (`listing`, `subscription`,
 `catalog`, `auth`, `user`) and are registered in `listing/market.registry.js`.
-`modules/README.md` and `docs/handover.md` §۳ describe the shape; `modules/havale/` is the
+`docs/handover.md` §۳ and `docs/onboarding/05-backend.md` describe the shape; `modules/havale/` is the
 reference example. Cross-cutting pieces live beside them: `middlewares/`, `utils/`,
 `constants/`, `errors/`, `config/`, `jobs/`, `docs/` (Swagger).
 

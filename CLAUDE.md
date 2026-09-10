@@ -79,3 +79,4 @@ node docs/pitch/render.mjs   # دِک معرفی
 | ساخت سرور / دستورهای روزمره | `docs/deployment.md`, `deploy/README.md` |
 | پیش از لانچ | `docs/launch-checklist.md` |
 | راهنمای نمایندگی (PDF) و دِک | `docs/guide/`, `docs/pitch/` |
+| فایل‌های تاریخی / اسکلت / ابزار کم‌کاربرد | `archive/` — اجرا و سرو نمی‌شود؛ چیزی به آن اضافه نکن مگر بازنشسته شده باشد |

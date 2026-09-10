@@ -16,7 +16,7 @@ import { faDigits } from './format.js';
  * The cut-outs come from the owner's own sheets in `assets/body/sheets/`.
  * Each sheet carries several views; the two used here — the plan and the
  * profile — are cropped out with pixel-exact windows measured from the images
- * themselves, and `scripts/crop-body-sheets.py` turns those windows into the
+ * themselves, and `archive/tools/body-map/crop-body-sheets.py` turns those windows into the
  * small WebP files the page actually loads (`assets/body/<type>-plan.webp`,
  * `<type>-side.webp`). The first version cropped in CSS, by showing a 900 KB
  * sheet three times through a window; on a phone that was a long wait for
@@ -140,7 +140,7 @@ export function gradeOf(bodyStatus) {
 // centre, with the rail tip (سرشاسی) further out along the same line, because
 // it is the same rail.
 //
-// To move one: run scripts/body-dots.py, which draws them onto the real
+// To move one: run archive/tools/body-map/body-dots.py, which draws them onto the real
 // crops at the size the page shows them.
 
 const SHEETS = {
