@@ -83,7 +83,7 @@ export function systemLogPage() {
   <div class="card">
     <div class="card-h"><h2>کانال هشدار</h2></div>
     <div class="hint" style="padding:12px 16px">
-      هشدارها به تلگرام می‌روند. کانالی که کسی آزمایشش نکرده، کانال هشدار نیست —
+      هشدارها به ربات بله (یا تلگرام) می‌روند. کانالی که کسی آزمایشش نکرده، کانال هشدار نیست —
       این دکمه یک پیام واقعی از همین سرور می‌فرستد.
       <div style="margin-top:10px"><button class="btn" data-test-alert>ارسال پیام آزمایشی</button></div>
     </div>

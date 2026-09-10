@@ -3,7 +3,13 @@ const config = require('../../config');
 const logger = require('../../utils/logger');
 
 /**
- * Alerts to Telegram.
+ * Alerts to the owner's phone, through a Telegram-style Bot API.
+ *
+ * Bale by default: it implements Telegram's Bot API exactly and answers from
+ * inside Iran, where api.telegram.org does not. The host comes from
+ * `ALERT_API_BASE` — this file used to hard-code Telegram's, so on the
+ * production server every alert the API sent went to a host it could not
+ * reach while the deploy scripts, reading the same variable, delivered fine.
  *
  * The reason this exists rather than "check the logs": nobody reads logs on a
  * server they are not already looking at. Every failure this project has hit so
@@ -13,8 +19,8 @@ const logger = require('../../utils/logger');
  *
  * Deliberately dependency-free and fire-and-forget. An alerting channel that
  * can throw, block, or fail a request is a second outage waiting to happen: if
- * Telegram is unreachable — which, from Iran, it regularly is — the
- * application must not notice.
+ * the bot API is unreachable — which, from Iran, Telegram's regularly is —
+ * the application must not notice.
  *
  * Rate limited per message kind, because the failure worth alerting on is
  * usually the one that repeats a thousand times a minute, and a thousand
@@ -42,10 +48,12 @@ function post(text) {
       disable_web_page_preview: true,
     });
 
+    const base = new URL(config.alerts.telegram.apiBase);
     const req = https.request(
       {
-        hostname: 'api.telegram.org',
-        path: `/bot${config.alerts.telegram.token}/sendMessage`,
+        hostname: base.hostname,
+        port: base.port || 443,
+        path: `${base.pathname.replace(/\/$/, '')}/bot${config.alerts.telegram.token}/sendMessage`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
         timeout: 8000,
@@ -59,7 +67,7 @@ function post(text) {
     // Every failure path resolves rather than rejects. A monitoring system that
     // can take the application down is worse than no monitoring system.
     req.on('error', (err) => {
-      logger.warn('Telegram alert failed', { error: err.message });
+      logger.warn('Alert delivery failed', { host: base.hostname, error: err.message });
       resolve(false);
     });
     req.on('timeout', () => {

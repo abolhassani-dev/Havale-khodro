@@ -68,11 +68,17 @@ module.exports = {
 
   alerts: {
     // Monitoring that reaches a phone. Absent token or chat id means alerting
-    // is simply off — the application must never depend on it, and from Iran
-    // Telegram is regularly unreachable.
+    // is simply off — the application must never depend on it.
+    //
+    // The messages go to whichever Bot API `ALERT_API_BASE` names. Bale by
+    // default (tapi.bale.ai), which speaks Telegram's Bot API word for word
+    // and is reachable from inside Iran, where Telegram itself is not. The
+    // variable names keep their TELEGRAM_ prefix so existing .env files keep
+    // working; deploy/notify.sh reads the same three values.
     telegram: {
       token: process.env.TELEGRAM_BOT_TOKEN || null,
       chatId: process.env.TELEGRAM_CHAT_ID || null,
+      apiBase: (process.env.ALERT_API_BASE || 'https://tapi.bale.ai').replace(/\/+$/, ''),
     },
   },
 

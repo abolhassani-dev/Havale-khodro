@@ -39,15 +39,15 @@ tg_token="$(env_get TELEGRAM_BOT_TOKEN)"; tg_chat="$(env_get TELEGRAM_CHAT_ID)"
 # a live credential to a service this server does not use.
 alert_base="$(env_get ALERT_API_BASE)"; alert_base="${alert_base:-https://tapi.bale.ai}"
 if [ -z "$tg_token" ] || [ -z "$tg_chat" ]; then
-  warn "هشدار تلگرام تنظیم نشده — خرابی‌ها فقط در لاگ می‌مانند" "docs/deployment.md — بخش هشدار تلگرام"
+  warn "ربات هشدار (بله) تنظیم نشده — خرابی‌ها فقط در لاگ می‌مانند" "./deploy/alert-setup.sh — پنج دقیقه، از داخل ایران کار می‌کند"
 else
   # -o /dev/null and no error output: the URL carries the token, and this
   # script's output may be pasted somewhere.
   if curl -s -o /dev/null --max-time 10 -w '%{http_code}' \
        "${alert_base}/bot$tg_token/getMe" 2>/dev/null | grep -q '^200$'; then
-    ok "توکن ربات تلگرام معتبر است"
+    ok "توکن ربات هشدار معتبر است (${alert_base#https://})"
   else
-    bad "تلگرام جواب نداد — توکن اشتباه است یا دسترسی شبکه ندارد" "توکن را در .env بررسی کنید (در چت نفرستید)"
+    bad "ربات هشدار (${alert_base#https://}) جواب نداد — توکن اشتباه است یا دسترسی شبکه ندارد" "توکن را در .env بررسی کنید (در چت نفرستید)"
   fi
 fi
 unset tg_token tg_chat

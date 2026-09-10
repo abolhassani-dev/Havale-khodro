@@ -94,7 +94,7 @@ router.post(
  * /errors/test-alert:
  *   post:
  *     tags: [Errors]
- *     summary: Send a test message to Telegram
+ *     summary: Send a test message to the alert bot (Bale or Telegram)
  *     description: >
  *       An alerting channel nobody has tested is not an alerting channel. This
  *       proves the token and chat id are right, from the machine that will
@@ -118,7 +118,7 @@ router.post(
     });
     return success(res, {
       sent,
-      reason: sent ? null : 'تلگرام پاسخ نداد. توکن، chat id و دسترسی شبکه‌ی سرور را بررسی کنید.',
+      reason: sent ? null : 'ربات هشدار پاسخ نداد. توکن، chat id، ALERT_API_BASE و دسترسی شبکه‌ی سرور را بررسی کنید.',
     });
   })
 );
