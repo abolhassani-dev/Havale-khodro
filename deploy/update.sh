@@ -111,8 +111,16 @@ else
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
 
-  curl -fsSL -o "$TMP/src.tar.gz" \
-    "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH"
+  # With a deadline: GitHub is reachable from here most days and glacial on
+  # some, and a download with no limit sat silently for minutes once, looking
+  # exactly like a hung script. Better to say so and stop.
+  if ! curl -fsSL --connect-timeout 20 --max-time 300 --retry 2 -o "$TMP/src.tar.gz" \
+       "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH"; then
+    echo "✗ could not download the code from GitHub (timeout or refused)." >&2
+    echo "  Nothing on this server was changed. Check the route out and try again:" >&2
+    echo "    curl -sS --max-time 15 -o /dev/null -w '%{http_code}\\n' https://codeload.github.com/" >&2
+    exit 1
+  fi
   mkdir -p "$TMP/src"
   tar xzf "$TMP/src.tar.gz" --strip-components=1 -C "$TMP/src"
 

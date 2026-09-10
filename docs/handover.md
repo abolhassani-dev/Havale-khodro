@@ -180,7 +180,7 @@
   (اسکرین‌شات‌ها به `docs/screens/`)؛ بدنه‌ی nginx در `site.inc` مشترک بین HTTP و
   HTTPS و `write-ssl.sh` که `update.sh` هر دیپلوی می‌زند؛ سربرگ‌های
   Permissions/COOP/CORP/HSTS؛ `no-new-privileges` و `cap_drop` در compose؛
-  preflight به `ALERT_API_BASE` می‌زند نه تلگرام؛ `qs` پین شد؛ `security/audit.js`
+  preflight به `ALERT_API_BASE` می‌زند نه تلگرام؛ پین `qs` معوق (security-audit.md §۱)؛ `security/audit.js`
   دیگر sinkهای `String(fn())` و فایل `.inc` را غلط نمی‌خواند.
 - **دفترچه‌ی توسعه‌دهنده** — [`onboarding/`](onboarding/README.md): ۱۳ فصل برای
   کسی که فردا استخدام می‌شود؛ نقشه‌ی پوشه‌ها، راه‌اندازی، بک‌اند، پنل، دیتابیس،
