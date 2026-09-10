@@ -444,6 +444,7 @@ const registrationService = {
       id,
       ip,
       targetType: 'REGISTRATION',
+      market: 'REGISTRATION',
     });
   },
 

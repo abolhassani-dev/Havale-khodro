@@ -97,9 +97,15 @@ const authRepository = {
     });
   },
 
-  countRecentFailures(username, since) {
+  /** Wrong passwords for this username since a moment — from one address, or from anywhere. */
+  countRecentFailures(username, since, ip = undefined) {
     return prisma.activityLog.count({
-      where: { action: 'LOGIN_FAILED', summary: username, createdAt: { gte: since } },
+      where: {
+        action: 'LOGIN_FAILED',
+        summary: username,
+        createdAt: { gte: since },
+        ...(ip ? { ip } : {}),
+      },
     });
   },
 

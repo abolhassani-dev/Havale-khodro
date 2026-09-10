@@ -21,6 +21,11 @@ const prisma = new PrismaClient();
 const ENCRYPTED = {
   User: { fields: ['phone', 'coordinatorPhone'], indexed: { phone: 'phoneIndex' } },
   ContactReveal: { fields: ['phoneShown'], indexed: {} },
+  // The delivery log's recipient. Read for display, never searched — the
+  // admin page lists recent messages by date. Without this, a stolen dump
+  // would hand over every number the system ever texted while the profile
+  // columns sat encrypted beside them.
+  SmsMessage: { fields: ['to'], indexed: {} },
 };
 
 function encryptWrite(model, data) {

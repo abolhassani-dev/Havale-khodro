@@ -36,6 +36,10 @@ const spec = swaggerJsdoc({
 });
 
 module.exports = function mountSwagger(app) {
+  // Development only. nginx never proxies /docs, so in production this was
+  // unreachable by accident rather than by decision — and a map of every
+  // route is not something to leave one config line away from the internet.
+  if (config.isProduction) return;
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
   app.get('/docs.json', (_req, res) => res.json(spec));
 };

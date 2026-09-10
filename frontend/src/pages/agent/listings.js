@@ -345,7 +345,7 @@ export function minePage() {
     const q = { ...(params.status ? { status: params.status } : {}), ...(reseller ? { scope } : {}), ...patch };
     return Object.entries(q)
       .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&');
   };
 

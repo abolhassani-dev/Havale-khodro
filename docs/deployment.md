@@ -864,5 +864,9 @@ chmod 644 /etc/cron.d/feranocar-preflight
 | لاگ خطاها | پنل مدیریت ← لاگ خطاها |
 | گزارش امنیتی | `docker run --rm --entrypoint node -v /opt/feranocar:/audit -w /audit feranocar-api security/audit.js --live https://feranocar.com --user … --pass … --report /tmp/audit.json` |
 | ورود به دیتابیس (ترمینال) | `docker compose exec db psql -U havale havale` |
-| ورود به دیتابیس (گرافیکی) | `http://45.94.213.252:8443` — بخش «مدیریت دیتابیس» |
+| ورود به دیتابیس (گرافیکی) | `https://feranocar.com:8443` (بعد از TLS؛ پیش از آن `http://45.94.213.252:8443`) — بخش «مدیریت دیتابیس». امن‌تر: تونل `ssh -L 8443:127.0.0.1:8443 root@server` و بستن پورت در ufw |
+| قیمت روز خودرو، همین حالا | `/opt/feranocar/deploy/car-prices.sh` (`--dry-run` فقط بررسی) — کرون هر ۱۵ دقیقه خودش می‌زند |
+| چرخش لاگ‌های کرون | `logrotate -d /etc/logrotate.d/feranocar` — `update.sh` نصبش می‌کند |
+| فایل‌های TLS تازه شوند | `deploy/nginx/write-ssl.sh feranocar.com && docker compose exec web nginx -s reload` — `update.sh` خودش می‌زند |
+| بازبینی امنیتی | [`security-audit.md`](security-audit.md) — یافته‌ها، چه بسته شد، چه باز است |
 | مصرف منابع | `docker stats --no-stream` |

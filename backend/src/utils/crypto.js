@@ -40,6 +40,17 @@ const crypto = require('crypto');
  */
 const ENABLED = Boolean(process.env.DATA_ENCRYPTION_KEY);
 
+if (!ENABLED && process.env.NODE_ENV === 'production') {
+  // Deliberately console rather than the logger: this file is loaded before
+  // the logger's own dependencies are, and a warning about encryption must
+  // not be the thing that creates a require cycle.
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[crypto] DATA_ENCRYPTION_KEY is not set — contact numbers are stored in clear text. ' +
+      'Set the key and run scripts/encrypt-existing.js to encrypt them.'
+  );
+}
+
 const VERSION = 'v1';
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12; // 96 bits, the size GCM is defined for
@@ -52,9 +63,9 @@ let cachedKey = null;
  *
  * Accepts either 32 raw bytes as hex (what the setup command generates) or a
  * passphrase, which is stretched with scrypt so a short one is not simply used
- * as-is. Refuses to run in production without a key: silently storing contact
- * details in clear text because a variable was missing is exactly the failure
- * this file exists to prevent.
+ * as-is. Without a key nothing is encrypted (see ENABLED above) — and because
+ * a production box storing contact details in clear text should never be a
+ * surprise, the boot log says so, once, in words nobody can miss.
  */
 function key() {
   if (cachedKey) return cachedKey;

@@ -38,7 +38,15 @@ module.exports = {
 
   security: {
     bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 10,
-    corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
+    // Empty means no cross-origin caller at all — which is the normal state:
+    // the panel is served from the same origin as the API and needs no CORS
+    // header. `*` is refused outright rather than passed along, because with
+    // credentials it is either ignored by the browser or, with a library
+    // change, a door for every site on the internet.
+    corsOrigins: (process.env.CORS_ORIGINS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s && s !== '*'),
     bodyLimit: process.env.BODY_LIMIT || '1mb',
     rateLimit: {
       windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
@@ -106,6 +114,11 @@ module.exports = {
       // deleted at all — they are one row per rule per address, so they cannot
       // grow the way a raw log does.
       resolvedSecurity: Number(process.env.RETAIN_RESOLVED_SECURITY_DAYS || 180),
+      // One-time codes and the SMS delivery log: both carry telephone
+      // numbers, neither is worth keeping past the time a support question
+      // about them could still come in.
+      otp: Number(process.env.RETAIN_OTP_DAYS || 30),
+      sms: Number(process.env.RETAIN_SMS_DAYS || 90),
       // Price points: one per change plus one a day, so a year is a few
       // thousand rows per car at most. Long, because the trend chart that
       // will read them is worth more the further back it can look.

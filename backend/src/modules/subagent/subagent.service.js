@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 
 const config = require('../../config');
-const { prisma } = require('../../config/database');
+const { serialized } = require('../../utils/serialize');
 const { subagentRepository } = require('./subagent.repository');
 const subscriptionService = require('../subscription/subscription.service');
 const authRepository = require('../auth/auth.repository');
@@ -74,8 +74,11 @@ const subagentService = {
       throw new ForbiddenError(MESSAGES.SUBSCRIPTION.EXPIRED, ERROR_CODES.SUBSCRIPTION_EXPIRED);
     }
 
-    const seats = await subscriptionService.seatSummary(user);
-    if (seats.available < 1) throw new ForbiddenError(MESSAGES.SEAT.NO_CAPACITY);
+    // A first look, so the ordinary «no seats left» answer costs nothing.
+    // The look that counts is the one inside the lock below.
+    if ((await subscriptionService.seatSummary(user)).available < 1) {
+      throw new ForbiddenError(MESSAGES.SEAT.NO_CAPACITY);
+    }
 
     const existing = await authRepository.findByUsername(payload.username);
     if (existing) throw new ConflictError(MESSAGES.SEAT.USERNAME_TAKEN);
@@ -117,7 +120,14 @@ const subagentService = {
     // Account, grants, seat: one transaction. A sub-agency either exists
     // whole or not at all — the three-step version could be interrupted
     // between any two steps and leave an account that half-works.
-    const child = await prisma.$transaction(async (tx) => {
+    //
+    // And one at a time per parent: the seat count is re-read under a lock
+    // keyed on the reseller, so two requests racing for the last seat cannot
+    // both find it free (utils/serialize.js).
+    const child = await serialized(`seats:${user.id}`, async (tx) => {
+      const seats = await subscriptionService.seatSummary(user);
+      if (seats.available < 1) throw new ForbiddenError(MESSAGES.SEAT.NO_CAPACITY);
+
       const created = await subagentRepository.create(
         {
           username: payload.username,

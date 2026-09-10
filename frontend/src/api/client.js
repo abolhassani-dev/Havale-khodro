@@ -6,7 +6,9 @@
  * steal. The cookie is httpOnly, so this file never sees it and cannot leak it.
  */
 
-const BASE = window.__API_BASE__ || '/api/v1';
+// A constant, not a `window` lookup: a global read by name can be shadowed
+// by any element with that id (DOM clobbering), and nothing ever set it.
+const BASE = '/api/v1';
 
 /** Errors the API returned, carrying the machine-readable code the UI branches on. */
 export class ApiError extends Error {

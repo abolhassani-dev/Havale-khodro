@@ -47,11 +47,18 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/feranocar}"
 DEST="$BACKUP_ROOT/$TIER"
+# Compose names volumes after the directory the project lives in. Deployed at
+# /opt/feranocar that is `feranocar_`; anywhere else the hard-coded name would
+# silently find nothing and the archive would say «none yet».
+VOLUME_PREFIX="${COMPOSE_PROJECT_NAME:-$(basename "$(pwd)")}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 mkdir -p "$DEST"
+# Nobody but root reads the backup tree: each archive is 600, and the
+# directory itself should not list what exists or when.
+chmod 700 "$BACKUP_ROOT" "$DEST" 2>/dev/null || true
 
 DB_USER="$(grep -E '^POSTGRES_USER=' .env 2>/dev/null | cut -d= -f2 || true)"
 DB_NAME="$(grep -E '^POSTGRES_DB=' .env 2>/dev/null | cut -d= -f2 || true)"
@@ -95,8 +102,8 @@ mkdir -p "$WORK/uploads"
 # the root-owned volume into a container that runs as a non-root user, and the
 # API died in a restart loop unable to create a folder. A backup must never
 # bring anything into existence.
-if docker volume inspect feranocar_uploads >/dev/null 2>&1; then
-  docker run --rm -v feranocar_uploads:/uploads:ro -v "$WORK/uploads:/out" alpine:3 \
+if docker volume inspect "${VOLUME_PREFIX}_uploads" >/dev/null 2>&1; then
+  docker run --rm -v "${VOLUME_PREFIX}_uploads:/uploads:ro" -v "$WORK/uploads:/out" alpine:3 \
     sh -c 'tar czf /out/uploads.tar.gz -C /uploads . 2>/dev/null || true' >/dev/null 2>&1 || \
     echo "    (could not read the volume — skipping)"
 else
@@ -128,9 +135,16 @@ fi
 # Re-issuing is possible but rate-limited to five a week per domain, and the
 # day you are restoring is the day you cannot afford to discover that.
 echo "  certificates"
-docker run --rm -v feranocar_certbot-certs:/certs:ro -v "$WORK/certs:/out" alpine:3 \
-  sh -c 'tar czf /out/letsencrypt.tar.gz -C /certs . 2>/dev/null || true' >/dev/null 2>&1 || \
+# Guarded like the uploads volume above: `docker run -v name:` creates a
+# missing volume, and an archive of an empty directory would read as a
+# backed-up certificate that is not there.
+if docker volume inspect "${VOLUME_PREFIX}_certbot-certs" >/dev/null 2>&1; then
+  docker run --rm -v "${VOLUME_PREFIX}_certbot-certs:/certs:ro" -v "$WORK/certs:/out" alpine:3 \
+    sh -c 'tar czf /out/letsencrypt.tar.gz -C /certs . 2>/dev/null || true' >/dev/null 2>&1 || \
+    echo "    (could not read — skipping)"
+else
   echo "    (none yet — skipping)"
+fi
 
 # ---- 4. the cron jobs ----
 echo "  schedules"

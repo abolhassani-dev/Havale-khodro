@@ -63,8 +63,18 @@ async function run() {
     }
   }
 
-  if (users || reveals) {
-    logger.info('Encrypted contact columns', { users, reveals });
+  // The SMS delivery log: every recipient the system ever wrote to.
+  let sms = 0;
+  const sent = await raw.smsMessage.findMany({ select: { id: true, to: true } });
+  for (const row of sent) {
+    if (row.to && !isEncrypted(row.to)) {
+      await raw.smsMessage.update({ where: { id: row.id }, data: { to: encrypt(row.to) } });
+      sms += 1;
+    }
+  }
+
+  if (users || reveals || sms) {
+    logger.info('Encrypted contact columns', { users, reveals, sms });
   } else {
     logger.info('Contact columns already encrypted');
   }

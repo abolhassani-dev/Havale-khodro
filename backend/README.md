@@ -186,19 +186,23 @@ routes → middlewares → validators → controllers → services → repositor
   called from a worker, a job, or a test.
 - **Repositories** are the only code that talks to the database.
 
-Every folder under `src/` has a README stating its responsibility and what does not belong
-in it. When unsure where new code goes, read that README first.
-
-Larger domains become modules under `src/modules/<name>/`, each with its own controller,
-routes, service, repository, validator, and DTO. `modules/user/` is the reference example.
+Every domain is a module under `src/modules/<name>/` — routes, controller, service,
+repository, validator and DTO side by side, one folder per subject. The markets
+(`havale`, `registration`, `car`) sit on a shared kernel (`listing`, `subscription`,
+`catalog`, `auth`, `user`) and are registered in `listing/market.registry.js`.
+`modules/README.md` and `docs/handover.md` §۳ describe the shape; `modules/havale/` is the
+reference example. Cross-cutting pieces live beside them: `middlewares/`, `utils/`,
+`constants/`, `errors/`, `config/`, `jobs/`, `docs/` (Swagger).
 
 ## Environment
 
-See `.env.example`. The app validates required variables at boot and refuses to start if any
-are missing — a missing secret should stop the process, not surface later as a confusing
-runtime failure.
+See `.env.example`. `SESSION_SECRET` and `DATABASE_URL` are checked at boot and the process
+refuses to start without them — a missing secret should stop the process, not surface later
+as a confusing runtime failure. Everything else has a documented default.
 
 ## Conventions
 
-Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
-`main` stays deployable; work happens on short-lived `feat/*` and `fix/*` branches.
+Commit subjects are one plain sentence saying what changed and why, in Persian or English.
+Everything is developed and deployed from one branch — the name is pinned in
+`deploy/update.sh` and recorded in `docs/handover.md` — and every commit on it is expected to
+keep the suite green (`RUN_E2E=1 npm test`, `npm run lint`).

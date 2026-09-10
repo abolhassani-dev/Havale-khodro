@@ -1,4 +1,4 @@
-import { html, raw } from '../../ui/html.js';
+import { html, raw, safeUrl } from '../../ui/html.js';
 import { icon } from '../../ui/icons.js';
 import { subscription, subAgents, tickets, reports, catalog } from '../../api/index.js';
 import { getState, setState, isAdmin } from '../../state/store.js';
@@ -498,7 +498,7 @@ function seatOrderRow(o) {
         ${money(o.totalToman)} · ثبت <span class="num">${date(o.createdAt)}</span>
         ${
           o.receipt
-            ? html` · <a href="${o.receipt.url}" target="_blank" rel="noopener">فیش ارسالی</a>`
+            ? html` · <a href="${safeUrl(o.receipt.url)}" target="_blank" rel="noopener">فیش ارسالی</a>`
             : ''
         }
         ${o.adminNote ? html` · ${o.adminNote}` : ''}
@@ -639,11 +639,11 @@ export function ticketsPage() {
  */
 function attachmentChip(a) {
   if (a.mime?.startsWith('image/')) {
-    return html`<a class="tkb-img" href="${a.url}" target="_blank" rel="noopener" title="${a.name}">
-      <img src="${a.url}" alt="${a.name}" loading="lazy">
+    return html`<a class="tkb-img" href="${safeUrl(a.url)}" target="_blank" rel="noopener" title="${a.name}">
+      <img src="${safeUrl(a.url)}" alt="${a.name}" loading="lazy">
     </a>`;
   }
-  return html`<a class="tkb-file" href="${a.url}" target="_blank" rel="noopener">
+  return html`<a class="tkb-file" href="${safeUrl(a.url)}" target="_blank" rel="noopener">
     ${icon('file', 15)}
     <span class="tkb-fn">${a.name}</span>
     <span class="tkb-fs">${fileSize(a.size)}</span>

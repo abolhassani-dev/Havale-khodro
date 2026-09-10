@@ -73,7 +73,12 @@ const authController = {
 
   logout: asyncHandler(async (req, res) => {
     await authService.logout(req.cookies[config.session.cookieName]);
-    res.clearCookie(config.session.cookieName, { path: '/' });
+    res.clearCookie(config.session.cookieName, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: req.secure,
+    });
     return success(res, null, MESSAGES.AUTH.LOGGED_OUT);
   }),
 

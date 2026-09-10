@@ -1,4 +1,5 @@
 const logger = require('../../utils/logger');
+const { maskPhone } = require('../../utils/maskPhone');
 const config = require('../../config');
 const settingsService = require('../settings/settings.service');
 const smsRepository = require('./sms.repository');
@@ -67,7 +68,7 @@ const smsService = {
     if (!enabled) {
       // Recorded, not sent. The row is the point: when the panel is switched on
       // there is already a history of what the system wanted to say.
-      logger.info('SMS skipped — panel is off', { to, template, id: message.id });
+      logger.info('SMS skipped — panel is off', { to: maskPhone(to), template, id: message.id });
       return { sent: false, reason: 'disabled', id: message.id };
     }
 
@@ -77,7 +78,7 @@ const smsService = {
       return { sent: true, id: message.id };
     } catch (err) {
       await smsRepository.markFailed(message.id, err.message);
-      logger.error('SMS delivery failed', { to, template, error: err.message });
+      logger.error('SMS delivery failed', { to: maskPhone(to), template, error: err.message });
       return { sent: false, reason: 'delivery_failed', id: message.id };
     }
   },

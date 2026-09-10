@@ -8,16 +8,23 @@ const { toPublicUser } = require('../user/user.dto');
 const { UnauthorizedError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
 const { ERROR_CODES } = require('../../constants/errorCodes');
 const { MESSAGES } = require('../../constants/messages');
-const { ROLES, isAdmin } = require('../../constants/roles');
+const { ROLES } = require('../../constants/roles');
 
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
+// Five wrong guesses from one address lock the account for that address. It
+// takes many more from *everywhere* before the account is locked outright —
+// otherwise anybody who knows a username can keep its owner out for good by
+// sending five bad passwords every quarter hour, which is a cheaper attack
+// than guessing and one this rule used to hand out for free.
 const LOCKOUT_THRESHOLD = 5;
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const LOCKOUT_THRESHOLD_ANYWHERE = 25;
 
 // Comparing against a real-shaped hash even when the user does not exist keeps
 // the response time the same either way. Without it, a fast rejection tells an
-// attacker the username is not registered.
-const DUMMY_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8.9pT7Y0qO3aOhH6cVJfE0hZLNqk7C';
+// attacker the username is not registered. Hashed at boot with the configured
+// cost so the comparison takes the same time as a real one — a fixed hash at
+// cost 10 would be measurably faster than a real user's at cost 12.
+const DUMMY_HASH = bcrypt.hashSync(generateToken(), config.security.bcryptRounds);
 
 /**
  * Authentication.
@@ -28,16 +35,24 @@ const DUMMY_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8.9pT7Y0qO3aOhH6cVJfE0hZLNqk7C
  */
 const authService = {
   async login({ username, password, ip, userAgent }) {
-    const since = new Date(Date.now() - LOCKOUT_WINDOW_MS);
-    const failures = await authRepository.countRecentFailures(username, since);
+    const user = await authRepository.findByUsername(username);
+
+    // Failures count from the start of the window, or from the account's last
+    // successful sign-in if that is later: a person who got in has proved
+    // themselves, and yesterday's typos should not still be counting.
+    let since = new Date(Date.now() - LOCKOUT_WINDOW_MS);
+    if (user?.lastLoginAt && user.lastLoginAt > since) since = user.lastLoginAt;
+    const [fromHere, fromAnywhere] = await Promise.all([
+      authRepository.countRecentFailures(username, since, ip),
+      authRepository.countRecentFailures(username, since),
+    ]);
 
     // Check the lockout before the password, so a locked account cannot be used
     // as an oracle telling the attacker when a guess was right.
-    if (failures >= LOCKOUT_THRESHOLD) {
+    if (fromHere >= LOCKOUT_THRESHOLD || fromAnywhere >= LOCKOUT_THRESHOLD_ANYWHERE) {
       throw new UnauthorizedError(MESSAGES.AUTH.LOCKED_OUT);
     }
 
-    const user = await authRepository.findByUsername(username);
     const passwordOk = await bcrypt.compare(password, user ? user.passwordHash : DUMMY_HASH);
 
     if (!user || !passwordOk) {
@@ -71,7 +86,11 @@ const authService = {
     // entitlement at all, so every guard in the system already refuses it:
     // no posting, no renewing, no reporting, and no contact details in any
     // serialised row. What they get is the reason and a way to answer it.
-    if (user.status !== 'ACTIVE' && isAdmin(user.role)) {
+    //
+    // «Staff» here is everybody who is not an agency — including the roles
+    // outside ADMIN_ROLES, such as a developer account. A suspended account
+    // of any non-agency kind stays out.
+    if (user.status !== 'ACTIVE' && user.role !== ROLES.AGENT) {
       throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
     }
 
@@ -81,7 +100,9 @@ const authService = {
       tokenHash: hashToken(token),
       ip,
       userAgent,
-      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+      // The same number the cookie is stamped with — one setting, not two
+      // that can disagree.
+      expiresAt: new Date(Date.now() + config.session.ttlMs),
     });
 
     // One live session per agent (blueprint 3.3). Signing in anywhere ends every
@@ -123,7 +144,7 @@ const authService = {
     // answer "your session is invalid" — sending the user to support to find out
     // why, when the interface could have told them. Nothing is leaked by saying
     // it: the account is theirs.
-    if (session.user.status !== 'ACTIVE' && isAdmin(session.user.role)) {
+    if (session.user.status !== 'ACTIVE' && session.user.role !== ROLES.AGENT) {
       throw new ForbiddenError(MESSAGES.AUTH.ACCOUNT_SUSPENDED);
     }
 

@@ -11,6 +11,7 @@ const swagger = require('./docs/swagger');
 const requestId = require('./middlewares/requestId');
 const { requestContext } = require('./utils/requestContext');
 const rateLimiter = require('./middlewares/rateLimiter');
+const sameOrigin = require('./middlewares/sameOrigin');
 const slowRequest = require('./middlewares/slowRequest');
 const blockedIp = require('./middlewares/blockedIp');
 const threatDetect = require('./middlewares/threatDetect');
@@ -56,6 +57,17 @@ app.use(slowRequest);
 // ends up refusing it, validating it away, or answering 404.
 app.use(threatDetect);
 app.use(rateLimiter);
+app.use(sameOrigin);
+
+// Nothing the API answers may be kept by a proxy or a browser cache. Most of
+// it is per-account — lists, contact details once revealed, the security
+// log — and the middleboxes this site is reached through are exactly the
+// kind that store a bodied 200 with no directive. A route that knows better
+// (the catalogue, a photo) sets its own header afterwards and wins.
+app.use(config.apiPrefix, (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 swagger(app);
 app.use(config.apiPrefix, routes);

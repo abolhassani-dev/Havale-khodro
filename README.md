@@ -28,18 +28,20 @@ sudo -u postgres createdb -O havale havale_test
 
 # ── بک‌اند ────────────────────────────────────────────────────────────────
 cd backend
-cp .env.example .env          # DATABASE_URL و SESSION_SECRET را پر کنید
+cp .env.example .env          # SESSION_SECRET را پر کنید و این خط را اضافه کنید:
+                              # DATABASE_URL=postgresql://havale:havale@127.0.0.1:5432/havale_dev?schema=public
 npm ci
 npx prisma migrate deploy
 DATABASE_URL="postgresql://havale:havale@127.0.0.1:5432/havale_test?schema=public" \
   npx prisma migrate deploy   # دیتابیس تست هم باید مهاجرت بخورد
 npm run seed                  # مدیر اول — رمزش را یک بار چاپ می‌کند
-SEED_DEMO=true node scripts/seed-demo.js   # نمایندگی‌های نمونه (فقط محلی)
+SEED_DEMO=true ALLOW_DEMO_SEED=true node scripts/seed-demo.js   # نمایندگی‌های نمونه (فقط محلی)
+node scripts/seed-cars.js     # آگهی‌های نمونه‌ی بازار خودرو (فقط محلی)
 npm run dev                   # API روی :3000
 
 # ── فرانت‌اند ─────────────────────────────────────────────────────────────
 cd ../frontend
-npm ci                        # فقط برای تست مرورگری؛ خودِ پنل وابستگی ندارد
+npm ci                        # فقط Playwright برای تست مرورگری؛ خودِ پنل وابستگی ندارد
 npm run dev                   # فایل‌های ثابت + پراکسی /api روی :5173
 ```
 
@@ -86,13 +88,13 @@ BASE_URL=http://localhost:5173/ npm run smoke
 ```
 backend/          API — Express + Prisma + PostgreSQL
   src/modules/    هر بازار و هر بخش، یک ماژول مستقل
-  src/jobs/       کار شبانه (آرشیو و پاک‌سازی لاگ)
+  src/jobs/       کار شبانه (آرشیو و پاک‌سازی) و قیمت روز (هر ۱۵ دقیقه) — از کرون هاست
   prisma/         schema و مهاجرت‌ها
 frontend/         پنل — ES module خام، بدون build
   src/pages/      صفحه‌ها، به تفکیک نماینده و مدیر
   src/ui/         html.js (escape پیش‌فرض)، format.js (شمسی)، اجزای مشترک
-deploy/           اسکریپت‌های سرور — update، backup، nightly، تشخیص کندی
-docs/             ⬅ از handover.md شروع کنید
+deploy/           اسکریپت‌های سرور — update، backup، nightly، preflight، nginx
+docs/             ⬅ از handover.md شروع کنید؛ توسعه‌دهنده‌ی جدید: docs/onboarding/
 mockup/           طرح تأییدشده‌ی اولیه. مرجع تاریخی، نه کد زنده
 security/         ارزیابی امنیتی
 ```
@@ -102,6 +104,10 @@ security/         ارزیابی امنیتی
 | فایل | چیست |
 |---|---|
 | [`docs/handover.md`](docs/handover.md) | **وضعیت پروژه و قاعده‌های معماری. اول این** |
+| [`docs/onboarding/`](docs/onboarding/README.md) | **دفترچه‌ی فنی توسعه‌دهنده‌ی جدید** — ۱۳ فصل از محصول تا دیپلوی |
+| [`CLAUDE.md`](CLAUDE.md) | قاعده‌ها و دستورهای دقیق برای دستیار هوش مصنوعی |
+| [`docs/security-audit.md`](docs/security-audit.md) | بازبینی امنیتی شهریور ۱۴۰۵ — بسته‌شده‌ها و موارد باز |
+| [`deploy/README.md`](deploy/README.md) | کدام اسکریپت سرور را کِی بزنیم |
 | [`docs/blueprint.md`](docs/blueprint.md) | نیازمندی‌های اولیه‌ی محصول |
 | [`docs/deployment.md`](docs/deployment.md) | نصب سرور از صفر، TLS، بکاپ |
 | [`docs/monitoring-design.md`](docs/monitoring-design.md) | طراحی لاگ‌گیری و لاگ امنیتی |

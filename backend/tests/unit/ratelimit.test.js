@@ -59,4 +59,45 @@ describe('rate limiting behaviour', () => {
     const other = await request(app).get('/x').set('Cookie', 'sid=userB');
     expect(other.status).toBe(200);
   });
+
+  it('a rotating cookie does not buy a fresh budget: the address keeps its own ceiling', async () => {
+    // The shape of the real limiter: a per-session bucket in front of a
+    // per-address one, five times larger. A script inventing a new cookie per
+    // request escapes the first and must run into the second.
+    const app = express();
+    app.use(cookieParser());
+    const perAddress = rateLimit({ windowMs: 60_000, max: 10, keyGenerator: (req) => `ip:${req.ip}`,
+      standardHeaders: false, legacyHeaders: false });
+    const perSession = rateLimit({ windowMs: 60_000, max: 2,
+      keyGenerator: (req) => (req.cookies?.sid ? `s:${req.cookies.sid}` : `ip:${req.ip}`),
+      standardHeaders: true, legacyHeaders: false });
+    app.use((req, res, next) => perAddress(req, res, (e) => (e ? next(e) : perSession(req, res, next))));
+    app.get('/x', (_req, res) => res.json({ ok: true }));
+
+    const codes = [];
+    for (let i = 0; i < 14; i += 1) {
+      const r = await request(app).get('/x').set('Cookie', `sid=forged-${i}`);
+      codes.push(r.status);
+    }
+    expect(codes.slice(0, 10).every((c) => c === 200)).toBe(true);
+    expect(codes.slice(10).every((c) => c === 429)).toBe(true);
+  });
+
+  it('spraying many usernames from one address runs out, even though each username is a new bucket', async () => {
+    const app = express();
+    app.use(express.json());
+    const perAddress = rateLimit({ windowMs: 60_000, max: 4, skipSuccessfulRequests: true,
+      keyGenerator: (req) => `auth:${req.ip}`, standardHeaders: false, legacyHeaders: false });
+    const perAccount = rateLimit({ windowMs: 60_000, max: 3, skipSuccessfulRequests: true,
+      keyGenerator: (req) => `${req.ip}|${req.body.username}`, standardHeaders: true, legacyHeaders: false });
+    app.post('/login', (req, res, next) => perAddress(req, res, (e) => (e ? next(e) : perAccount(req, res, next))),
+      (_req, res) => res.status(401).json({ ok: false }));
+
+    const codes = [];
+    for (let i = 0; i < 8; i += 1) {
+      const r = await request(app).post('/login').send({ username: `user${i}`, password: 'wrong' });
+      codes.push(r.status);
+    }
+    expect(codes.filter((c) => c === 429).length).toBeGreaterThan(0);
+  });
 });

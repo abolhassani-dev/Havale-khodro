@@ -150,6 +150,22 @@ if [ -f deploy/nginx/.htpasswd ] && [ "$(stat -c '%a' deploy/nginx/.htpasswd)" !
   chmod 644 deploy/nginx/.htpasswd
 fi
 
+# A TLS-enabled server keeps its generated ssl.conf and adminer.conf across
+# deploys (they are in LOCAL_FILES above). Both are now rendered from one
+# template, deploy/nginx/write-ssl.sh, whose body is the shared site.inc — so
+# they are re-rendered here on every deploy while a certificate exists, and a
+# fix to the site reaches HTTPS without anyone re-running enable-ssl.sh.
+# The domain is read from the file itself; nothing is guessed.
+if [ -f deploy/nginx/ssl.conf ]; then
+  ssl_domain=$(sed -n 's#.*ssl_certificate .*/live/\([^/]*\)/fullchain.pem.*#\1#p' deploy/nginx/ssl.conf | head -1)
+  if [ -n "$ssl_domain" ]; then
+    echo "→ refreshing the HTTPS configuration for $ssl_domain"
+    deploy/nginx/write-ssl.sh "$ssl_domain"
+  else
+    echo "  ! could not read the domain from deploy/nginx/ssl.conf — left as is"
+  fi
+fi
+
 # A stale rate limit locks real people out.
 #
 # The value this project shipped with first was 100 requests per fifteen
@@ -259,8 +275,13 @@ if [ -d /etc/logrotate.d ]; then
     missingok
     notifempty
     copytruncate
+    create 0640 root $log_group
 }
 ROTATE
+  # The logs already there were created 644 by the shell; nothing in them is
+  # secret, but a local user learning the backup inventory is one more thing
+  # than they need.
+  chmod 640 /var/log/feranocar-*.log 2>/dev/null || true
   chmod 644 /etc/logrotate.d/feranocar
   echo "→ cron logs set to rotate weekly (4 kept, su root:$log_group)"
 fi

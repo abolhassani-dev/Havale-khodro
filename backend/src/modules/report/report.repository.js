@@ -27,11 +27,13 @@ const HAVALE_SELECT = {
 };
 
 const reportRepository = {
-  create(data) {
-    return prisma.$transaction([
-      prisma.violationReport.create({ data }),
-      prisma.listing.update({ where: { id: data.listingId }, data: { reportCount: { increment: 1 } } }),
-    ]);
+  create(data, db = undefined) {
+    const write = (tx) =>
+      Promise.all([
+        tx.violationReport.create({ data }),
+        tx.listing.update({ where: { id: data.listingId }, data: { reportCount: { increment: 1 } } }),
+      ]);
+    return db ? write(db) : prisma.$transaction(write);
   },
 
   findById(id) {
@@ -47,8 +49,8 @@ const reportRepository = {
     });
   },
 
-  countRecentByReporter(reporterId, since) {
-    return prisma.violationReport.count({ where: { reporterId, createdAt: { gte: since } } });
+  countRecentByReporter(reporterId, since, db = prisma) {
+    return db.violationReport.count({ where: { reporterId, createdAt: { gte: since } } });
   },
 
   /** The queue length for the sidebar: reports nobody has ruled on yet. */

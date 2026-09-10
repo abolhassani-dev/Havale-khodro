@@ -593,7 +593,7 @@ export function regMinePage() {
     };
     return Object.entries(q)
       .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&');
   };
 

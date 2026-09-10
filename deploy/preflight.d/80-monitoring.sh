@@ -34,13 +34,17 @@ else
 fi
 
 tg_token="$(env_get TELEGRAM_BOT_TOKEN)"; tg_chat="$(env_get TELEGRAM_CHAT_ID)"
+# The same base notify.sh uses — Bale by default, because Telegram is not
+# reachable from here. Probing api.telegram.org with a Bale token would send
+# a live credential to a service this server does not use.
+alert_base="$(env_get ALERT_API_BASE)"; alert_base="${alert_base:-https://tapi.bale.ai}"
 if [ -z "$tg_token" ] || [ -z "$tg_chat" ]; then
   warn "هشدار تلگرام تنظیم نشده — خرابی‌ها فقط در لاگ می‌مانند" "docs/deployment.md — بخش هشدار تلگرام"
 else
   # -o /dev/null and no error output: the URL carries the token, and this
   # script's output may be pasted somewhere.
   if curl -s -o /dev/null --max-time 10 -w '%{http_code}' \
-       "https://api.telegram.org/bot$tg_token/getMe" 2>/dev/null | grep -q '^200$'; then
+       "${alert_base}/bot$tg_token/getMe" 2>/dev/null | grep -q '^200$'; then
     ok "توکن ربات تلگرام معتبر است"
   else
     bad "تلگرام جواب نداد — توکن اشتباه است یا دسترسی شبکه ندارد" "توکن را در .env بررسی کنید (در چت نفرستید)"

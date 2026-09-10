@@ -81,24 +81,76 @@ function makeUploader({ subdir, maxFiles = 3, typeMessage, mimes }) {
 }
 
 /**
- * Deletes what was uploaded if the request ends up refused.
+ * What each accepted type looks like in its first bytes.
  *
- * Multer writes the file to disk before anything downstream gets to look at
- * the request, so a schema error or a permission check leaves a file on a
- * small VPS that no row will ever point at. Mounted straight after the upload
- * middleware, so nothing else has to remember.
+ * The MIME type multer sees is the one the client wrote into its own request,
+ * and a browser will happily label anything `image/png` if a script asks it
+ * to. The bytes on disk are the only thing that was not chosen by the
+ * uploader, so they decide. WebP is RIFF....WEBP, with a length in the gap.
+ */
+const SIGNATURES = {
+  'image/jpeg': [[0xff, 0xd8, 0xff]],
+  'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x57, 0x45, 0x42, 0x50]],
+  'application/pdf': [[0x25, 0x50, 0x44, 0x46]],
+};
+
+function matchesSignature(bytes, mime) {
+  const patterns = SIGNATURES[mime];
+  if (!patterns) return false;
+  return patterns.some((p) => p.every((b, i) => b === null || bytes[i] === b));
+}
+
+async function looksLike(file) {
+  const fh = await fs.promises.open(file.path, 'r');
+  try {
+    const buf = Buffer.alloc(12);
+    const { bytesRead } = await fh.read(buf, 0, 12, 0);
+    return bytesRead >= 4 && matchesSignature(buf, file.mimetype);
+  } finally {
+    await fh.close();
+  }
+}
+
+function filesOf(req) {
+  const files = req.file ? [req.file] : req.files || [];
+  return [].concat(files);
+}
+
+/**
+ * Checks what was uploaded, and deletes it if the request ends up refused.
+ *
+ * Two jobs, one place, because every uploader mounts this and nothing else
+ * has to remember either:
+ *
+ *   The file's first bytes must match the type it claimed. A mismatch is
+ *   refused as a validation error and the file is gone before any handler
+ *   sees it — so what the API later serves under `image/png` is a PNG, and
+ *   not an HTML page a browser might be talked into rendering.
+ *
+ *   Multer writes the file to disk before anything downstream gets to look at
+ *   the request, so a schema error or a permission check leaves a file on a
+ *   small VPS that no row will ever point at. Whatever the response, a
+ *   refused request leaves nothing behind.
  */
 function discardOnFailure(req, res, next) {
   res.on('finish', () => {
     if (res.statusCode < 400) return;
-    const files = req.file ? [req.file] : req.files || [];
-    for (const file of [].concat(files)) {
+    for (const file of filesOf(req)) {
       fs.unlink(file.path, (err) => {
         if (err) logger.warn('Could not remove an upload from a refused request', { error: err.message });
       });
     }
   });
-  return next();
+
+  const files = filesOf(req);
+  if (!files.length) return next();
+  return Promise.all(files.map((f) => looksLike(f).catch(() => false))).then((oks) => {
+    if (oks.every(Boolean)) return next();
+    const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE');
+    err.message = 'محتوای فایل با نوع آن نمی‌خواند — فقط عکس واقعی (JPG، PNG، WebP) یا PDF قابل پیوست است';
+    return next(err);
+  }, next);
 }
 
 /** What multer hands over, in the shape the database stores. */

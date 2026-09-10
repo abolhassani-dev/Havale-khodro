@@ -16,11 +16,11 @@
  * visible `raw()` in the diff rather than an invisible absence.
  */
 
-const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' };
 
 export function escape(value) {
   if (value === null || value === undefined) return '';
-  return String(value).replace(/[&<>"']/g, (c) => ESCAPES[c]);
+  return String(value).replace(/[&<>"'`]/g, (c) => ESCAPES[c]);
 }
 
 /** Marks a string as already-safe HTML. Use it only on markup you built. */
@@ -59,10 +59,18 @@ export function html(strings, ...values) {
   return raw(out);
 }
 
-/** Attribute value for a URL, refusing schemes that can execute. */
+/**
+ * Attribute value for a URL, refusing anything that can execute.
+ *
+ * An allow-list, not a deny-list: a browser strips tabs, newlines and other
+ * control characters *inside* a scheme before it reads it, so `jav\tascript:`
+ * runs where a test for the word «javascript» would not have matched. The
+ * same characters are stripped here first, and then only the shapes a link
+ * in this product can legitimately have are let through — a relative path,
+ * a fragment, a query, http(s), tel and mailto. Everything else becomes `#`.
+ */
 export function safeUrl(url) {
-  const value = String(url || '');
-  // `javascript:` and `data:` in an href are script execution dressed as a link.
-  if (/^\s*(javascript|data|vbscript):/i.test(value)) return '#';
-  return escape(value);
+  const value = String(url ?? '').replace(/[\u0000-\u001f\u007f\s]/g, '');
+  if (!/^(https?:|tel:|mailto:|\/|#|\?)/i.test(value)) return '#';
+  return escape(String(url));
 }

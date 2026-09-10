@@ -30,6 +30,9 @@ x-logging: &logging
 services:
   web:
     image: nginx:1.27-alpine
+    # No process in the container may gain privileges it did not start with
+    # (setuid binaries, capabilities) — one line, no behavioural change.
+    security_opt: ['no-new-privileges:true']
     restart: unless-stopped
     logging: *logging
     mem_limit: ${WEB_MEM_LIMIT:-128m}
@@ -70,6 +73,12 @@ services:
         # cannot serve anything the lockfile did not describe.
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
     restart: unless-stopped
+    # No process in the container may gain privileges it did not start with
+    # (setuid binaries, capabilities) — one line, no behavioural change.
+    security_opt: ['no-new-privileges:true']
+    # The API runs as an unprivileged user and binds an unprivileged port; it
+    # needs no Linux capability at all, so none are granted.
+    cap_drop: [ALL]
     logging: *logging
     # Room for the workers below: each Node process carries its own heap and
     # runtime, and two of them under the old 512m ceiling would have been one
@@ -145,6 +154,9 @@ services:
 
   db:
     image: postgres:16-alpine
+    # No process in the container may gain privileges it did not start with
+    # (setuid binaries, capabilities) — one line, no behavioural change.
+    security_opt: ['no-new-privileges:true']
     restart: unless-stopped
     logging: *logging
     mem_limit: ${DB_MEM_LIMIT:-1g}
@@ -175,6 +187,9 @@ services:
   # this way the panel itself is never the first line of defence.
   adminer:
     image: adminer:4
+    # No process in the container may gain privileges it did not start with
+    # (setuid binaries, capabilities) — one line, no behavioural change.
+    security_opt: ['no-new-privileges:true']
     restart: unless-stopped
     logging: *logging
     mem_limit: ${ADMINER_MEM_LIMIT:-128m}

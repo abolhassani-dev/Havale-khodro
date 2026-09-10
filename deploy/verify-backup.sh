@@ -75,7 +75,9 @@ case "$FILE" in
       "system/os.txt:مشخصات سرور"
     do
       p="${part%%:*}"; label="${part#*:}"
-      if [ -e "$UNPACK/$p" ]; then
+      # Present *and* non-trivial: an empty tarball is a valid file and a
+      # useless backup, and the certificate archive once was exactly that.
+      if [ -e "$UNPACK/$p" ] && [ "$(stat -c %s "$UNPACK/$p" 2>/dev/null || echo 0)" -gt 64 ]; then
         printf '   ✓ %-28s %s\n' "$p" "$label"
       else
         printf '   ✗ %-28s %s — نیست\n' "$p" "$label"

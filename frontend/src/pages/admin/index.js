@@ -1,4 +1,4 @@
-import { html, raw } from '../../ui/html.js';
+import { html, raw, safeUrl } from '../../ui/html.js';
 import { icon } from '../../ui/icons.js';
 import { admin, reports, tickets, subscription } from '../../api/index.js';
 import { getState, setState, can } from '../../state/store.js';
@@ -361,8 +361,7 @@ function dashPage() {
                     ? html`<span class="kt-age">${waitLabel(row)}</span>`
                     : ''
                 }
-                <button class="btn sm" data-go="${row.page}"
-                        ${raw(row.params ? `data-go-params="${row.params}"` : '')}>رسیدگی</button>
+                <button class="btn sm" data-go="${row.page}" data-go-params="${row.params || ''}">رسیدگی</button>
               </div>`
             )}
           </div>`
@@ -1622,7 +1621,7 @@ function adminTicketsPage() {
     const merged = { status, category, ...patch };
     return Object.entries(merged)
       .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&');
   };
 
@@ -2003,16 +2002,16 @@ function seatReceipt(r) {
   }
   const image = r.mime?.startsWith('image/');
   return html`<div class="seat-slip">
-    <a class="seat-slip-v ${image ? 'is-img' : 'is-file'}" href="${r.url}" target="_blank" rel="noopener"
+    <a class="seat-slip-v ${image ? 'is-img' : 'is-file'}" href="${safeUrl(r.url)}" target="_blank" rel="noopener"
        title="${r.name}">
-      ${image ? html`<img src="${r.url}" alt="فیش واریزی" loading="lazy">` : icon('file', 22)}
+      ${image ? html`<img src="${safeUrl(r.url)}" alt="فیش واریزی" loading="lazy">` : icon('file', 22)}
     </a>
     <div class="seat-slip-m">
       <b>فیش واریزی</b>
       <span class="seat-slip-fn">${r.name}</span>
       <span class="hint num">${fileSize(r.size)}</span>
     </div>
-    <a class="btn sm" href="${r.url}" target="_blank" rel="noopener">دیدن فیش</a>
+    <a class="btn sm" href="${safeUrl(r.url)}" target="_blank" rel="noopener">دیدن فیش</a>
   </div>`;
 }
 

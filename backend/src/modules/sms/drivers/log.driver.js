@@ -8,11 +8,17 @@ const logger = require('../../../utils/logger');
  * can see exactly which message would have gone to which number, and the day the
  * panel is connected the only thing that changes is which driver is selected.
  */
+const { maskPhone } = require('../../../utils/maskPhone');
+
 const logDriver = {
   name: 'log',
 
   async send({ to, body }) {
-    logger.info('SMS (log driver — not actually sent)', { to, body });
+    // The number is masked and the text is measured, not printed: the log is
+    // outside the database's encryption, and a recipient list in plain text
+    // there would undo what the column encryption is for. The full row is in
+    // the SmsMessage table for anybody who needs to read it.
+    logger.info('SMS (log driver — not actually sent)', { to: maskPhone(to), chars: body.length });
     return { providerId: null };
   },
 };

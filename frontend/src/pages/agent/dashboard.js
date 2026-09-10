@@ -168,7 +168,7 @@ export function dashboardPage() {
               <thead><tr><th>خودرو</th><th>بازار</th>${reseller ? html`<th>زیرشاخه</th>` : ''}<th>وضعیت</th><th>بازدید</th></tr></thead>
               <tbody>
                 ${items.slice(0, 6).map(
-                  (h) => html`<tr ${raw(h.market === 'HAVALE' ? `data-open-havale="${h.id}"` : h.market === 'CAR' ? `data-open-car="${h.id}"` : '')} style="cursor:pointer">
+                  (h) => html`<tr data-open-havale="${h.market === 'HAVALE' ? h.id : ''}" data-open-car="${h.market === 'CAR' ? h.id : ''}" style="cursor:pointer">
                     <td>${h.carType}</td>
                     <td><span class="tag ${MARKET_TONE[h.market] || 'c'}">${MARKET_LABEL[h.market] || '—'}</span></td>
                     ${

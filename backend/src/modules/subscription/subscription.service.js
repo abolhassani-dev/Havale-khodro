@@ -4,7 +4,7 @@ const settingsService = require('../settings/settings.service');
 const authRepository = require('../auth/auth.repository');
 const { DEFAULT_REVEAL_LIMITS, REVEAL_PERIOD_DAYS } = require('../../constants/havale');
 const { addDays } = require('../../utils/time');
-const { isAdmin } = require('../../constants/roles');
+const { isAdmin, userCan } = require('../../constants/roles');
 const { MESSAGES } = require('../../constants/messages');
 const { BadRequestError, NotFoundError, ForbiddenError } = require('../../errors/AppError');
 
@@ -306,7 +306,10 @@ async function seatOrderReceipt({ user, orderId }) {
   const order = await subscriptionRepository.findSeatOrder(orderId);
   if (!order || !order.receiptStoredAs) throw new NotFoundError('فیش واریزی');
 
-  const maySee = isAdmin(user.role) || order.buyerId === user.id;
+  // «Staff who may review capacity» — the seats permission, not any staff
+  // account: a deposit slip is a financial document, and support staff have
+  // no business in it.
+  const maySee = userCan(user, 'seats') || order.buyerId === user.id;
   if (!maySee) throw new NotFoundError('فیش واریزی');
 
   return {

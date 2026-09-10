@@ -441,7 +441,7 @@ const havaleService = {
    * mean two versions of the one rule the business runs on.
    */
   reveal({ user, access, id, ip }) {
-    return revealService.reveal({ user, access, id, ip, targetType: 'HAVALE' });
+    return revealService.reveal({ user, access, id, ip, targetType: 'HAVALE', market: 'HAVALE' });
   },
 
   revealUsage({ user, access }) {

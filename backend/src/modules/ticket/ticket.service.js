@@ -103,6 +103,9 @@ const ticketService = {
   },
 
   async setPriority({ id, priority }) {
+    // Looked up first: an unknown id is a 404, not a database error that ends
+    // up in the error log and pages somebody.
+    if (!(await ticketRepository.findById(id))) throw new NotFoundError('تیکت');
     await ticketRepository.setPriority(id, priority);
     return toTicket(await ticketRepository.findById(id));
   },

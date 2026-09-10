@@ -1,4 +1,6 @@
 const { prisma } = require('../../config/database');
+const { serialized } = require('../../utils/serialize');
+const { toRevealResult } = require('./reveal.dto');
 const authRepository = require('../auth/auth.repository');
 const { startOfTehranDay } = require('../../utils/time');
 const { MESSAGES } = require('../../constants/messages');
@@ -36,15 +38,21 @@ const OWNER_SELECT = {
 };
 
 const revealRepository = {
-  findListing(id) {
+  /**
+   * The listing, in the market it was asked for. A حواله id sent to the
+   * خودرو reveal route is refused rather than revealed under the wrong
+   * label — the allowance is shared, so nothing is gained, but the record
+   * of what was revealed where is the record the monitoring reads.
+   */
+  findListing(id, market = undefined) {
     return prisma.listing.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...(market ? { market } : {}) },
       include: { owner: OWNER_SELECT },
     });
   },
 
-  findReveal(listingId, viewerId) {
-    return prisma.contactReveal.findUnique({
+  findReveal(listingId, viewerId, db = prisma) {
+    return db.contactReveal.findUnique({
       where: { listingId_viewerId: { listingId, viewerId } },
     });
   },
@@ -59,8 +67,8 @@ const revealRepository = {
     return new Set(rows.map((r) => r.listingId));
   },
 
-  countSince(viewerId, since) {
-    return prisma.contactReveal.count({ where: { viewerId, createdAt: { gte: since } } });
+  countSince(viewerId, since, db = prisma) {
+    return db.contactReveal.count({ where: { viewerId, createdAt: { gte: since } } });
   },
 
   /**
@@ -70,28 +78,19 @@ const revealRepository = {
    * viewer for nothing or show the owner a view that was never recorded — and
    * the recorded trail is the evidence the whole monitoring feature rests on.
    */
-  record({ listingId, viewerId, ip, phoneShown, agencyCodeShown }) {
-    return prisma.$transaction([
-      prisma.contactReveal.create({
-        data: { listingId, viewerId, ip, phoneShown, agencyCodeShown },
-      }),
-      prisma.listing.update({ where: { id: listingId }, data: { revealCount: { increment: 1 } } }),
-    ]);
+  async record({ listingId, viewerId, ip, phoneShown, agencyCodeShown }, db = prisma) {
+    const write = (tx) =>
+      Promise.all([
+        tx.contactReveal.create({
+          data: { listingId, viewerId, ip, phoneShown, agencyCodeShown },
+        }),
+        tx.listing.update({ where: { id: listingId }, data: { revealCount: { increment: 1 } } }),
+      ]);
+    // Inside the caller's transaction when there is one; in one of its own
+    // otherwise, so the two writes still cannot come apart.
+    return db === prisma ? prisma.$transaction(write) : write(db);
   },
 };
-
-/** What the caller hands back to the viewer once the reveal is paid for. */
-function toRevealResult(owner, usage) {
-  return {
-    contact: {
-      coordinatorName: owner.coordinatorName,
-      coordinatorPhone: owner.coordinatorPhone,
-      phone: owner.phone,
-    },
-    agency: { code: owner.agencyCode, name: owner.agencyName, city: owner.city },
-    usage,
-  };
-}
 
 /**
  * How much of the allowance is gone.
@@ -100,10 +99,12 @@ function toRevealResult(owner, usage) {
  * thirty-day period rather than a Jalali month, so renewing early cannot be
  * used to reset the allowance (review round 3, fix 2).
  */
-async function usageFor({ user, access }) {
+async function usageFor({ user, access }, db = prisma) {
   const [dailyUsed, monthlyUsed] = await Promise.all([
-    revealRepository.countSince(user.id, startOfTehranDay()),
-    access.periodStart ? revealRepository.countSince(user.id, access.periodStart) : Promise.resolve(0),
+    revealRepository.countSince(user.id, startOfTehranDay(), db),
+    access.periodStart
+      ? revealRepository.countSince(user.id, access.periodStart, db)
+      : Promise.resolve(0),
   ]);
 
   return {
@@ -124,8 +125,8 @@ async function usageFor({ user, access }) {
  * @param {string} [args.ip]
  * @param {string} [args.targetType] how the activity log names it
  */
-async function reveal({ user, access, id, ip, targetType = 'LISTING' }) {
-  const listing = await revealRepository.findListing(id);
+async function reveal({ user, access, id, ip, targetType = 'LISTING', market = undefined }) {
+  const listing = await revealRepository.findListing(id, market);
   if (!listing) throw new AppError(MESSAGES.LISTING.GONE, 404, ERROR_CODES.NOT_FOUND);
 
   if (listing.ownerId === user.id) {
@@ -138,48 +139,58 @@ async function reveal({ user, access, id, ip, targetType = 'LISTING' }) {
     throw new AppError(MESSAGES.LISTING.OWNER_INACTIVE, 404, ERROR_CODES.NOT_FOUND);
   }
 
-  // Already opened: hand it back without charging again. The unique constraint
-  // on (listing, viewer) makes that the natural behaviour rather than something
-  // to remember — an agent who closes the tab has not used up a second view.
-  const existing = await revealRepository.findReveal(id, user.id);
-  if (existing) {
-    return toRevealResult(listing.owner, await usageFor({ user, access }));
-  }
+  // Count, compare, write — as one step per viewer. Without the lock, thirty
+  // reveals fired together all counted the same «one left» and all went
+  // through; see utils/serialize.js.
+  const { usage, charged } = await serialized(`reveal:${user.id}`, async (tx) => {
+    // Already opened: hand it back without charging again. The unique
+    // constraint on (listing, viewer) makes that the natural behaviour rather
+    // than something to remember — an agent who closes the tab has not used
+    // up a second view.
+    const existing = await revealRepository.findReveal(id, user.id, tx);
+    if (existing) return { usage: await usageFor({ user, access }, tx), charged: false };
 
-  const usage = await usageFor({ user, access });
+    const used = await usageFor({ user, access }, tx);
 
-  if (usage.dailyUsed >= usage.dailyLimit) {
-    throw new ForbiddenError(MESSAGES.LISTING.DAILY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
-  }
-  if (usage.monthlyUsed >= usage.monthlyLimit) {
-    throw new ForbiddenError(MESSAGES.LISTING.MONTHLY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
-  }
+    if (used.dailyUsed >= used.dailyLimit) {
+      throw new ForbiddenError(MESSAGES.LISTING.DAILY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
+    }
+    if (used.monthlyUsed >= used.monthlyLimit) {
+      throw new ForbiddenError(MESSAGES.LISTING.MONTHLY_LIMIT, ERROR_CODES.REVEAL_LIMIT_REACHED);
+    }
 
-  await revealRepository.record({
-    listingId: id,
-    viewerId: user.id,
-    ip,
-    // The number as it read at this moment. Contact details can be changed
-    // later through a ticket, and without this the log would quietly rewrite
-    // history to show the new number (review round 3, fix 6).
-    phoneShown: listing.owner.coordinatorPhone,
-    agencyCodeShown: listing.owner.agencyCode,
+    await revealRepository.record(
+      {
+        listingId: id,
+        viewerId: user.id,
+        ip,
+        // The number as it read at this moment. Contact details can be changed
+        // later through a ticket, and without this the log would quietly
+        // rewrite history to show the new number (review round 3, fix 6).
+        phoneShown: listing.owner.coordinatorPhone,
+        agencyCodeShown: listing.owner.agencyCode,
+      },
+      tx
+    );
+
+    return {
+      usage: { ...used, dailyUsed: used.dailyUsed + 1, monthlyUsed: used.monthlyUsed + 1 },
+      charged: true,
+    };
   });
 
-  await authRepository.recordActivity({
-    userId: user.id,
-    action: 'CONTACT_REVEALED',
-    targetType,
-    targetId: id,
-    summary: listing.owner.agencyCode,
-    ip,
-  });
+  if (charged) {
+    await authRepository.recordActivity({
+      userId: user.id,
+      action: 'CONTACT_REVEALED',
+      targetType,
+      targetId: id,
+      summary: listing.owner.agencyCode,
+      ip,
+    });
+  }
 
-  return toRevealResult(listing.owner, {
-    ...usage,
-    dailyUsed: usage.dailyUsed + 1,
-    monthlyUsed: usage.monthlyUsed + 1,
-  });
+  return toRevealResult(listing.owner, usage);
 }
 
 /**

@@ -25,3 +25,15 @@ add_header Referrer-Policy "same-origin" always;
 # No third-party embedding. Clickjacking a "suspend account" button is easy
 # money, and this panel has no business inside anyone else's page.
 add_header X-Frame-Options "DENY" always;
+# Nothing in this product uses a camera, a microphone, a location or a
+# payment API, and saying so stops an injected script from asking.
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" always;
+# The panel opens no cross-origin popups and serves nothing another origin
+# may embed; both are cheap to state and close two classes of side channel.
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Resource-Policy "same-origin" always;
+# Two years of «HTTPS only», remembered by the browser. Sent over plain HTTP
+# too, where browsers ignore it by specification — which is what lets it live
+# in the one file both servers include, instead of a second copy that could
+# be dropped by a location setting its own header (see the top of this file).
+add_header Strict-Transport-Security "max-age=63072000" always;

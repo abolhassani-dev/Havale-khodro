@@ -15,6 +15,7 @@
  */
 
 const { HAVALE_KIND } = require('../../constants/havale');
+const { contactOf, agencyOf } = require('../listing/reveal.dto');
 const { maskAllText } = require('../../utils/textGuard');
 
 /** Prisma returns BigInt for money columns, and JSON.stringify throws on those. */
@@ -121,16 +122,8 @@ function toHavaleCard(havale, { subscriptionActive, revealed = false } = {}) {
     // Paid for, so handed over — and unmasked, because somebody holding the
     // telephone number gains nothing from a blanked copy of it.
     card.description = havale.description;
-    card.agency = {
-      name: havale.owner.agencyName,
-      code: havale.owner.agencyCode,
-      city: havale.owner.city,
-    };
-    card.contact = {
-      coordinatorName: havale.owner.coordinatorName,
-      coordinatorPhone: havale.owner.coordinatorPhone,
-      phone: havale.owner.phone,
-    };
+    card.agency = agencyOf(havale.owner);
+    card.contact = contactOf(havale.owner);
   }
 
   return card;
@@ -154,16 +147,8 @@ function toOwnHavale(havale) {
     revealCount: havale.revealCount,
     reportCount: havale.reportCount,
     suspendReason: havale.suspendReason,
-    agency: havale.owner
-      ? { name: havale.owner.agencyName, code: havale.owner.agencyCode, city: havale.owner.city }
-      : null,
-    contact: havale.owner
-      ? {
-          coordinatorName: havale.owner.coordinatorName,
-          coordinatorPhone: havale.owner.coordinatorPhone,
-          phone: havale.owner.phone,
-        }
-      : null,
+    agency: havale.owner ? agencyOf(havale.owner) : null,
+    contact: havale.owner ? contactOf(havale.owner) : null,
     contactRevealed: true,
   };
 }

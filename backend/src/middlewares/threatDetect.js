@@ -139,7 +139,10 @@ function threatDetect(req, res, next) {
     } else if (PROBE_PATH.test(url)) {
       found = { rule: 'PROBE_PATH', sample: readable };
     } else {
-      const size = Number(req.headers['content-length'] || 0);
+      // Measured from what was actually parsed, not from the Content-Length
+      // header: a client can declare any length it likes, and a declared
+      // size over the cap must not be a way to skip the scan.
+      const size = req.body ? Buffer.byteLength(JSON.stringify(req.body)) : 0;
       const body = req.body && size <= MAX_BODY_SCAN ? flatten(req.body) : null;
       const hit = match(url, body);
       // A hit on the URL is reported as the readable URL, not as the pair the

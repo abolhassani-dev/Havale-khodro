@@ -1,4 +1,4 @@
-import { html, raw } from '../../ui/html.js';
+import { html, raw, safeUrl } from '../../ui/html.js';
 import { icon } from '../../ui/icons.js';
 import { car, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
@@ -505,7 +505,7 @@ export async function openCarModal(id) {
       ${
         c.photos?.length
           ? html`<div class="car-photos">
-              ${c.photos.map((p) => html`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" alt="عکس خودرو" loading="lazy"></a>`)}
+              ${c.photos.map((p) => html`<a href="${safeUrl(p.url)}" target="_blank" rel="noopener"><img src="${safeUrl(p.url)}" alt="عکس خودرو" loading="lazy"></a>`)}
             </div>`
           : offer && c.photoCount && !c.contactRevealed
             ? html`<p class="hint" style="margin:10px 0 0">
@@ -889,7 +889,7 @@ export function carMinePage() {
     const q = { ...(params.status ? { status: params.status } : {}), ...(reseller ? { scope } : {}), ...patch };
     return Object.entries(q)
       .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&');
   };
 
@@ -1113,7 +1113,7 @@ export function carEditModal(id) {
               <div class="car-photos" data-edit-photos>
                 ${(c.photos || []).map(
                   (p) => html`<span class="car-photo-edit">
-                    <img src="${p.url}" alt="عکس خودرو" loading="lazy">
+                    <img src="${safeUrl(p.url)}" alt="عکس خودرو" loading="lazy">
                     <button type="button" class="btn sm danger" data-car-photo-del="${p.id}"
                             data-car-listing="${c.id}">حذف</button>
                   </span>`

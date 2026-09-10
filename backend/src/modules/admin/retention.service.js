@@ -173,6 +173,9 @@ const retentionService = {
       report.archivesRemoved = await this.forgetOldArchives();
       report.errorsRemoved = await this.pruneResolvedErrors();
       report.securityRemoved = await this.pruneResolvedSecurityEvents();
+      report.sessionsRemoved = await this.pruneEndedSessions();
+      report.otpRemoved = await this.pruneOtpChallenges();
+      report.smsRemoved = await this.pruneSmsLog();
     }
 
     return report;
@@ -284,6 +287,46 @@ const retentionService = {
       where: {
         resolvedAt: { not: null, lt: cutoff(config.retention.days.resolvedSecurity) },
       },
+    });
+    return count;
+  },
+
+  /**
+   * Sessions that ended.
+   *
+   * A finished session is an address, a browser string and two timestamps —
+   * useful for «where was I signed in last week», worthless after a season,
+   * and personal data for as long as it sits there. The live ones are never
+   * touched; the login/logout activity rows keep the audit trail on their
+   * own schedule.
+   */
+  async pruneEndedSessions() {
+    const { count } = await prisma.authSession.deleteMany({
+      where: { endedAt: { not: null, lt: cutoff(config.retention.days.auth) } },
+    });
+    return count;
+  },
+
+  /**
+   * One-time codes, long after they could be used. A challenge expires in
+   * minutes; the row is kept a month so a support question about «I never
+   * got the code» can still be answered, and then it goes.
+   */
+  async pruneOtpChallenges() {
+    const { count } = await prisma.otpChallenge.deleteMany({
+      where: { expiresAt: { lt: cutoff(config.retention.days.otp) } },
+    });
+    return count;
+  },
+
+  /**
+   * The SMS delivery log. Each row carries a telephone number and the full
+   * text of a message — the one table that would hand a thief every number
+   * the system ever wrote to. A season is enough to debug a delivery problem.
+   */
+  async pruneSmsLog() {
+    const { count } = await prisma.smsMessage.deleteMany({
+      where: { createdAt: { lt: cutoff(config.retention.days.sms) } },
     });
     return count;
   },

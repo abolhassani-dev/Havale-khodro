@@ -421,6 +421,7 @@ const carService = {
       id,
       ip,
       targetType: 'CAR',
+      market: 'CAR',
     });
   },
 

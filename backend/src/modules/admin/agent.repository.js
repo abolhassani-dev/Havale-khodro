@@ -55,9 +55,19 @@ const agentRepository = {
     return prisma.user.create({ data, select: AGENT_SELECT });
   },
 
+  /**
+   * An agency by id — and only an agency.
+   *
+   * Every admin action on «a نمایندگی» (edit, suspend, reset password, force
+   * logout, set limits) starts here, so this is where the role is pinned.
+   * Without the filter the same routes would accept a staff account's id —
+   * which /admin/activity hands out — and a SUPER_ADMIN could reset another
+   * administrator's password through the agency endpoint. Staff are managed
+   * only by staff.service, which has its own rules about who may touch whom.
+   */
   findById(id) {
-    return prisma.user.findUnique({
-      where: { id },
+    return prisma.user.findFirst({
+      where: { id, role: 'AGENT' },
       select: {
         ...AGENT_SELECT,
         // The file page shows where an account sits in the hierarchy: a

@@ -1,4 +1,5 @@
 const reportRepository = require('./report.repository');
+const { serialized } = require('../../utils/serialize');
 const authRepository = require('../auth/auth.repository');
 const settingsService = require('../settings/settings.service');
 const smsService = require('../sms/sms.service');
@@ -53,13 +54,6 @@ const reportService = {
     // fifteen reports and manufacture a suspension.
     if (existing) throw new ConflictError(MESSAGES.REPORT.ALREADY_REPORTED);
 
-    const dailyLimit = await settingsService.get('report.dailyLimit');
-    const recent = await reportRepository.countRecentByReporter(
-      user.id,
-      new Date(Date.now() - 24 * 60 * 60 * 1000)
-    );
-    if (recent >= dailyLimit) throw new ForbiddenError(MESSAGES.REPORT.DAILY_LIMIT);
-
     // "Nobody answers" is a claim only somebody who tried to call can make, and
     // the reveal log is the proof they tried (blueprint 8.2).
     if (REASONS_REQUIRING_CONTACT.includes(reason)) {
@@ -67,11 +61,27 @@ const reportService = {
       if (!revealed) throw new BadRequestError(MESSAGES.REPORT.NEEDS_CONTACT_FIRST);
     }
 
-    const [report] = await reportRepository.create({
-      listingId,
-      reporterId: user.id,
-      reason,
-      description,
+    const dailyLimit = await settingsService.get('report.dailyLimit');
+
+    // Count and write under one lock per reporter, so a burst of reports
+    // fired together cannot all pass the daily cap (utils/serialize.js).
+    const [report] = await serialized(`report:${user.id}`, async (tx) => {
+      const recent = await reportRepository.countRecentByReporter(
+        user.id,
+        new Date(Date.now() - 24 * 60 * 60 * 1000),
+        tx
+      );
+      if (recent >= dailyLimit) throw new ForbiddenError(MESSAGES.REPORT.DAILY_LIMIT);
+
+      return reportRepository.create(
+        {
+          listingId,
+          reporterId: user.id,
+          reason,
+          description,
+        },
+        tx
+      );
     });
 
     await authRepository.recordActivity({

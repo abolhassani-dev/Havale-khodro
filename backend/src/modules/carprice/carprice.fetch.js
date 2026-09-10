@@ -24,10 +24,34 @@ async function once(url) {
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
+    return await readCapped(response, MAX_PAGE_BYTES, controller);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * The body, up to a ceiling. A price page is a few hundred kilobytes; a
+ * source that starts sending gigabytes — by mistake or otherwise — must not
+ * be able to grow this container until the kernel kills it. Counted while
+ * streaming, so the ceiling holds whether or not Content-Length was honest.
+ */
+const MAX_PAGE_BYTES = 8 * 1024 * 1024;
+
+async function readCapped(response, limit, controller) {
+  const declared = Number(response.headers.get('content-length') || 0);
+  if (declared > limit) throw new Error(`صفحه بزرگ‌تر از حد مجاز است (${declared} بایت)`);
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of response.body) {
+    total += chunk.length;
+    if (total > limit) {
+      controller.abort();
+      throw new Error(`صفحه بزرگ‌تر از حد مجاز است (بیش از ${limit} بایت)`);
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

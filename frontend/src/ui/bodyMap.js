@@ -465,7 +465,7 @@ export function setBodyPreviewType(form, bodyType) {
   if (groups && was !== (bodyType || '')) {
     const parts = partsFor(bodyType);
     for (const key of Object.keys(table)) if (!parts[key]) delete table[key];
-    groups.innerHTML = String(partGroups(bodyType).map((group) => groupBox(group, table)).join(''));
+    groups.innerHTML = String(html`${partGroups(bodyType).map((group) => groupBox(group, table))}`);
     refresh(wrap, table);
     return;
   }

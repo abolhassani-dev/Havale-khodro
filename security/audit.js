@@ -90,6 +90,102 @@ const code = ALL.filter(
 // ─────────────────────────────────────────────────────────────────────────────
 // XSS
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Which functions render only through the escaping template.
+ *
+ * A sink fed by `String(detailPanel(...))` is as safe as the html`` tag it is
+ * built from — but a scanner that reads the sink line alone cannot know that,
+ * and the first version of this check reported eight such lines as XSS. Every
+ * one was a false alarm, and eight false alarms on every run are how a check
+ * stops being read. So the function behind each call is looked up: it counts
+ * as a renderer when every `return` in it hands back html``, raw(...), an
+ * empty string, or another renderer. Anything else — a template literal, a
+ * concatenation, a value passed in — keeps the finding.
+ */
+const rendererCache = new Map();
+
+function functionBody(text, name) {
+  const decl = new RegExp(
+    `(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`
+  );
+  const m = decl.exec(text);
+  if (!m) return null;
+  let i = m.index + m[0].length;
+  let depth = 1;
+  const start = i;
+  while (i < text.length && depth > 0) {
+    const ch = text[i];
+    if (ch === '{') depth += 1;
+    else if (ch === '}') depth -= 1;
+    i += 1;
+  }
+  return text.slice(start, i - 1);
+}
+
+function isRenderer(text, name, depth = 0) {
+  const key = `${name}@${text.length}`;
+  if (rendererCache.has(key)) return rendererCache.get(key);
+  if (depth > 4) return false;
+  const body = functionBody(text, name);
+  if (body === null) {
+    // Not in this file: follow the import, which in this frontend is always a
+    // relative module under src/.
+    const imp = new RegExp(`import\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*['"]([^'"]+)['"]`).exec(text);
+    if (!imp) return false;
+    const owner = code.find((f) => text === stripComments(read(f)));
+    if (!owner) return false;
+    const target = path.resolve(path.dirname(owner), imp[1]);
+    if (!fs.existsSync(target)) return false;
+    const result = isRenderer(stripComments(read(target)), name, depth + 1);
+    rendererCache.set(key, result);
+    return result;
+  }
+  const returns = [...body.matchAll(/\breturn\b\s*([^;]*)/g)].map((r) => r[1].trim());
+  const ok =
+    returns.length > 0 &&
+    returns.every((expr) => {
+      if (/^html`/.test(expr) || /^raw\(/.test(expr) || /^(''|""|``)$/.test(expr)) return true;
+      const call = /^([A-Za-z_$][\w$]*)\s*\(/.exec(expr);
+      if (call && call[1] !== name) return isRenderer(text, call[1], depth + 1);
+      // `return cond ? html`…` : html`…`` — every branch must be a renderer.
+      if (/\?/.test(expr)) {
+        return expr
+          .split(/\s*[?:]\s*/)
+          .slice(1)
+          .every((part) => /^html`/.test(part) || /^raw\(/.test(part) || /^(''|""|``)$/.test(part));
+      }
+      return false;
+    });
+  rendererCache.set(key, ok);
+  return ok;
+}
+
+/**
+ * Whether the value written into the sink was escaped on its way there.
+ * Three shapes are trusted: a literal with no interpolation, `String(fn(…))`
+ * where fn is a renderer, and a local `const x = …` that is one of those.
+ */
+function sinkIsEscaped(text, source) {
+  const rhs = (/(?:=\s*|insertAdjacentHTML\s*\([^,]*,\s*)(.*)$/.exec(source) || [])[1] || '';
+  const value = rhs.replace(/\)?;?\s*$/, '').trim();
+  const literal = /^(['"`])(?:(?!\1).)*\1$/.test(value) && !value.includes('${');
+  if (literal) return true;
+  if (/String\(html`/.test(value)) return true;
+  const call = /String\(([A-Za-z_$][\w$]*)\s*\(/.exec(value);
+  if (call) return isRenderer(text, call[1]);
+  const ident = /^([A-Za-z_$][\w$]*)$/.exec(value);
+  if (ident) {
+    const def = new RegExp(`\\b(?:const|let)\\s+${ident[1]}\\s*=\\s*([^;]*)`).exec(text);
+    if (!def) return false;
+    const expr = def[1];
+    // `cond ? String(fn(x)) : ''` and plain `String(fn(x))` both qualify.
+    const calls = [...expr.matchAll(/String\(([A-Za-z_$][\w$]*)\s*\(/g)].map((c) => c[1]);
+    const rest = expr.replace(/String\([A-Za-z_$][\w$]*\s*\([^)]*\)\)/g, '').replace(/[?:\s]|''|""|``|[A-Za-z_$][\w$.?]*/g, '');
+    return calls.length > 0 && rest === '' && calls.every((c) => isRenderer(text, c));
+  }
+  return false;
+}
+
 function checkXss() {
   const sinks = [
     { re: /\.innerHTML\s*=/g, what: 'innerHTML assignment' },
@@ -119,7 +215,8 @@ function checkXss() {
           ) ||
           // `x.innerHTML = ''` clears a node. There is no interpolation, so
           // there is nothing to inject.
-          /innerHTML\s*=\s*(''|""|``)\s*;?\s*$/.test(source.trim());
+          /innerHTML\s*=\s*(''|""|``)\s*;?\s*$/.test(source.trim()) ||
+          sinkIsEscaped(text, source);
         add({
           severity: escaped ? 'info' : 'high',
           check: 'xss',
@@ -449,10 +546,14 @@ function checkDeployment() {
       : 'the database panel is reachable only through nginx',
   });
 
-  // Security headers, in whichever nginx file is live.
+  // Security headers, in whichever nginx file is live. The headers moved into
+  // security-headers.inc (so the asset locations, which set their own
+  // Cache-Control, still get them), and an earlier version of this check read
+  // only *.conf — and reported all four as missing while every response
+  // carried them.
   const nginxDir = path.join(ROOT, 'deploy/nginx');
   const confs = fs.existsSync(nginxDir)
-    ? fs.readdirSync(nginxDir).filter((f) => f.endsWith('.conf')).map((f) => path.join(nginxDir, f))
+    ? fs.readdirSync(nginxDir).filter((f) => /\.(conf|inc)$/.test(f)).map((f) => path.join(nginxDir, f))
     : [];
   // Comments stripped for the same reason the JavaScript is: app.conf carries a
   // comment saying "`unsafe-inline` is absent from script-src on purpose", and
