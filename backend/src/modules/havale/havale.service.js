@@ -2,6 +2,7 @@ const { havaleRepository } = require('./havale.repository');
 const { toHavaleCard, toOwnHavale } = require('./havale.dto');
 const authRepository = require('../auth/auth.repository');
 const revealService = require('../listing/reveal.service');
+const network = require('../listing/network');
 const catalogRepository = require('../catalog/catalog.repository');
 const brandAccess = require('../catalog/brandAccess.service');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../errors/AppError');
@@ -111,6 +112,7 @@ function encodeCursor(row) {
  * everything.
  */
 const EDIT_FIELDS = {
+  visibility: ['نمایش'],
   carType: ['مدل خودرو'],
   carColor: ['رنگ'],
   model: ['سال'],
@@ -153,6 +155,7 @@ const havaleService = {
     const havale = await havaleRepository.create({
       ...rest,
       ...catalog,
+      visibility: network.resolveVisibility(user, payload.visibility),
       ownerId: user.id,
       closesAt,
     });
@@ -179,14 +182,19 @@ const havaleService = {
     const take = Math.min(filters.limit || LIST_PAGE_SIZE.DEFAULT, LIST_PAGE_SIZE.MAX);
     const where = publicWhere(filters);
 
+    // A network's own rows reach only the network; everyone else's list is
+    // public rows only. ANDed in, because publicWhere already uses OR
+    // (modules/listing/network).
+    where.AND = [...(where.AND || []), await network.visibilityClause(user)];
+
     // "Only my network": listings posted by the same main agency's accounts —
     // the parent and its sub-agencies. Only members of a network have one to
     // filter by; for anyone else the option resolves to nothing and the filter
     // is ignored rather than failing, mirroring the interface, which does not
     // offer it to them.
     if (filters.network === 'mine') {
-      const rootId = user.parentId || (user.isReseller ? user.id : null);
-      if (rootId) where.ownerId = { in: await havaleRepository.networkMemberIds(rootId) };
+      const own = await network.networkFilter(user);
+      if (own) Object.assign(where, own);
     }
 
     // Two paginations, deliberately. The panel shows people numbered pages —
@@ -263,6 +271,8 @@ const havaleService = {
     if (havale.owner.status !== 'ACTIVE' || havale.status !== HAVALE_STATUS.ACTIVE) {
       throw new NotFoundError('حواله');
     }
+    // Nor is a network-only listing, from outside its network.
+    if (!network.mayView(user, havale)) throw new NotFoundError('حواله');
 
     const reveal = access.active ? await havaleRepository.findReveal(id, user.id) : null;
     return toHavaleCard(havale, { subscriptionActive: access.active, revealed: Boolean(reveal) });
@@ -331,6 +341,9 @@ const havaleService = {
     // had to be repeated here. With the model frozen there is nothing to walk.
     const { carColor, ...rest } = payload;
     const catalog = await this.resolveCatalog({ carColor });
+    if (rest.visibility !== undefined) {
+      rest.visibility = network.resolveVisibility(user, rest.visibility);
+    }
 
     const updated = await havaleRepository.update(id, {
       ...rest,

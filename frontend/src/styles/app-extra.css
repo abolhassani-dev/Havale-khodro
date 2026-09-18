@@ -2698,3 +2698,9 @@ form.card[data-form="car"] { overflow: clip; }
   .help-link { padding: 6px 10px; font-size: 15px; font-weight: 900; }
   .help-link .hl-t { display: none; }
 }
+
+/* «فقط شبکه‌ی من» — the switch on a posting form: a checkbox with its
+   explanation underneath, spanning the row like the description box above it. */
+.net-field { padding: 12px 14px; border: 1px dashed var(--line); border-radius: 10px; background: var(--primary-04, #f4f6fb); }
+.net-field .check { min-height: 0; }
+.net-field .hint { margin-top: 6px; }

@@ -88,12 +88,13 @@ function statusFilter(status) {
 }
 
 const listingRepository = {
-  list({ query, market, kind, status, ownerId, skip = 0, take = 25 }) {
+  list({ query, market, kind, status, ownerId, visibility, skip = 0, take = 25 }) {
     const where = {
       // The desk is one desk, but each market gets its own screen — so the
       // market is a filter here rather than a separate query.
       ...(market ? { market } : {}),
       ...(kind ? { kind } : {}),
+      ...(visibility ? { visibility } : {}),
       ...(ownerId ? { ownerId } : {}),
       ...statusFilter(status),
       ...(textFilter(query) || {}),

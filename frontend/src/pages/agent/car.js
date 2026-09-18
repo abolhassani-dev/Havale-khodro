@@ -1,4 +1,5 @@
 import { html, raw, safeUrl } from '../../ui/html.js';
+import { networkSwitch, networkTag, visibilityOf, hasNetwork } from '../../ui/networkSwitch.js';
 import { icon } from '../../ui/icons.js';
 import { car, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
@@ -72,6 +73,7 @@ export async function loadCarSearch(params) {
       maxMileage: params.maxMileage,
       grades: params.grades,
       warranty: params.warranty,
+      network: params.network,
       sort: params.sort,
       page: params.page || 1,
       limit: 12,
@@ -126,7 +128,7 @@ const SORTS = [
 /** Everything in the address that is a filter — not the kind, order or page. */
 const FILTER_KEYS = [
   'brandIds', 'carModelIds', 'bodyType', 'yearFrom', 'yearTo',
-  'priceFrom', 'priceTo', 'maxMileage', 'grades', 'warranty',
+  'priceFrom', 'priceTo', 'maxMileage', 'grades', 'warranty', 'network',
 ];
 
 /**
@@ -143,7 +145,7 @@ function searchLink(params, patch) {
 }
 
 export function carSearchPage() {
-  const { data, params } = getState();
+  const { data, params, user } = getState();
   const items = data.list?.items || [];
   const total = data.list?.total || 0;
   const brands = data.tree?.brands || [];
@@ -238,6 +240,16 @@ export function carSearchPage() {
           فقط گارانتی فعال
         </label>
       </div>
+      ${
+        hasNetwork(user)
+          ? html`<div class="field">
+              <label class="fcheck">
+                <input type="checkbox" name="network" value="mine" ${raw(params.network === 'mine' ? 'checked' : '')}>
+                فقط خودروهای شبکه‌ی خودمان
+              </label>
+            </div>`
+          : ''
+      }
       <div class="actions">
         <button class="btn primary" type="submit">اعمال</button>
         <button class="btn" type="button" data-go="car-search">پاک کردن</button>
@@ -273,7 +285,7 @@ function card(c) {
     <header>
       <div>
         <span class="tag ${offer ? '' : 'c'}">${CAR_KIND_LABEL[c.kind]}</span>
-        ${editedTag(c)}
+        ${editedTag(c)} ${networkTag(c)}
         <h3>${c.carType}</h3>
       </div>
       ${
@@ -531,7 +543,7 @@ export async function openCarModal(id) {
 // ── the forms ───────────────────────────────────────────────────────────────
 
 export function carFormPage(kind) {
-  const { data } = getState();
+  const { data, user } = getState();
   const offer = kind === 'OFFER';
   const brands = data.tree?.brands || [];
   const colors = data.tree?.colors || [];
@@ -694,6 +706,7 @@ export function carFormPage(kind) {
         <textarea class="in" id="description" name="description" rows="3" maxlength="1000"
                   placeholder="${offer ? 'مثلاً: سرویس‌ها به‌موقع، لاستیک نو…' : ''}"></textarea>
       </div>
+      ${networkSwitch(user)}
     </div>
 
     <div class="form-foot">
@@ -773,6 +786,8 @@ export async function submitCar(form) {
   const kind = form.dataset.kind;
   const offer = kind === 'OFFER';
   const payload = { kind, carModelId: form.carModelId.value };
+  const visibility = visibilityOf(form);
+  if (visibility) payload.visibility = visibility;
 
   const entered = (name) => form.elements[name]?.value || '';
 
@@ -852,6 +867,7 @@ export function applyCarFilters(form) {
     if (value) params[name] = enDigits(value);
   }
   if (form.elements.warranty?.checked) params.warranty = '1';
+  if (form.elements.network?.checked) params.network = 'mine';
   for (const name of ['priceFrom', 'priceTo']) {
     const value = form.elements[name]?.value;
     if (value) params[name] = enDigits(value);
@@ -934,7 +950,7 @@ export function carMinePage() {
                     <div class="sub">
                       ${c.year ? `${faDigits(c.year)} · ` : ''}${c.kind === 'OFFER' ? `${mileage(c.mileageKm)} · ` : ''}${BODY_TYPE_FA[c.bodyType] || ''}
                     </div>
-                    ${editedTag(c)}
+                    ${editedTag(c)} ${networkTag(c)}
                   </td>
                   ${
                     reseller
@@ -1102,6 +1118,7 @@ export function carEditModal(id) {
         <label for="e-desc">توضیحات</label>
         <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${c.description || ''}</textarea>
       </div>
+      ${networkSwitch(getState().user, { checked: c.visibility === 'NETWORK', id: 'e-visibility' })}
       ${
         // The photo shelf — only offers carry photos. Deleting acts at once
         // (each photo is its own row and file); new files ride with «ثبت
@@ -1136,6 +1153,7 @@ export function carEditModal(id) {
     onSubmit: async (form) => {
       const entered = (name) => form.elements[name]?.value || '';
       const payload = { description: entered('description') };
+      if (visibilityOf(form)) payload.visibility = visibilityOf(form);
 
       const numeric = offer
         ? ['year', 'mileageKm', 'carPriceToman']

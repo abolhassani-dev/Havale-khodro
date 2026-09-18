@@ -2,6 +2,7 @@ const { registrationRepository } = require('./registration.repository');
 const { toCard, toOwn } = require('./registration.dto');
 const { REGISTRATION_KIND, LIFETIME_DAYS } = require('./registration.constants');
 const revealService = require('../listing/reveal.service');
+const network = require('../listing/network');
 const catalogRepository = require('../catalog/catalog.repository');
 const brandAccess = require('../catalog/brandAccess.service');
 const authRepository = require('../auth/auth.repository');
@@ -89,7 +90,7 @@ function split(payload) {
  * have to know about this list. The label travels with the recorded change, so
  * an entry written today still reads correctly if a field is renamed later.
  */
-const LISTING_FIELDS = { description: ['توضیحات'] };
+const LISTING_FIELDS = { visibility: ['نمایش'], description: ['توضیحات'] };
 
 const DETAIL_FIELDS = {
   planName: ['نام طرح'],
@@ -173,6 +174,7 @@ const registrationService = {
     const row = await registrationRepository.create({
       ...listing,
       carType: model.name,
+      visibility: network.resolveVisibility(user, payload.visibility),
       ownerId: user.id,
       closesAt: closingDate(payload.kind, payload.registerDeadline),
       detail,
@@ -218,6 +220,13 @@ const registrationService = {
     if (filters.saleType) detail.saleType = filters.saleType;
     if (filters.maxPremium) detail.premiumToman = { lte: BigInt(filters.maxPremium) };
     if (Object.keys(detail).length) where.registration = detail;
+
+    // Network-only rows reach only their network (modules/listing/network).
+    where.AND = [...(where.AND || []), await network.visibilityClause(user)];
+    if (filters.network === 'mine') {
+      const own = await network.networkFilter(user);
+      if (own) Object.assign(where, own);
+    }
 
     // One row, serialised the way this viewer is entitled to see it.
     const serialise = (rows, revealed) =>
@@ -288,6 +297,10 @@ const registrationService = {
     if (row.owner.status !== 'ACTIVE') {
       throw new AppError(MESSAGES.LISTING.OWNER_INACTIVE, 404, ERROR_CODES.NOT_FOUND);
     }
+    // Outside its network, a network-only row is «gone» — see the car market.
+    if (!network.mayView(user, row)) {
+      throw new AppError(MESSAGES.LISTING.GONE, 404, ERROR_CODES.NOT_FOUND);
+    }
 
     const seen = await revealService.revealRepository.findReveal(id, user.id);
     return toCard(row, { subscriptionActive: access.active, revealed: Boolean(seen) });
@@ -341,6 +354,9 @@ const registrationService = {
 
     const detail = detailPatch(payload);
     const updated = await registrationRepository.update(id, {
+      ...(payload.visibility !== undefined
+        ? { visibility: network.resolveVisibility(user, payload.visibility) }
+        : {}),
       ...(payload.description !== undefined ? { description: payload.description } : {}),
       // The deadline moves the advertisement's own life with it: an agency that
       // corrects the scheme's date expects the advertisement to follow, not to

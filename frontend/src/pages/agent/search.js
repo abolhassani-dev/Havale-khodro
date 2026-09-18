@@ -13,6 +13,7 @@ import { checkChips } from '../../ui/checkChips.js';
 import { usageChip } from '../../ui/shell.js';
 import { moneyInput } from '../../ui/moneyInput.js';
 import { editedTag } from './listings.js';
+import { networkTag } from '../../ui/networkSwitch.js';
 import { resolve } from '../../router.js';
 
 /**
@@ -182,7 +183,7 @@ function card(h) {
         <span class="tag ${h.kind === 'OFFER' ? '' : 'c'}">${KIND_LABEL[h.kind]}</span>
         <!-- A listing changed since it was posted is a different thing to read,
              and the reader is entitled to know that before ringing about it. -->
-        ${editedTag(h)}
+        ${editedTag(h)} ${networkTag(h)}
         <h3>${h.carType}</h3>
       </div>
       <span class="solh ${h.solh === 'SOLH' ? 'is-solh' : 'is-vek'}">

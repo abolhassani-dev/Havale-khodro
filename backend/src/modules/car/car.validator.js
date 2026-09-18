@@ -51,6 +51,8 @@ const requestOnly = (schema) =>
   });
 
 const createBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   kind: Joi.string()
     .valid(...Object.values(CAR_KIND))
     .required(),
@@ -114,6 +116,8 @@ const createBody = Joi.object({
 // the kind, and with them the body type stay put. The reveals already paid
 // for on this advertisement must keep meaning what they meant.
 const updateBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   year: year,
   mileageKm: Joi.number().integer().min(0).max(LIMITS.MILEAGE_MAX),
   carColor: Joi.string().trim().max(40),
@@ -165,6 +169,7 @@ const listQuery = Joi.object({
   // every market here uses; the other three are what a car is actually
   // shopped for.
   sort: Joi.string().valid(...Object.values(CAR_SORT)),
+  network: Joi.string().valid('mine'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
   page: Joi.number().integer().min(1).max(MAX_PAGE),
 });

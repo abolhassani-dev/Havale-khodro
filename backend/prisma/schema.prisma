@@ -59,6 +59,17 @@ enum ListingMarket {
   CAR // خودروی آماده — صفر یا کارکرده
 }
 
+/// چه کسی آگهی را می‌بیند.
+///
+/// PUBLIC یعنی همه‌ی بازار. NETWORK یعنی فقط «شبکه»ی صاحب آگهی: نمایندگی مرکزی
+/// و زیرنمایندگی‌هایش — همان تعریفی که فیلتر «فقط شبکه‌ی من» دارد. یک ستون برای
+/// هر سه بازار، چون قاعده‌اش برای هر سه یکی است و هسته آن را اعمال می‌کند
+/// (modules/listing/network.js). صاحب آگهی هر وقت بخواهد عوضش می‌کند.
+enum ListingVisibility {
+  PUBLIC
+  NETWORK
+}
+
 /// خلاصه‌ی وضعیت بدنه، مشتق‌شده از جدول قطعه‌به‌قطعه — روی کارت و در فیلتر جستجو
 enum CarBodyGrade {
   NO_PAINT // بدون رنگ
@@ -372,6 +383,7 @@ model Listing {
 
   /// کدام بازار. هر پرس‌وجوی یک بازار روی همین ستون فیلتر می‌شود.
   market ListingMarket @default(HAVALE)
+  visibility ListingVisibility @default(PUBLIC)
   kind   HavaleKind
 
   ownerId String

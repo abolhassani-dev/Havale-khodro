@@ -31,6 +31,7 @@ function baseFields(row) {
     serial: row.serial,
     kind: row.kind,
     status: row.status,
+    visibility: row.visibility,
     carModelId: row.carModelId,
     carType: row.carType,
     planName: d.planName || null,

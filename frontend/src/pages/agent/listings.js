@@ -1,4 +1,5 @@
 import { html, raw } from '../../ui/html.js';
+import { networkSwitch, networkTag, visibilityOf } from '../../ui/networkSwitch.js';
 import { havale, catalog } from '../../api/index.js';
 import { getState, setState } from '../../state/store.js';
 import {
@@ -42,7 +43,7 @@ export async function loadMine(params) {
  * have to invent one (blueprint 5.2).
  */
 export function havaleFormPage(kind) {
-  const { data } = getState();
+  const { data, user } = getState();
   const tree = data.tree;
   const offer = kind === 'OFFER';
 
@@ -177,6 +178,7 @@ export function havaleFormPage(kind) {
         <label for="description">توضیحات <span class="opt">(اختیاری)</span></label>
         <textarea class="in" id="description" name="description" rows="3" maxlength="1000"></textarea>
       </div>
+      ${networkSwitch(user)}
     </div>
 
     <div class="form-foot">
@@ -265,6 +267,8 @@ export async function onBrandChange(form) {
 export async function submitHavale(form) {
   const kind = form.dataset.kind;
   const payload = { kind, carModelId: form.carModelId.value, solh: form.solh.value };
+  const visibility = visibilityOf(form);
+  if (visibility) payload.visibility = visibility;
 
   const optional = {
     carColor: form.carColor.value,
@@ -388,7 +392,7 @@ export function minePage() {
                   <td>
                     <b>${h.carType}</b>
                     <div class="sub">${h.carColor || 'هر رنگ'} · ${SOLH_LABEL[h.solh]}</div>
-                    ${editedTag(h)}
+                    ${editedTag(h)} ${networkTag(h)}
                   </td>
                   ${
                     reseller
@@ -577,7 +581,8 @@ export function editHavaleModal(id) {
       <div class="field">
         <label for="e-desc">توضیحات</label>
         <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${item.description || ''}</textarea>
-      </div>`,
+      </div>
+      ${networkSwitch(getState().user, { checked: item.visibility === 'NETWORK', id: 'e-visibility' })}`,
     confirmLabel: 'ثبت ویرایش',
     onSubmit: async (form) => {
       // Only what actually moved. Sending the whole form would write every
@@ -593,6 +598,7 @@ export function editHavaleModal(id) {
       put('model', form.model.value.trim() ? enDigits(form.model.value.trim()) : null, item.model ?? null);
       put('paymentType', form.paymentType.value || null, item.paymentType ?? null);
       put('description', form.description.value.trim(), item.description || '');
+      if (visibilityOf(form)) put('visibility', visibilityOf(form), item.visibility || 'PUBLIC');
 
       for (const name of ['carPriceToman', 'amountToman', 'paidAmountToman']) {
         const raw2 = form[name].value.trim();

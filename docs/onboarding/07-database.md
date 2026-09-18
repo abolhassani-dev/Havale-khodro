@@ -37,7 +37,7 @@ ActivityLog  ErrorLog  SecurityEvent  BlockedIp  Setting  SmsMessage
 
 | مدل | نکته‌های مهم |
 |---|---|
-| `Listing` | **یک جدول برای هر سه بازار**: `market`, `kind` (`OFFER/REQUEST`), `ownerId`, `carModelId` + `carType` (نام آینه‌شده)، `solh`, رنگ/مدل/مبالغ (BigInt تومان)، `deliveryDays`, `depositDays`, `paymentType`, `description` (پشت reveal)، `status`, `suspendReason`, `serial` (شماره‌ی خوانا)، `revealCount`, `reportCount`, `editedAt`, `closesAt`, `deletedAt` (حذف نرم) |
+| `Listing` | **یک جدول برای هر سه بازار**: `market`, `kind` (`OFFER/REQUEST`), `ownerId`, `carModelId` + `carType` (نام آینه‌شده)، `solh`, رنگ/مدل/مبالغ (BigInt تومان)، `deliveryDays`, `depositDays`, `paymentType`, `description` (پشت reveal)، `status`, `suspendReason`, `serial` (شماره‌ی خوانا)، `visibility` (`PUBLIC`/`NETWORK` — «فقط شبکه‌ی من»)، `revealCount`, `reportCount`, `editedAt`, `closesAt`, `deletedAt` (حذف نرم) |
 | `RegistrationDetail` | فیلدهای مخصوص ثبت‌نامی (یک‌به‌یک) |
 | `CarDetail` | خودرو: کارکرد، سال، `bodyStatus` (Json ۲۲ قطعه)، `bodyGrade` مشتق، `warranty`, `paintTolerance` |
 | `CarPhoto` | نام فایل تصادفی؛ سرو فقط با مجوز |

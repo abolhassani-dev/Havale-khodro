@@ -157,6 +157,7 @@ create: asyncHandler(async (req, res) => {
 3. **dto**: کارت عمومی فقط فیلدهای ساختاریافته؛ `description` و تماس پشت
    `revealed`. از `listing/reveal.dto.js` (`contactOf`, `agencyOf`) استفاده کنید.
 4. **reveal**: `revealService.reveal({ …, targetType: 'PARTS', market: 'PARTS' })`.
+   **دیده‌شدن** («فقط شبکه‌ی من»): `network.visibilityClause(user)` در `where.AND` فهرست، `network.mayView` در خواندن با شناسه، `network.resolveVisibility` در ثبت/ویرایش — همه از `listing/network.js`.
 5. **market.js**: `registerMarket('PARTS', { label, include, summarise, describe })`
    و `require('./parts.market')` بالای routes.
 6. **routes/index.js**: `router.use('/parts', partsRoutes)`.

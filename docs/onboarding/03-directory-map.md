@@ -71,7 +71,7 @@ backend/
     └── modules/              ← فصل ۵
         ├── auth/             ورود، نشست، تغییر رمز، راهنمای دیده‌شده، /session
         ├── user/             user.dto — تنها سریالایزر کاربر (نه توکن، نه هش)
-        ├── listing/          هسته: reveal.service (سهمیه و ثبت)، reveal.dto، marketRegistry
+        ├── listing/          هسته: reveal.service (سهمیه و ثبت)، reveal.dto، marketRegistry، network (فقط شبکه‌ی من)
         ├── havale/           بازار حواله (نمونه‌ی مرجع برای بازار جدید)
         ├── registration/     بازار ثبت‌نامی
         ├── car/              بازار خودرو: constants (۲۲ قطعه)، upload (عکس‌ها)، market
@@ -121,6 +121,7 @@ frontend/
     ├── styles/               app.css، app-extra.css
     ├── ui/
     │   ├── html.js           html``, raw(), escape(), safeUrl()
+    │   ├── networkSwitch.js  سوئیچ و برچسب «فقط شبکه‌ی من»
     │   ├── shell.js          سایدبار، نوار بالا، لینک «راهنمای این بخش»
     │   ├── modal.js, feedback.js   مودال، توست، خطای فرم، pager، جعبه‌ی خالی/در حال بارگذاری
     │   ├── format.js, jalali.js    اعداد فارسی، پول، تاریخ شمسی (Intl)

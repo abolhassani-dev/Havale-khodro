@@ -29,6 +29,8 @@ const requiredForOffer = (schema) =>
   });
 
 const createBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   kind: Joi.string()
     .valid(...Object.values(REGISTRATION_KIND))
     .required(),
@@ -62,6 +64,8 @@ const createBody = Joi.object({
 // posting a different advertisement, and the reveals already paid for on this
 // one must keep meaning what they meant.
 const updateBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   planName: Joi.string().trim().max(LIMITS.PLAN_NAME_MAX),
   method: Joi.string().valid(...Object.values(REGISTRATION_METHOD)),
   saleType: Joi.string().valid(...Object.values(REGISTRATION_SALE_TYPE)),
@@ -83,6 +87,7 @@ const listQuery = Joi.object({
   saleType: Joi.string().valid(...Object.values(REGISTRATION_SALE_TYPE)),
   maxPremium: toman,
   city: Joi.string().trim().max(60),
+  network: Joi.string().valid('mine'),
   limit: Joi.number().integer().min(1).max(LIST_PAGE_SIZE.MAX).default(LIST_PAGE_SIZE.DEFAULT),
   cursor: Joi.string().trim().max(120),
   page: Joi.number().integer().min(1).max(MAX_PAGE),

@@ -85,7 +85,7 @@ maybe('no free text carries a contact out', () => {
       if (key === 'id' || key.endsWith('Id') || key === 'status' || key === 'market') continue;
       if (key === 'kind' || key === 'solh' || key === 'paymentType' || key === 'method') continue;
       if (key === 'saleType' || key === 'bodyType' || key === 'bodyGrade') continue;
-      if (key === 'paintTolerance') continue;
+      if (key === 'paintTolerance' || key === 'visibility') continue;
       data[key] = PHONE;
     }
 

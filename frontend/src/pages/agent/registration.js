@@ -1,4 +1,5 @@
 import { html, raw } from '../../ui/html.js';
+import { networkSwitch, networkTag, visibilityOf, hasNetwork } from '../../ui/networkSwitch.js';
 import { icon } from '../../ui/icons.js';
 import { registration, catalog, havale } from '../../api/index.js';
 import { getState } from '../../state/store.js';
@@ -51,7 +52,7 @@ const SALE_LABEL = Object.fromEntries(REG_SALE_TYPES);
 // ── loaders ─────────────────────────────────────────────────────────────────
 
 /** Everything in the address that is a filter — not the tab or the page. */
-export const REG_FILTER_KEYS = ['brandIds', 'carModelIds', 'method', 'saleType', 'maxPremium'];
+export const REG_FILTER_KEYS = ['brandIds', 'carModelIds', 'method', 'saleType', 'maxPremium', 'network'];
 
 export async function loadRegSearch(params) {
   // The catalogue and the allowance ride along with the results: the filters
@@ -65,6 +66,7 @@ export async function loadRegSearch(params) {
       method: params.method,
       saleType: params.saleType,
       maxPremium: params.maxPremium,
+      network: params.network,
       page: params.page || 1,
       limit: 20,
     }),
@@ -98,7 +100,7 @@ export async function loadRegMine(params) {
 // ── the market ──────────────────────────────────────────────────────────────
 
 export function regSearchPage() {
-  const { data, params } = getState();
+  const { data, params, user } = getState();
   const items = data.list?.items || [];
   const brands = data.tree?.brands || [];
 
@@ -134,6 +136,16 @@ export function regSearchPage() {
         <label for="maxPremium-in">سقف مبلغ امتیاز</label>
         ${moneyInput('maxPremium', { value: params.maxPremium || '', placeholder: 'تومان' })}
       </div>
+      ${
+        hasNetwork(user)
+          ? html`<div class="field">
+              <label class="fcheck">
+                <input type="checkbox" name="network" value="mine" ${raw(params.network === 'mine' ? 'checked' : '')}>
+                فقط ثبت‌نامی‌های شبکه‌ی خودمان
+              </label>
+            </div>`
+          : ''
+      }
 
       <div class="actions">
         <button class="btn primary" type="submit">اعمال</button>
@@ -184,7 +196,7 @@ function regCard(r) {
     <header>
       <div>
         <span class="tag ${offer ? '' : 'c'}">${REG_KIND_LABEL[r.kind]}</span>
-        ${editedTag(r)}
+        ${editedTag(r)} ${networkTag(r)}
         <h3>${r.carType}</h3>
       </div>
       ${
@@ -313,7 +325,7 @@ export function confirmRegReveal(id) {
  * would stop deals rather than describe them.
  */
 export function regFormPage(kind) {
-  const { data } = getState();
+  const { data, user } = getState();
   const offer = kind === 'OFFER';
   const all = data.tree?.brands || [];
   // A capacity offer may only be posted under what this account holds; a
@@ -441,6 +453,7 @@ export function regFormPage(kind) {
         <label for="description">توضیحات <span class="opt">(اختیاری)</span></label>
         <textarea class="in" id="description" name="description" rows="3" maxlength="1000"></textarea>
       </div>
+      ${networkSwitch(user)}
     </div>
 
     <div class="form-foot">
@@ -516,6 +529,8 @@ export async function onRegBrandChange(form) {
 export async function submitRegistration(form) {
   const kind = form.dataset.kind;
   const payload = { kind, carModelId: form.carModelId.value };
+  const visibility = visibilityOf(form);
+  if (visibility) payload.visibility = visibility;
 
   // Read through the form rather than by name: three of these fields only
   // exist on the capacity side, and `form.conditions.value` on a request form
@@ -660,7 +675,7 @@ function mineRow(r, reseller) {
     <td>
       <b>${r.carType}</b>
       <div class="sub">${REG_KIND_LABEL[r.kind]}</div>
-      ${editedTag(r)}
+      ${editedTag(r)} ${networkTag(r)}
     </td>
     ${
       reseller
@@ -797,7 +812,8 @@ export function regEditModal(id) {
       <div class="field">
         <label for="e-desc">توضیحات</label>
         <textarea class="in" id="e-desc" name="description" rows="3" maxlength="1000">${item.description || ''}</textarea>
-      </div>`,
+      </div>
+      ${networkSwitch(getState().user, { checked: item.visibility === 'NETWORK', id: 'e-visibility' })}`,
     confirmLabel: 'ثبت ویرایش',
     onSubmit: async (form) => {
       // Only what moved: writing every field on every edit would fill the
@@ -828,6 +844,7 @@ export function regEditModal(id) {
       }
 
       put('description', text('description'), item.description || '');
+      if (visibilityOf(form)) put('visibility', visibilityOf(form), item.visibility || 'PUBLIC');
 
       if (!Object.keys(payload).length) {
         toast('چیزی تغییر نکرده بود');

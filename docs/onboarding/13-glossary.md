@@ -20,6 +20,7 @@
 | صلح / وکالتی | `solh: SOLH / VEKALATI` | نوع واگذاری حواله |
 | مبلغ حواله / واریزی / قیمت خودرو | `amountToman`, `paidAmountToman`, `carPriceToman` | سه عدد جدا؛ `moneyInput` |
 | مدت تحویل / مدت واریز | `deliveryDays`, `depositDays` | روز؛ عمر آگهی = مدت واریز |
+| فقط شبکه‌ی من | `visibility: NETWORK`, `listing/network.js` | آگهی که فقط نمایندگی مرکزی و شعبه‌هایش می‌بینند؛ سوئیچ در فرم ثبت و ویرایش |
 | نمایش مشخصات | reveal, `ContactReveal` | خرج یک واحد سهمیه برای دیدن تماس + متن آزاد + عکس |
 | سهمیه‌ی روزانه / ماهانه | `dailyLimit`, `monthlyLimit`, `resolveAccess()` | از پلن یا override حساب؛ مشترک بین بازارها |
 | اشتراک | `Subscription`, `Plan` | دوره‌ی ۳۰ روزه؛ `origin: ADMIN` یا `PARENT_SEAT` |

@@ -10,6 +10,7 @@ const { UPLOADS_DIR } = require('./car.upload');
 const { isAdmin } = require('../../constants/roles');
 const logger = require('../../utils/logger');
 const revealService = require('../listing/reveal.service');
+const network = require('../listing/network');
 const catalogRepository = require('../catalog/catalog.repository');
 const authRepository = require('../auth/auth.repository');
 const { addDays } = require('../../utils/time');
@@ -117,6 +118,7 @@ function split(payload, bodyType) {
  * The fields an edit is worth recording, and what to call them in the log.
  */
 const LISTING_FIELDS = {
+  visibility: ['نمایش'],
   description: ['توضیحات'],
   carColor: ['رنگ بدنه'],
   carPriceToman: ['قیمت خودرو', 'money'],
@@ -197,6 +199,7 @@ const carService = {
     const row = await carRepository.create({
       ...listing,
       carType: model.name,
+      visibility: network.resolveVisibility(user, payload.visibility),
       ownerId: user.id,
       closesAt: addDays(new Date(), LIFETIME_DAYS[payload.kind] || LIFETIME_DAYS.OFFER),
       detail,
@@ -255,6 +258,13 @@ const carService = {
     }
     if (Object.keys(detail).length) where.car = detail;
 
+    // Network-only rows reach only their network (modules/listing/network).
+    where.AND = [...(where.AND || []), await network.visibilityClause(user)];
+    if (filters.network === 'mine') {
+      const own = await network.networkFilter(user);
+      if (own) Object.assign(where, own);
+    }
+
     const serialise = (rows, revealed) =>
       rows.map((row) =>
         row.ownerId === user.id
@@ -292,6 +302,12 @@ const carService = {
     if (row.ownerId === user.id) return toOwn(row, { viewerId: user.id });
     if (row.owner.status !== 'ACTIVE') {
       throw new AppError(MESSAGES.LISTING.OWNER_INACTIVE, 404, ERROR_CODES.NOT_FOUND);
+    }
+    // A network-only advertisement is «gone» from outside its network, the
+    // same answer as a removed one: the id must not confirm more than the
+    // list would have shown.
+    if (!network.mayView(user, row)) {
+      throw new AppError(MESSAGES.LISTING.GONE, 404, ERROR_CODES.NOT_FOUND);
     }
 
     const seen = await revealService.revealRepository.findReveal(id, user.id);
@@ -335,6 +351,9 @@ const carService = {
 
     const detail = detailPatch(payload);
     const updated = await carRepository.update(id, {
+      ...(payload.visibility !== undefined
+        ? { visibility: network.resolveVisibility(user, payload.visibility) }
+        : {}),
       ...(payload.description !== undefined ? { description: payload.description } : {}),
       ...(payload.carColor !== undefined ? { carColor: payload.carColor } : {}),
       ...(payload.carPriceToman !== undefined

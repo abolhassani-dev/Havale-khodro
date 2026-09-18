@@ -88,6 +88,7 @@ export function registerAdminRoutes(route) {
         query: params.query,
         status: params.status || 'LIVE',
         kind: params.kind,
+        visibility: params.visibility,
         take: 50,
       }),
       market: market.key,
@@ -1218,6 +1219,14 @@ function listingsPage(market) {
           )}
         </select>
       </div>
+      <div class="field">
+        <label for="hv">نمایش</label>
+        <select class="in" id="hv" name="visibility">
+          <option value="">همه</option>
+          <option value="PUBLIC" ${raw(params.visibility === 'PUBLIC' ? 'selected' : '')}>عمومی</option>
+          <option value="NETWORK" ${raw(params.visibility === 'NETWORK' ? 'selected' : '')}>فقط شبکه</option>
+        </select>
+      </div>
       <div class="field" style="align-self:end">
         <button class="btn primary" type="submit">جستجو</button>
       </div>
@@ -1240,6 +1249,11 @@ function listingsPage(market) {
 }
 
 /** The state badge, which is three fields collapsed into the one word people use. */
+/** «فقط شبکه» beside the status: the desk must be able to tell why a live row is not in the market. */
+function visibilityTag(h) {
+  return h.visibility === 'NETWORK' ? html`<span class="tag b">فقط شبکه</span>` : '';
+}
+
 function listingTag(h) {
   if (h.removed) return html`<span class="tag r">برداشته شد</span>`;
   if (h.status === 'SUSPENDED') return html`<span class="tag w">تعلیق</span>`;
@@ -1270,7 +1284,7 @@ function listingRow(h, market) {
       }
     </td>
     <td class="num">${h.headlineToman ? money(h.headlineToman) : '—'}</td>
-    <td>${listingTag(h)}</td>
+    <td>${listingTag(h)} ${visibilityTag(h)}</td>
     <td class="num">${faDigits(h.revealCount ?? 0)}</td>
     <td>${relative(h.createdAt)}</td>
     <td style="text-align:left">
@@ -1303,7 +1317,7 @@ function listingPage() {
       <div class="af-who">
         <div class="af-name">
           <h2>${h.carType}</h2>
-          ${listingTag(h)}
+          ${listingTag(h)} ${visibilityTag(h)}
         </div>
         <div class="af-sub">
           <span class="num">#${faDigits(h.serial)}</span> · ${h.marketLabel || market.unit}

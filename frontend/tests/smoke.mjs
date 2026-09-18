@@ -276,6 +276,89 @@ await step('a second agency has something on the market', async () => {
   }
 });
 
+/**
+ * Runs `fn` signed in as the second agency, in a context of its own, and
+ * signs out again. The second demo agency is a reseller — the one kind of
+ * account the «فقط شبکه‌ی من» switch is offered to.
+ */
+async function asSecondAgency(fn) {
+  const user = process.env.AGENT2_USER;
+  const pass = process.env.AGENT2_PASS;
+  if (!user || !pass) return null;
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  await other.goto(BASE, { waitUntil: 'networkidle' });
+  await other.fill('input[name="username"]', user);
+  await other.fill('input[name="password"]', pass);
+  await other.click('button[type="submit"]');
+  await other.waitForSelector('.nav', { timeout: 15000 });
+  try {
+    return await fn(other);
+  } finally {
+    await context.close();
+  }
+}
+
+let networkOnly = null;
+
+await step('«فقط شبکه‌ی من» is not offered to an agency without a network', async () => {
+  await navigate('new-offer');
+  await page.waitForSelector('form[data-form="havale"]', { timeout: 8000 });
+  const offered = await page.locator('form[data-form="havale"] input[name="visibility"]').count();
+  if (offered) throw new Error('the switch is shown to an independent agency');
+});
+
+await step('a reseller sees the switch, and a network-only listing stays inside its network', async () => {
+  networkOnly = await asSecondAgency(async (other) => {
+    // The switch itself, on the reseller's own form.
+    await other.evaluate(() => { location.hash = '#new-offer'; });
+    await other.waitForSelector('form[data-form="havale"] input[name="visibility"]', { timeout: 8000 });
+
+    // Posted through the API so the step is about visibility, not the form.
+    return other.evaluate(async () => {
+      const tree = await fetch('/api/v1/catalog', { credentials: 'include' }).then((r) => r.json());
+      const brand = (tree.data?.brands || []).find((b) => b.canPost || b.postableModelIds?.length);
+      const models = await fetch(`/api/v1/catalog/brands/${brand.id}/models`, { credentials: 'include' }).then((r) => r.json());
+      const allowed = brand.canPost
+        ? models.data?.models || []
+        : (models.data?.models || []).filter((m) => (brand.postableModelIds || []).includes(m.id));
+      const res = await fetch('/api/v1/havales', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'OFFER', carModelId: allowed[0].id, solh: 'SOLH', model: '1405',
+          carColor: tree.data?.colors?.[0]?.name,
+          carPriceToman: 1_100_000_000, amountToman: 900_000_000, paidAmountToman: 200_000_000,
+          paymentType: 'CASH', deliveryDays: 30, depositDays: 7, visibility: 'NETWORK',
+          description: 'آگهی شبکه‌ای تست دودی — در پایان اجرا برداشته می‌شود',
+        }),
+      });
+      const body = await res.json();
+      if (!body?.data?.id) throw new Error(`network-only post answered ${res.status}`);
+      // Its owner sees the badge on it.
+      const mine = await fetch('/api/v1/havales/mine?limit=50', { credentials: 'include' }).then((r) => r.json());
+      const row = (mine.data?.items || []).find((h) => h.id === body.data.id);
+      if (!row || row.visibility !== 'NETWORK') throw new Error('the owner does not see it as network-only');
+      return body.data.id;
+    });
+  });
+  if (!networkOnly) {
+    if (process.env.AGENT2_USER) throw new Error('the second agency could not post a network-only listing');
+    return;
+  }
+
+  // The first agency is outside that network: not in its list, not by id.
+  const seen = await page.evaluate(async (id) => {
+    const list = await fetch('/api/v1/havales?page=1&limit=50', { credentials: 'include' }).then((r) => r.json());
+    const inList = (list.data?.items || []).some((h) => h.id === id);
+    const byId = await fetch(`/api/v1/havales/${id}`, { credentials: 'include' }).then((r) => r.status);
+    return { inList, byId };
+  }, networkOnly);
+  if (seen.inList) throw new Error('a network-only listing leaked into another agency’s list');
+  if (seen.byId !== 404) throw new Error(`a network-only listing answered ${seen.byId} by id to an outsider`);
+});
+
 await step('search lists havales with contact hidden', async () => {
   await navigate('search');
   await page.waitForSelector('.hcard', { timeout: 8000 });
@@ -899,6 +982,13 @@ await step('a not-yet-built section explains itself instead of dead-ending', asy
  * A soft delete, which is what the button in the panel does: the row stays for
  * the audit trail and leaves the market.
  */
+await step('the run removes the network-only listing too', async () => {
+  if (!networkOnly) return;
+  await asSecondAgency((other) =>
+    other.evaluate((id) => fetch(`/api/v1/havales/${id}`, { method: 'DELETE', credentials: 'include' }), networkOnly)
+  );
+});
+
 await step('the run removes the background listing too', async () => {
   await removeSecondAgencyListing(backdrop);
 });

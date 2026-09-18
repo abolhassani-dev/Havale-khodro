@@ -53,6 +53,8 @@ const modelYear = Joi.string()
   }, 'model year');
 
 const createBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   kind: Joi.string()
     .valid(...Object.values(HAVALE_KIND))
     .required(),
@@ -116,6 +118,8 @@ const createBody = Joi.object({
 // that already carries three days of age and a view count is not an edit, it
 // is a different advertisement wearing the first one's history.
 const updateBody = Joi.object({
+  // «فقط شبکه‌ی من» — the kernel decides whether this account may ask for it.
+  visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
   solh: Joi.string().valid(...Object.values(SOLH_STATUS)),
   carColor: Joi.string().trim().max(60).allow(null),
   model: modelYear.allow(null),

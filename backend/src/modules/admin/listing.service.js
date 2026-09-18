@@ -46,6 +46,7 @@ function toRow(listing) {
     marketLabel: market.label,
     kind: listing.kind,
     status: listing.status,
+    visibility: listing.visibility,
     // The two states an administrator actually sorts by, computed once here so
     // the interface never has to work them out from three fields.
     removed: Boolean(listing.deletedAt),

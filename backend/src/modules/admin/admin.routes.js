@@ -274,6 +274,7 @@ router.get(
           allMarkets().some((m) => m.key === value) ? value : helpers.error('any.invalid')
         ),
       kind: Joi.string().valid('OFFER', 'REQUEST'),
+      visibility: Joi.string().valid('PUBLIC', 'NETWORK'),
       // LIVE and DELETED are not columns — see the repository.
       status: Joi.string().valid('ALL', 'LIVE', 'DELETED', 'ACTIVE', 'FULFILLED', 'EXPIRED', 'SUSPENDED', 'ARCHIVED'),
       ownerId: Joi.string().trim().max(40),
