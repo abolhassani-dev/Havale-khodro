@@ -29,7 +29,7 @@ Havale-khodro/
 ```
 backend/
 ├── server.js                 بوت: کلاستر اختیاری، اتصال دیتابیس، listen
-├── package.json              اسکریپت‌ها: dev, test, lint, seed, seed:demo, seed:cars, create:owner
+├── package.json              اسکریپت‌ها: dev, test, lint, seed, seed:demo, seed:cars, create:owner, reset:launch
 ├── Dockerfile, docker/entrypoint.sh   ایمیج چندمرحله‌ای، کاربر غیر-root، `prisma migrate deploy` در بوت
 ├── .env.example              نسخه‌ی بک‌اند برای اجرای محلی بدون Docker
 ├── prisma/
@@ -40,6 +40,7 @@ backend/
 │   ├── seed-demo.js          چهار نمایندگی نمونه + چند حواله (فقط با ALLOW_DEMO_SEED=true)
 │   ├── seed-cars.js          ده آگهی نمونه‌ی بازار خودرو
 │   ├── create-owner.js       ساخت حساب مالک — رمز از ترمینال خاموش، هرگز از آرگومان
+│   ├── reset-for-launch.js   فرش کردن روز لانچ: نمایندگی‌ها و همه‌ی داده‌ی کاری می‌رود، کاتالوگ و مدیران می‌مانند (پیش‌فرض فقط شمارش، --apply)
 │   ├── build-catalog.js      ساخت کاتالوگ ۱۸۶ برندی از داده‌ی خام
 │   ├── dedupe-catalog.js     پاک‌سازی تکراری‌های کاتالوگ
 │   ├── encrypt-existing.js   بک‌فیل رمزنگاری ستون‌ها وقتی کلید فعال شد

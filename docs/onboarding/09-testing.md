@@ -10,7 +10,7 @@
 | سوئیت | کجا | چطور | چقدر |
 |---|---|---|---|
 | بک‌اند — واحد و یکپارچگی | `backend/tests/unit`, `integration` | `npm test` | ثانیه‌ها |
-| بک‌اند — e2e | `backend/tests/e2e` | `RUN_E2E=1 npm test` | ~۷۵ ثانیه، ۵۵۷ تست |
+| بک‌اند — e2e | `backend/tests/e2e` | `RUN_E2E=1 npm test` | ~۶۰ ثانیه، ۵۷۵ تست |
 | اسموک مرورگری | `frontend/tests/smoke.mjs` | `node tests/smoke.mjs` با API زنده | ~۲ دقیقه، ۶۲ مرحله |
 | lint | `backend/` | `npm run lint` | ثانیه‌ها |
 | اسکن امنیتی | `security/audit.js` | `node security/audit.js` | ثانیه‌ها |

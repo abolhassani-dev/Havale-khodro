@@ -88,7 +88,7 @@ cd backend && node scripts/create-owner.js     # نام و رمز را در تر
 ```bash
 cd backend
 npm run lint                      # باید تمیز باشد
-RUN_E2E=1 npm test                # ۵۵۷ تست، حدود ۷۵ ثانیه
+RUN_E2E=1 npm test                # ۵۷۵ تست، حدود ۶۰ ثانیه
 cd ../frontend                    # با API و dev-server روشن:
 AGENT_USER=zagros AGENT_PASS=Demo@12345 AGENT2_USER=alborz AGENT2_PASS=Demo@12345 \
 ADMIN_USER=admin ADMIN_PASS='رمز-مدیر' OWNER_USER=… OWNER_PASS='…' \

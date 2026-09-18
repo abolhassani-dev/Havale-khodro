@@ -292,6 +292,13 @@ async function asSecondAgency(fn) {
   await other.fill('input[name="password"]', pass);
   await other.click('button[type="submit"]');
   await other.waitForSelector('.nav', { timeout: 15000 });
+  // On a fresh database this account has not confirmed the guide either, and
+  // the gate holds every page until it does. The gate itself is tested above,
+  // with the first agency; here it is only in the way.
+  if (await other.locator('[data-guide-ack]').count()) {
+    await other.click('[data-guide-ack]');
+    await other.waitForSelector('.stats .s-v', { timeout: 8000 });
+  }
   try {
     return await fn(other);
   } finally {

@@ -47,18 +47,20 @@ pg_ctlcluster 16 main start
 cd backend && (setsid nohup node server.js >/tmp/api.log 2>&1 </dev/null &)      # :3000
 pkill -f "node serve[r].js"                                                        # توقف
 ESLINT_USE_FLAT_CONFIG=false npx eslint src tests scripts                          # lint
-RUN_E2E=1 npx jest --runInBand                                                     # ۵۵۷ تست، ~۷۵ ثانیه
+RUN_E2E=1 npx jest --runInBand                                                     # ۵۷۵ تست، ~۶۰ ثانیه
 DATABASE_URL='postgresql://havale:havale@127.0.0.1:5432/havale_test' npx prisma migrate deploy   # بعد از هر مایگریشن
 # فرانت (حتماً از پوشه‌ی frontend)
 cd frontend && (setsid nohup node tests/dev-server.js >/tmp/web.log 2>&1 </dev/null &)   # :5173
 AGENT_USER=zagros AGENT_PASS=Demo@12345 AGENT2_USER=alborz AGENT2_PASS=Demo@12345 \
 ADMIN_USER=admin ADMIN_PASS='…' OWNER_USER=… OWNER_PASS='…' \
-CHROME_PATH=/opt/pw-browsers/chromium BASE_URL=http://127.0.0.1:5173/ node tests/smoke.mjs   # ۶۲ مرحله
+CHROME_PATH=/opt/pw-browsers/chromium BASE_URL=http://127.0.0.1:5173/ node tests/smoke.mjs   # ۶۵ مرحله
 # امنیت
 node security/audit.js                                  # کد؛ انتظار: ۰ بحرانی، ۰ مهم (جز TLS در مخزن)
 node security/audit.js --live http://127.0.0.1:5173 --user zagros --pass 'Demo@12345'
 # داده‌ی نمونه‌ی محلی
 cd backend && npm run seed && SEED_DEMO=true ALLOW_DEMO_SEED=true node scripts/seed-demo.js && node scripts/seed-cars.js
+# فرش کردن برای لانچ (روی سرور داخل کانتینر api): بدون آرگومان فقط می‌شمارد؛ --apply پاک می‌کند
+node scripts/reset-for-launch.js          # نمایندگی‌ها/آگهی‌ها/تیکت‌ها/گزارش‌ها/آپلودها می‌روند؛ مدیران، کاتالوگ، قیمت روز می‌مانند
 # اسناد تولیدی
 node docs/guide/render.mjs   # راهنمای PDF از frontend/src/content/guide.js
 node docs/pitch/render.mjs   # دِک معرفی

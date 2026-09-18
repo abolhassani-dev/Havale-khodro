@@ -852,6 +852,7 @@ chmod 644 /etc/cron.d/feranocar-preflight
 | تست بازگردانی بکاپ (ماهانه) | `/opt/feranocar/deploy/verify-backup.sh` |
 | بررسی سلامت کل سیستم | `/opt/feranocar/deploy/watchdog.sh` |
 | بکاپ کامل دستی | `/opt/feranocar/deploy/backup.sh daily` |
+| فرش کردن برای لانچ (نمایندگی‌ها، آگهی‌ها، تیکت‌ها، گزارش‌ها می‌روند؛ کاتالوگ و حساب‌های مدیریتی می‌مانند) | `docker compose exec -T api node scripts/reset-for-launch.js` (پیش‌نمایش) و بعد `--apply` — ترتیب کامل در [`launch-checklist.md`](launch-checklist.md) |
 | لاگ خطاها | پنل مدیریت ← لاگ خطاها |
 | گزارش امنیتی | `docker run --rm --entrypoint node -v /opt/feranocar:/audit -w /audit feranocar-api security/audit.js --live https://feranocar.com --user … --pass … --report /tmp/audit.json` |
 | ورود به دیتابیس (ترمینال) | `docker compose exec db psql -U havale havale` |

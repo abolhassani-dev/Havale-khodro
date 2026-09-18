@@ -93,12 +93,13 @@ DATABASE_URL='…havale_test' npx prisma migrate deploy   # دیتابیس تس�
 | `scripts/seed-demo.js` | ۴ نمایندگی + حواله‌های نمونه | `ALLOW_DEMO_SEED=true` (و `SEED_DEMO=true` برای بوت خودکار) |
 | `scripts/seed-cars.js` | ۱۰ آگهی خودرو با بدنه‌های مختلف | همان |
 | `scripts/create-owner.js` | حساب مالک | تعاملی، رمز از ترمینال خاموش |
+| `scripts/reset-for-launch.js` | عکس سه تای اول: نمایندگی‌ها، آگهی‌ها، تیکت‌ها، گزارش‌ها، لاگ فعالیت و فایل‌های آپلودی را پاک می‌کند؛ حساب‌های مدیریتی، کاتالوگ، قیمت روز، پلن، تنظیمات و لاگ‌های فنی می‌مانند؛ سریال‌ها از ۱ | بدون آرگومان فقط می‌شمارد؛ `--apply` اجرای واقعی؛ با `SEED_DEMO`/`ALLOW_DEMO_SEED=true` اجرا نمی‌شود |
 
 همه idempotent‌اند (دوباره اجرا کردن تکراری نمی‌سازد) و از مسیر خودِ سرویس‌ها
 می‌روند، پس هر قاعده‌ی محصول را رعایت می‌کنند.
 
 > **پیش از اولین نمایندگی واقعی**: `SEED_DEMO=false`, `ALLOW_DEMO_SEED=false`،
-> حساب‌های نمونه تعلیق، دیتابیس فرش — `docs/launch-checklist.md`.
+> بکاپ، بعد `reset-for-launch.js --apply` — ترتیب کامل در `docs/launch-checklist.md`.
 
 ---
 
