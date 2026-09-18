@@ -29,7 +29,7 @@ Havale-khodro/
 ```
 backend/
 ├── server.js                 بوت: کلاستر اختیاری، اتصال دیتابیس، listen
-├── package.json              اسکریپت‌ها: dev, test, lint, seed, seed:demo, seed:cars, create:owner, reset:launch
+├── package.json              اسکریپت‌ها: dev, test, lint, seed, seed:demo, seed:cars, create:owner
 ├── Dockerfile, docker/entrypoint.sh   ایمیج چندمرحله‌ای، کاربر غیر-root، `prisma migrate deploy` در بوت
 ├── .env.example              نسخه‌ی بک‌اند برای اجرای محلی بدون Docker
 ├── prisma/

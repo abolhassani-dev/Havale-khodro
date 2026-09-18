@@ -21,7 +21,6 @@
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "seed": "node scripts/seed.js",
     "seed:demo": "node scripts/seed-demo.js",
-    "reset:launch": "node scripts/reset-for-launch.js",
     "seed:cars": "node scripts/seed-cars.js",
     "audit:security": "node ../security/audit.js",
     "create:owner": "node scripts/create-owner.js"
