@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بازبینی محصول دیلرزلند</title>
+<style>
+/* Standalone copy of the review page: answers live in this browser only and
+   are handed over with the «کپی پاسخ‌ها» button (no server behind the page). */
+@font-face { font-family: 'Vazirmatn'; src: url('../../frontend/assets/vazirmatn.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+/* Layout: one topic at a time (wizard), a topic list beside it on wide screens; answers saved live to the shared store. */
+:root {
+  --bg: #f6f4ee;
+  --card: #ffffff;
+  --fg: #1d2420;
+  --muted: #5e6a66;
+  --line: #d9d3c4;
+  --accent: #1f5f8b;
+  --accent-ink: #ffffff;
+  --soft: #e6eef5;
+  --keep: #2e7d4f;
+  --change: #b46a12;
+  --remove: #b3342b;
+  --later: #5a5f8a;
+  --add: #1f5f8b;
+  --font: 'Vazirmatn', Tahoma, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15191b; --card: #1e2427; --fg: #e8e6df; --muted: #9ea8a3; --line: #343c40;
+    --accent: #6fb0dd; --accent-ink: #0f1a22; --soft: #243038;
+    --keep: #5fc08a; --change: #e3a24a; --remove: #ec6f66; --later: #a0a5d9; --add: #6fb0dd;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15191b; --card: #1e2427; --fg: #e8e6df; --muted: #9ea8a3; --line: #343c40;
+  --accent: #6fb0dd; --accent-ink: #0f1a22; --soft: #243038;
+  --keep: #5fc08a; --change: #e3a24a; --remove: #ec6f66; --later: #a0a5d9; --add: #6fb0dd;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); direction: rtl; line-height: 1.8; font-size: 15px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 20px 60px; padding-inline: 16px; }
+header.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 18px; }
+header.top h1 { font-size: 22px; font-weight: 900; margin: 0; text-wrap: balance; }
+header.top .sub { color: var(--muted); font-size: 13.5px; margin: 0; }
+.progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { width: 160px; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.status { font-size: 12.5px; color: var(--muted); }
+.status.err { color: var(--remove); }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; align-items: start; }
+nav.topics { position: sticky; top: env(safe-area-inset-top, 0px); display: flex; flex-direction: column; gap: 4px; }
+nav.topics button { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 13.5px; color: var(--fg); }
+nav.topics button:hover, nav.topics button:focus-visible { background: var(--soft); outline: none; }
+nav.topics button.cur { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+nav.topics button .n { color: inherit; opacity: .6; font-variant-numeric: tabular-nums; margin-inline-end: 6px; }
+.chip { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; color: #fff; white-space: nowrap; }
+.chip.KEEP { background: var(--keep); } .chip.CHANGE { background: var(--change); } .chip.REMOVE { background: var(--remove); } .chip.LATER { background: var(--later); }
+.chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+nav.topics button.cur .chip.none { color: var(--accent-ink); border-color: var(--accent-ink); }
+main { min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 18px; }
+.eyebrow { font-size: 12.5px; color: var(--muted); letter-spacing: .02em; margin: 0 0 4px; }
+.card h2 { font-size: 21px; font-weight: 900; margin: 0 0 14px; text-wrap: balance; }
+.now { background: var(--soft); border-radius: 10px; padding: 14px 16px; margin-bottom: 18px; }
+.now .t { font-weight: 700; margin: 0 0 6px; font-size: 14px; }
+.now ul { margin: 0; padding-inline-start: 18px; }
+.now li { margin-bottom: 4px; }
+.now p { margin: 0 0 6px; }
+.q { font-weight: 700; margin: 16px 0 8px; font-size: 15px; }
+.q small { font-weight: 400; color: var(--muted); display: block; font-size: 13px; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choices button { font: inherit; font-weight: 700; cursor: pointer; border: 2px solid var(--line); background: var(--card); color: var(--fg); border-radius: 10px; padding: 8px 14px; min-width: 96px; text-align: center; }
+.choices button small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.choices button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choices button.on { color: #fff; }
+.choices button.on small { color: #ffffffcc; }
+.choices button.on.KEEP { background: var(--keep); border-color: var(--keep); }
+.choices button.on.CHANGE { background: var(--change); border-color: var(--change); }
+.choices button.on.REMOVE { background: var(--remove); border-color: var(--remove); }
+.choices button.on.LATER { background: var(--later); border-color: var(--later); }
+.choices button.on.ADD { background: var(--add); border-color: var(--add); }
+.follow { border-inline-start: 3px solid var(--line); padding-inline-start: 14px; margin-top: 10px; }
+.follow .q { margin-top: 12px; }
+textarea, input[type=text] { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); color: var(--fg); resize: vertical; min-height: 44px; }
+textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opts label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; cursor: pointer; font-size: 14px; background: var(--card); }
+.opts label:has(input:checked) { background: var(--soft); border-color: var(--accent); font-weight: 700; }
+.opts input { accent-color: var(--accent); }
+.footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.btn { font: inherit; font-weight: 700; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 9px 18px; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 12.5px; color: var(--muted); }
+.summary h3 { margin: 18px 0 6px; font-size: 16px; }
+.summary .row { border-top: 1px solid var(--line); padding: 10px 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: start; }
+.summary .row p { margin: 0 0 4px; }
+.summary .row .k { color: var(--muted); font-size: 13px; }
+.notice { background: var(--soft); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; }
+  nav.topics { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 6px; }
+  nav.topics button { white-space: nowrap; border: 1px solid var(--line); }
+  nav.topics button .chip { display: none; }
+  .bar { width: 110px; }
+  .card { padding: 16px 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>بازبینی محصول دیلرزلند</h1>
+      <p class="sub">سیزده موضوع. برای هر کدام: در فرانو فعلی این‌طور است؛ شما تصمیم می‌گیرید. پاسخ‌ها روی همین مرورگر می‌ماند؛ در پایان با دکمه‌ی «کپی پاسخ‌ها» تحویل می‌دهید.</p>
+    </div>
+    <div>
+      <div class="progress"><span id="prog-t">۰ از ۱۳</span><span class="bar"><i id="prog-b"></i></span></div>
+      <div class="status" id="status">ذخیره روی همین مرورگر</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="topics" id="nav" aria-label="موضوع‌ها"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+'use strict';
+const FA = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+const DEC = {
+  KEEP:   { fa: 'بماند',      sub: 'همین‌طور که هست' },
+  CHANGE: { fa: 'تغییر کند',  sub: 'با توضیح' },
+  REMOVE: { fa: 'حذف شود',    sub: 'در دیلرزلند نباشد' },
+  LATER:  { fa: 'بعداً',      sub: 'نه در نسخه‌ی اول' },
+};
+
+/* Each topic: what Ferano does today (from the repo docs), then simple
+   non-technical follow-ups that appear only when the board picks CHANGE. */
+const TOPICS = [
+  { id: 'core', title: 'هسته‌ی اصلی محصول',
+    now: [
+      'بازار بسته‌ای که فقط نمایندگی‌های تأییدشده وارد آن می‌شوند.',
+      'هر نمایندگی آگهی می‌گذارد، آگهی بقیه را با فیلتر می‌بیند، و برای این‌که بفهمد آگهی از کیست و چطور تماس بگیرد، «نمایش مشخصات» را می‌زند که از سهمیه‌اش کم می‌شود.',
+      'معامله و پول بیرون از سامانه رد و بدل می‌شود؛ سامانه فقط جای پیدا کردن طرف مقابل است.',
+      'ارزش اصلی: شماره‌ی تماس جلوی چشم رقیب نیست، هر آگهی تاریخ دارد، و هر بدقولی ثبت می‌شود.',
+    ],
+    change: [
+      { k: 'sentence', q: 'هسته‌ی دیلرزلند را در یک جمله بگویید.' },
+      { k: 'outside', q: 'معامله همچنان بیرون از سامانه انجام شود؟', opts: ['بله، فقط پیدا کردن طرف مقابل', 'خیر، سامانه در معامله هم نقش داشته باشد', 'بعداً تصمیم می‌گیریم'] },
+    ] },
+  { id: 'users', title: 'کاربران',
+    now: [
+      'فقط نمایندگی‌های خودرو. ثبت‌نام عمومی وجود ندارد؛ حساب را تیم ما می‌سازد و نام کاربری را می‌دهد.',
+      'سه شکل حساب نمایندگی: نمایندگی عادی، نمایندگی مرکزی (که برای شعبه‌هایش حساب می‌سازد)، و شعبه.',
+      'کارمندان ما: مدیر کل، پشتیبانی، مالی، و مالک (که از دید بقیه نامرئی است).',
+      'حذف حساب وجود ندارد؛ فقط تعلیق.',
+    ],
+    change: [
+      { k: 'who', q: 'چه کسانی باید بتوانند حساب بگیرند؟', opts: ['فقط نمایندگی‌های رسمی', 'نمایندگی‌ها و فروشندگان دیگر خودرو (بنگاه، نمایشگاه)', 'هر کسی'] },
+      { k: 'signup', q: 'نمایندگی خودش از سایت ثبت‌نام کند یا تیم ما حساب بسازد؟', opts: ['فقط تیم ما', 'خودش ثبت‌نام کند و ما تأیید کنیم', 'خودش ثبت‌نام کند، بدون تأیید'] },
+    ] },
+  { id: 'types', title: 'نوع آگهی‌ها',
+    now: [
+      'سه بازار جدا با منوی جدا: حواله، ثبت‌نامی، خودرو. هر کدام دو نوع آگهی دارد: فروش و درخواست خرید.',
+      'آگهی فروش حواله و ثبت‌نامی فقط برای برندهایی که تیم ما برای آن نمایندگی تعیین کرده قابل ثبت است؛ بازار خودرو محدودیت برند ندارد.',
+      'بازار چهارم «قطعات» در منو با برچسب «به‌زودی» هست و ساخته نشده.',
+    ],
+    change: [
+      { k: 'which', q: 'کدام نوع‌ها در نسخه‌ی اول دیلرزلند باشند؟', multi: ['حواله', 'ثبت‌نامی', 'خودرو صفر', 'خودرو کارکرده', 'قطعات'] },
+      { k: 'request', q: '«درخواست خرید» بماند؟', opts: ['بله', 'خیر، فقط آگهی فروش', 'بعداً'] },
+      { k: 'brand', q: 'محدودیت برند برای حواله و ثبت‌نامی بماند؟', opts: ['بله', 'خیر، هر کسی هر برندی', 'بعداً'] },
+    ] },
+  { id: 'post', title: 'ثبت آگهی',
+    now: [
+      'مدل خودرو از فهرست انتخاب می‌شود، تایپ نمی‌شود. ارقام در خانه‌های جدا (مثلاً در حواله: قیمت خودرو، مبلغ حواله، مبلغ واریزشده).',
+      'نام نمایندگی، شهر و شماره از پروفایل می‌آید و در فرم نیست. در متن توضیحات نمی‌شود شماره، آیدی، لینک یا نام نمایندگی نوشت؛ سامانه رد می‌کند.',
+      'عمر آگهی: حواله به اندازه‌ی مهلت واریز (۱ تا ۳۰ روز)، ثبت‌نامی تا مهلت طرح (حداکثر ۳۰ روز)، خودرو ۷ روز، درخواست خرید ۷ روز. همه با یک کلیک تمدید می‌شوند.',
+      'بعد از ثبت: ویرایش (آشکار، با برچسب «ویرایش‌شده»)، تمدید، «فروخته شد»، حذف. سقف تعداد آگهی وجود ندارد.',
+    ],
+    change: [
+      { k: 'simpler', q: 'فرم ثبت چطور ساده‌تر شود؟ کدام خانه‌ها حذف یا اختیاری شوند؟' },
+      { k: 'life', q: 'عمر آگهی‌ها چقدر باشد؟', opts: ['همین که هست', 'همه یکسان (مثلاً ۷ روز)', 'همه یکسان (مثلاً ۳۰ روز)', 'بدون انقضا'] },
+    ] },
+  { id: 'search', title: 'جستجو و استعلام',
+    now: [
+      'هر بازار صفحه‌ی استعلام خودش را دارد. بالای صفحه سه تب: همه / فروش / درخواست خرید.',
+      'فیلترها: برند و مدل، رنگ، قیمت، و فیلترهای مخصوص هر بازار (مثلاً در خودرو: سال، کارکرد، نوع بدنه، وضعیت بدنه، گارانتی).',
+      'کارت آگهی همه‌ی ارقام را نشان می‌دهد، ولی نه نام نمایندگی، نه شهر، نه توضیحات، نه عکس.',
+    ],
+    change: [
+      { k: 'unified', q: 'جستجو چطور باشد؟', opts: ['یک صفحه‌ی مشترک برای همه‌ی نوع‌ها', 'صفحه‌ی جدا برای هر نوع (مثل فرانو)', 'یک صفحه با انتخاب نوع در بالا'] },
+      { k: 'filters', q: 'کدام فیلترها واقعاً لازم است؟ بقیه حذف شود.' },
+    ] },
+  { id: 'reveal', title: 'نمایش اطلاعات تماس',
+    now: [
+      'تا دکمه‌ی «نمایش مشخصات» زده نشود، نام نمایندگی، شهر، شماره، توضیحات تایپی و عکس‌ها به هیچ‌کس نشان داده نمی‌شود.',
+      'هر نمایش یک واحد از سهمیه کم می‌کند: پیش‌فرض ۳۰ در روز و ۳۰۰ در هر دوره‌ی اشتراک، مشترک بین همه‌ی بازارها. باز کردن دوباره‌ی همان آگهی رایگان است.',
+      'هر نمایش برای همیشه ثبت می‌شود. صاحب آگهی فقط تعداد بازدید را می‌بیند، نه این‌که چه کسی.',
+      'با اشتراک منقضی، دکمه کار نمی‌کند.',
+    ],
+    change: [
+      { k: 'before', q: 'قبل از نمایش مشخصات، چه چیزی دیده شود؟', multi: ['هیچ‌چیز (مثل فرانو)', 'شهر', 'نام نمایندگی', 'توضیحات', 'عکس‌ها'] },
+      { k: 'quota', q: 'سهمیه چطور باشد؟', opts: ['سهمیه‌ی روزانه و ماهانه داخل اشتراک (مثل فرانو)', 'هر نمایش جداگانه هزینه داشته باشد', 'سهمیه برای هر نوع آگهی جدا (افزونه‌ای)', 'بدون سهمیه'] },
+      { k: 'number', q: 'اگر سهمیه می‌ماند، عدد مناسب روزانه چند است؟' },
+    ] },
+  { id: 'subscription', title: 'اشتراک',
+    now: [
+      'یک پلن ماهانه (دوره‌ی ۳۰ روزه). اشتراک یعنی مدت + سهمیه‌ی نمایش مشخصات. سقف تعداد آگهی ندارد.',
+      'پرداخت دستی: نمایندگی واریز می‌کند، فیش را با تیکت می‌فرستد، تیم ما تأیید می‌کند. درگاه آنلاین ندارد.',
+      'اشتراک منقضی: ورود و دیدن بازار آزاد است؛ ثبت آگهی، ویرایش، تمدید و نمایش مشخصات بسته است. قیمت روز، پشتیبانی و اطلاعیه‌ها باز می‌ماند.',
+      'تمدید از روز ثبت شروع می‌شود، نه از تاریخ انقضا.',
+    ],
+    change: [
+      { k: 'plans', q: 'یک پلن یا چند پلن؟', opts: ['یک پلن پایه + افزونه‌ها', 'چند پلن (مثلاً پایه / حرفه‌ای)', 'یک پلن ثابت برای همه'] },
+      { k: 'online', q: 'پرداخت آنلاین در نسخه‌ی اول لازم است؟', opts: ['بله', 'خیر، فیش و تأیید دستی کافی است', 'بعداً'] },
+      { k: 'expired', q: 'با اشتراک منقضی چه چیزی باز بماند؟', opts: ['فقط دیدن بازار (مثل فرانو)', 'هیچ‌چیز، ورود بسته شود', 'دیدن و ثبت آگهی، فقط نمایش مشخصات بسته شود'] },
+    ] },
+  { id: 'branches', title: 'زیرنمایندگی (شعبه)',
+    now: [
+      'نمایندگی مرکزی برای هر شعبه یک «ظرفیت» در هر دوره‌ی ۳۰ روزه پیش‌خرید می‌کند و با آن حساب شعبه می‌سازد.',
+      'شعبه کاملاً مثل نمایندگی عادی کار می‌کند. اشتراکش از مادر می‌آید؛ سهمیه‌ی نمایش مشخصاتش جداست.',
+      'مادر برندهای مجاز شعبه را تعیین می‌کند، می‌تواند تعلیقش کند و رمزش را عوض کند، آگهی‌هایش را می‌بیند ولی ویرایش نمی‌کند.',
+      'این بخش فقط برای نمایندگی‌هایی که تیم ما «حالت ماژول» را برایشان روشن کرده در منو ظاهر می‌شود.',
+    ],
+    change: [
+      { k: 'need', q: 'شعبه در نسخه‌ی اول لازم است؟', opts: ['بله، همین شکل', 'بله، ساده‌تر (فقط چند کاربر زیر یک حساب)', 'خیر، بعداً'] },
+      { k: 'paid', q: 'ظرفیت شعبه پولی باشد؟', opts: ['بله، مثل فرانو', 'جزو افزونه‌ی «شبکه‌ی داخلی» باشد', 'رایگان'] },
+    ] },
+  { id: 'network', title: 'شبکه‌ی داخلی',
+    now: [
+      'گزینه‌ی «فقط شبکه‌ی من»: نمایندگی مرکزی و شعبه‌هایش می‌توانند آگهی را فقط برای خودشان بگذارند؛ بقیه‌ی بازار آن را نمی‌بیند.',
+      'پیش‌فرض خاموش است. اعضای شبکه هم برای دیدن مشخصات از سهمیه‌شان خرج می‌کنند.',
+      'در استعلام هر بازار فیلتر «فقط شبکه‌ی خودمان» هست.',
+    ],
+    change: [
+      { k: 'addon', q: 'شبکه‌ی داخلی افزونه‌ی پولی باشد؟', opts: ['بله، افزونه‌ی جدا', 'داخل اشتراک پایه', 'بعداً'] },
+      { k: 'who', q: 'چه کسی بتواند شبکه بسازد؟', opts: ['فقط نمایندگی‌هایی که شعبه دارند', 'هر نمایندگی بتواند چند نمایندگی دیگر را به شبکه‌اش دعوت کند'] },
+      { k: 'free', q: 'داخل شبکه، دیدن مشخصات رایگان باشد؟', opts: ['بله', 'خیر، مثل بقیه سهمیه خرج شود'] },
+    ] },
+  { id: 'cars', title: 'بازار خودرو (صفر و کارکرده)',
+    now: [
+      'خودروی آماده در پارکینگ، صفر یا کارکرده، بین نمایندگی‌ها. بدون محدودیت برند. عمر آگهی ۷ روز.',
+      'وضعیت بدنه قطعه‌به‌قطعه: ۲۲ قطعه در پنج گروه، روی نقشه‌ی خودرو رنگی می‌شود؛ درجه‌ی بدنه (بدون رنگ تا شاسی‌خورده) را سامانه حساب می‌کند و فیلتر جستجوست.',
+      'تا ۶ عکس، که فقط بعد از «نمایش مشخصات» دیده می‌شود (روی شیشه می‌شود شماره نوشت).',
+      'مرتب‌سازی: جدیدترین، ارزان‌ترین، گران‌ترین، کم‌کارکردترین. گارانتی فعال/غیرفعال.',
+    ],
+    change: [
+      { k: 'body', q: 'وضعیت بدنه چطور باشد؟', opts: ['قطعه‌به‌قطعه با نقشه (مثل فرانو)', 'ساده: یک درجه‌ی کلی که فروشنده انتخاب می‌کند', 'حذف شود'] },
+      { k: 'photos', q: 'عکس‌ها قبل از نمایش مشخصات دیده شوند؟', opts: ['خیر، پشت نمایش مشخصات (مثل فرانو)', 'بله، برای همه'] },
+      { k: 'who', q: 'این بازار برای چه کسانی باشد؟', opts: ['فقط نمایندگی‌ها', 'نمایندگی‌ها و نمایشگاه‌ها', 'بعداً تصمیم می‌گیریم'] },
+    ] },
+  { id: 'admin', title: 'مدیریت و نظارت',
+    now: [
+      'گزارش تخلف دوطرفه: گزارش تأییدشده = آگهی تعلیق + یک اخطار برای صاحب آگهی؛ گزارش بی‌مورد = یک اخطار برای گزارش‌دهنده. سه اخطار = تعلیق حساب.',
+      'نمایندگی تعلیق‌شده وارد می‌شود تا دلیل را بخواند و اعتراض کند، ولی هیچ کاری نمی‌تواند بکند.',
+      'هر تصمیم سامانه درباره‌ی یک حساب در «اطلاعیه‌ها» با دلیل و دکمه‌ی اعتراض می‌آید.',
+      'پشتیبانی با تیکت داخل سامانه (با پیوست فیش و مدرک). پنل مدیریت با کارتابل کارهای معطل، میز هر بازار، پرونده‌ی نمایندگی، لاگ کارها.',
+      'ورود: هر نمایندگی یک نشست فعال؛ بازیابی رمز فقط از طریق پشتیبانی. راهنمای داخل پنل با تأیید اجباری در اولین ورود.',
+    ],
+    change: [
+      { k: 'strikes', q: 'قانون «سه اخطار = تعلیق» بماند؟', opts: ['بله', 'خیر، تعلیق فقط با تصمیم مدیر', 'عدد دیگری'] },
+      { k: 'reports', q: 'گزارش تخلف دوطرفه بماند؟', opts: ['بله', 'فقط گزارش علیه آگهی، بدون اخطار برای گزارش‌دهنده', 'حذف شود'] },
+      { k: 'support', q: 'پشتیبانی کجا باشد؟', opts: ['داخل سامانه با تیکت (مثل فرانو)', 'بیرون: تلفن و پیام‌رسان', 'هر دو'] },
+      { k: 'guide', q: 'راهنمای اجباری در اولین ورود بماند؟', opts: ['بله', 'خیر، فقط در منو باشد'] },
+    ] },
+  { id: 'revenue', title: 'مدل درآمد',
+    now: [
+      'اشتراک ماهانه‌ی نمایندگی (شامل سهمیه‌ی نمایش مشخصات) + ظرفیت پولی برای هر شعبه.',
+      'پرداخت دستی با فیش و تأیید. هیچ قابلیتی جداگانه فروخته نمی‌شود.',
+      'قیمت روز خودرو برای همه‌ی نمایندگی‌های واردشده رایگان است، حتی با اشتراک منقضی.',
+    ],
+    change: [
+      { k: 'source', q: 'منبع اصلی درآمد چه باشد؟', opts: ['اشتراک پایه + افزونه‌های پولی', 'فقط اشتراک، همه‌چیز داخلش', 'فقط افزونه‌ها، ورود رایگان', 'پرداخت به ازای هر نمایش مشخصات'] },
+      { k: 'addons', q: 'کدام قابلیت‌ها افزونه‌ی پولی باشند؟', multi: ['دیدن مشخصات حواله', 'دیدن مشخصات ثبت‌نامی', 'دیدن مشخصات خودرو', 'شبکه‌ی داخلی', 'شعبه‌ها', 'قیمت روز', 'سهمیه‌ی بیشتر'] },
+      { k: 'free', q: 'چه چیزی برای همه رایگان باشد؟' },
+    ] },
+  { id: 'future', title: 'قابلیت‌های آینده',
+    now: [
+      'در نقشه‌ی راه فرانو: بازار قطعات، پنل پیامک و کد تأیید دو عاملی، نمودار تاریخچه‌ی قیمت روز، اعلان روی گوشی، تکمیل لوگوی برندها.',
+      'به تعویق افتاده به تصمیم مالک: رمزنگاری داده‌های حساس و بکاپ خارج از سرور.',
+    ],
+    change: [
+      { k: 'first', q: 'کدام‌ها باید در نسخه‌ی اول دیلرزلند باشند؟', multi: ['بازار قطعات', 'پیامک و کد تأیید', 'تاریخچه‌ی قیمت', 'اعلان روی گوشی', 'هیچ‌کدام'] },
+      { k: 'drop', q: 'کدام‌ها کلاً کنار گذاشته شوند؟' },
+    ] },
+];
+
+/* ---------- state & persistence ---------- */
+const answers = {};            // topicId -> {decision, add, addText, q:{}, note, why, updatedAt}
+let cur = 0, db = null, saveTimer = {}, writing = {};
+const $ = s => document.querySelector(s);
+const statusEl = $('#status');
+function setStatus(t, err) { statusEl.textContent = t; statusEl.classList.toggle('err', !!err); }
+
+function localLoad() { try { const j = localStorage.getItem('dl-review'); if (j) Object.assign(answers, JSON.parse(j)); } catch (e) {} }
+function localSave() { try { localStorage.setItem('dl-review', JSON.stringify(answers)); } catch (e) {} }
+
+function get(id) { return answers[id] || (answers[id] = { decision: '', add: false, addText: '', q: {}, note: '', why: '' }); }
+
+function save(id) {
+  localSave();
+  clearTimeout(saveTimer[id]);
+  saveTimer[id] = setTimeout(async () => {
+    if (!db) return;
+    if (writing[id]) { saveTimer[id] = setTimeout(() => save(id), 400); return; }
+    writing[id] = true;
+    const body = Object.assign({}, get(id), { updatedAt: new Date().toISOString() });
+    try { await db.doc('answers/' + id).set(body); setStatus('ذخیره شد ' + timeFa()); }
+    catch (e) { setStatus('ذخیره نشد؛ دوباره تلاش می‌شود (' + (e && e.code || 'خطا') + ')', true); }
+    finally { writing[id] = false; }
+  }, 500);
+}
+function timeFa() { return FA(new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })); }
+
+/* ---------- rendering ---------- */
+function answeredCount() { return TOPICS.filter(t => get(t.id).decision).length; }
+
+function renderNav() {
+  const nav = $('#nav'); nav.innerHTML = '';
+  TOPICS.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = i === cur ? 'cur' : '';
+    const d = get(t.id).decision;
+    b.innerHTML = '<span><span class="n">' + FA(i + 1) + '</span>' + t.title + '</span>' +
+      '<span class="chip ' + (d || 'none') + '">' + (d ? DEC[d].fa : 'بی‌پاسخ') + '</span>';
+    b.addEventListener('click', () => { cur = i; render(); window.scrollTo({ top: 0 }); });
+    nav.appendChild(b);
+  });
+  const sb = document.createElement('button');
+  sb.className = cur === TOPICS.length ? 'cur' : '';
+  sb.innerHTML = '<span><span class="n">≡</span>خلاصه‌ی پاسخ‌ها</span>';
+  sb.addEventListener('click', () => { cur = TOPICS.length; render(); window.scrollTo({ top: 0 }); });
+  nav.appendChild(sb);
+  const n = answeredCount();
+  $('#prog-t').textContent = FA(n) + ' از ' + FA(TOPICS.length);
+  $('#prog-b').style.width = (n / TOPICS.length * 100) + '%';
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function render() {
+  renderNav();
+  const main = $('#main');
+  if (cur === TOPICS.length) { renderSummary(main); return; }
+  const t = TOPICS[cur], a = get(t.id);
+  let h = '<section class="card">';
+  h += '<p class="eyebrow">موضوع ' + FA(cur + 1) + ' از ' + FA(TOPICS.length) + '</p>';
+  h += '<h2>' + esc(t.title) + '</h2>';
+  h += '<div class="now"><p class="t">در فرانو فعلی این بخش این‌طور است:</p><ul>' + t.now.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>';
+
+  h += '<p class="q">برای دیلرزلند چه تصمیمی می‌گیرید؟</p>';
+  h += '<div class="choices" id="dec">' + Object.keys(DEC).map(k =>
+    '<button type="button" data-dec="' + k + '" class="' + k + (a.decision === k ? ' on' : '') + '">' + DEC[k].fa + '<small>' + DEC[k].sub + '</small></button>').join('') +
+    '<button type="button" data-add="1" class="ADD' + (a.add ? ' on' : '') + '">افزودن<small>چیزی اضافه شود</small></button></div>';
+
+  if (a.decision === 'CHANGE') {
+    h += '<div class="follow">';
+    let open = true;
+    t.change.forEach((qq, i) => {
+      if (!open) return;
+      const v = a.q[qq.k];
+      h += '<p class="q">' + esc(qq.q) + (i === 0 ? '<small>یکی‌یکی می‌پرسیم؛ با پاسخ هر سؤال، بعدی می‌آید.</small>' : '') + '</p>';
+      if (qq.opts) {
+        h += '<div class="opts">' + qq.opts.map(o => '<label><input type="radio" name="q-' + qq.k + '" data-q="' + qq.k + '" value="' + esc(o) + '"' + (v === o ? ' checked' : '') + '>' + esc(o) + '</label>').join('') + '</div>';
+      } else if (qq.multi) {
+        const arr = Array.isArray(v) ? v : [];
+        h += '<div class="opts">' + qq.multi.map(o => '<label><input type="checkbox" data-qm="' + qq.k + '" value="' + esc(o) + '"' + (arr.includes(o) ? ' checked' : '') + '>' + esc(o) + '</label>').join('') + '</div>';
+      } else {
+        h += '<textarea id="q-' + qq.k + '" data-qt="' + qq.k + '" rows="2" placeholder="پاسخ کوتاه">' + esc(v || '') + '</textarea>';
+      }
+      open = Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim());
+    });
+    h += '</div>';
+  }
+  if (a.decision === 'REMOVE') {
+    h += '<div class="follow"><p class="q">چرا حذف شود؟ <small>اختیاری، یک جمله کافی است.</small></p><textarea id="why" rows="2">' + esc(a.why) + '</textarea></div>';
+  }
+  if (a.decision === 'LATER') {
+    h += '<div class="follow"><p class="q">چه زمانی یا با چه شرطی برگردد؟ <small>اختیاری.</small></p><textarea id="why" rows="2">' + esc(a.why) + '</textarea></div>';
+  }
+  if (a.add) {
+    h += '<div class="follow"><p class="q">چه چیزی به این بخش اضافه شود؟ <small>فرانو این را ندارد.</small></p><textarea id="addText" rows="3">' + esc(a.addText) + '</textarea></div>';
+  }
+  h += '<p class="q">یادداشت <small>اختیاری؛ هر نکته‌ای برای این موضوع.</small></p><textarea id="note" rows="2">' + esc(a.note) + '</textarea>';
+
+  h += '<div class="footer"><button type="button" class="btn ghost" id="prev"' + (cur === 0 ? ' disabled' : '') + '>قبلی</button>' +
+    '<span class="hint">' + (a.decision ? 'پاسخ ثبت شد. می‌توانید جلو بروید.' : 'یکی از گزینه‌ها را انتخاب کنید.') + '</span>' +
+    '<button type="button" class="btn" id="next">' + (cur === TOPICS.length - 1 ? 'خلاصه‌ی پاسخ‌ها' : 'موضوع بعدی') + '</button></div>';
+  h += '</section>';
+  main.innerHTML = h;
+
+  main.querySelectorAll('[data-dec]').forEach(b => b.addEventListener('click', () => {
+    a.decision = a.decision === b.dataset.dec ? '' : b.dataset.dec; save(t.id); render();
+  }));
+  main.querySelector('[data-add]').addEventListener('click', () => { a.add = !a.add; save(t.id); render(); });
+  main.querySelectorAll('[data-q]').forEach(r => r.addEventListener('change', () => { a.q[r.dataset.q] = r.value; save(t.id); render(); }));
+  main.querySelectorAll('[data-qm]').forEach(c => c.addEventListener('change', () => {
+    const k = c.dataset.qm; const arr = Array.from(main.querySelectorAll('[data-qm="' + k + '"]:checked')).map(x => x.value);
+    a.q[k] = arr; save(t.id); render();
+  }));
+  main.querySelectorAll('[data-qt]').forEach(ta => {
+    ta.addEventListener('input', () => { a.q[ta.dataset.qt] = ta.value; save(t.id); });
+    ta.addEventListener('change', () => render());
+  });
+  const why = main.querySelector('#why'); if (why) why.addEventListener('input', () => { a.why = why.value; save(t.id); });
+  const addT = main.querySelector('#addText'); if (addT) addT.addEventListener('input', () => { a.addText = addT.value; save(t.id); });
+  main.querySelector('#note').addEventListener('input', e => { a.note = e.target.value; save(t.id); });
+  main.querySelector('#prev').addEventListener('click', () => { cur--; render(); window.scrollTo({ top: 0 }); });
+  main.querySelector('#next').addEventListener('click', () => { cur++; render(); window.scrollTo({ top: 0 }); });
+}
+
+function renderSummary(main) {
+  let h = '<section class="card summary"><p class="eyebrow">خلاصه</p><h2>پاسخ‌های هیئت‌مدیره</h2>';
+  const n = answeredCount();
+  h += '<div class="notice">' + (n === TOPICS.length ? 'همه‌ی سیزده موضوع پاسخ گرفته. مرحله‌ی بعد: نوشتن سند چشم‌انداز محصول از روی همین پاسخ‌ها.' : FA(TOPICS.length - n) + ' موضوع هنوز بی‌پاسخ است.') + '</div>';
+  TOPICS.forEach((t, i) => {
+    const a = get(t.id);
+    h += '<h3>' + FA(i + 1) + '. ' + esc(t.title) + ' <span class="chip ' + (a.decision || 'none') + '">' + (a.decision ? DEC[a.decision].fa : 'بی‌پاسخ') + '</span></h3>';
+    if (a.decision === 'CHANGE') t.change.forEach(qq => { const v = a.q[qq.k]; const s = Array.isArray(v) ? v.join('، ') : v; if (s) h += '<div class="row"><span class="k">' + esc(qq.q) + '</span><p>' + esc(s) + '</p></div>'; });
+    if (a.why) h += '<div class="row"><span class="k">دلیل / شرط</span><p>' + esc(a.why) + '</p></div>';
+    if (a.add && a.addText) h += '<div class="row"><span class="k">افزودن</span><p>' + esc(a.addText) + '</p></div>';
+    if (a.note) h += '<div class="row"><span class="k">یادداشت</span><p>' + esc(a.note) + '</p></div>';
+  });
+  h += '<h3>تحویل پاسخ‌ها</h3><p class="hint">این متن را کپی کنید و در گفتگو بفرستید. همین متن را می‌شود در دستگاه دیگری در جعبه‌ی «وارد کردن» گذاشت تا پاسخ‌ها همان‌جا هم باز شود.</p>';
+  h += '<textarea id="export" rows="4" readonly dir="ltr" style="font-size:12px;direction:ltr;text-align:left">' + esc(exportText()) + '</textarea>';
+  h += '<div class="choices" style="margin-top:8px"><button type="button" class="btn" id="copy">کپی پاسخ‌ها</button><button type="button" class="btn ghost" id="imp-toggle">وارد کردن پاسخ‌ها</button></div>';
+  h += '<div id="imp" hidden style="margin-top:10px"><textarea id="imp-text" rows="3" dir="ltr" placeholder="متن کپی‌شده را این‌جا بگذارید"></textarea><div class="choices" style="margin-top:8px"><button type="button" class="btn" id="imp-do">جایگزین کن</button></div></div>';
+  h += '<div class="footer"><button type="button" class="btn ghost" id="prev">برگشت به موضوع‌ها</button><span class="hint">پاسخ‌ها روی همین مرورگر می‌ماند؛ هر وقت خواستید می‌توانید عوضشان کنید.</span></div></section>';
+  main.innerHTML = h;
+  main.querySelector('#prev').addEventListener('click', () => { cur = 0; render(); window.scrollTo({ top: 0 }); });
+  const ex = main.querySelector('#export');
+  main.querySelector('#copy').addEventListener('click', async () => {
+    const b = main.querySelector('#copy');
+    try { await navigator.clipboard.writeText(ex.value); b.textContent = 'کپی شد'; }
+    catch (e) { ex.focus(); ex.select(); b.textContent = 'متن انتخاب شد؛ Ctrl+C بزنید'; }
+    setTimeout(() => { b.textContent = 'کپی پاسخ‌ها'; }, 2500);
+  });
+  main.querySelector('#imp-toggle').addEventListener('click', () => { const d = main.querySelector('#imp'); d.hidden = !d.hidden; });
+  main.querySelector('#imp-do').addEventListener('click', () => {
+    const raw = main.querySelector('#imp-text').value.trim();
+    const ok = importText(raw);
+    if (ok) { render(); setStatus('پاسخ‌ها وارد شد ' + timeFa()); }
+    else setStatus('متن قابل خواندن نبود؛ همان متنی را بگذارید که با «کپی پاسخ‌ها» گرفته‌اید.', true);
+  });
+}
+
+/* Hand-over format: a one-line JSON of only the answered topics, wrapped in
+   markers so it survives a paste into chat and can be pasted back here. */
+const MARK_A = 'DL-REVIEW:', MARK_B = ':END';
+function exportText() {
+  const out = {};
+  TOPICS.forEach(t => { const a = get(t.id); if (a.decision || a.add || a.note) out[t.id] = a; });
+  return MARK_A + JSON.stringify(out) + MARK_B;
+}
+function importText(raw) {
+  const i = raw.indexOf(MARK_A), j = raw.lastIndexOf(MARK_B);
+  if (i < 0 || j < 0 || j <= i) return false;
+  try {
+    const obj = JSON.parse(raw.slice(i + MARK_A.length, j));
+    if (!obj || typeof obj !== 'object') return false;
+    TOPICS.forEach(t => { delete answers[t.id]; });
+    Object.keys(obj).forEach(k => { if (TOPICS.some(t => t.id === k)) answers[k] = Object.assign({ decision: '', add: false, addText: '', q: {}, note: '', why: '' }, obj[k]); });
+    localSave();
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- boot ---------- */
+localLoad();
+render();
+try { localStorage.setItem('dl-review-t', '1'); } catch (e) { setStatus('این مرورگر اجازه‌ی ذخیره نمی‌دهد؛ پیش از بستن صفحه، «کپی پاسخ‌ها» را بزنید.', true); }
+</script>
+</body>
+</html>
